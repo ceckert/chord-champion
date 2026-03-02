@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v5.5-debug';
+const VERSION = 'v5.6-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -1539,7 +1539,7 @@ function drawHUD() {
   if (boxLines.length > 0) {
     const lineH = 14, pad = 6;
     const bw = 170, bh = pad*2 + boxLines.length * lineH;
-    const bx = 10, by = canvas.height - bh - 10;
+    const bx = 10, by = canvas.height - 26 - bh - 6; // 26px controls bar + 6px gap
     ctx.fillStyle = 'rgba(0,0,0,0.65)';
     ctx.fillRect(bx, by, bw, bh);
     ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
