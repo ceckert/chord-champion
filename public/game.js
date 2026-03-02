@@ -565,6 +565,7 @@ function uiShow(screenId) {
 function uiPlay() {
   document.getElementById('ui-overlay').style.display = 'none';
   gameState = 'playing';
+  interiorCooldown = 180; // prevent spawning inside a structure
   // Pre-spawn starting enemies so world feels alive immediately
   initLandmarks();
   setTimeout(() => preSpawnEnemies(3), 300);
