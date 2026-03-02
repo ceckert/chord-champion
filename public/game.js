@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v4.4-debug';
+const VERSION = 'v4.5-debug';
 const TILE = 32;
 const MAP_W = 160, MAP_H = 160;
 
@@ -93,7 +93,11 @@ for (let i = 0; i < 40; i++) spawnMapNote();
 let bullets = [];
 let explosions = [];
 let lightningArcs = [];
-let equippedAbility = null; // id of the one active ability // { x1,y1,x2,y2,life } // { x, y, r, maxR, life, maxLife }
+let equippedAbility = null;
+let biomeTimer = 0;        // frames in current biome
+let lastBiome = 'forest';  // biome player was in last frame
+let bossActive = false;    // only one boss at a time
+let bossWarningTimer = 0;  // flashing warning before spawn // id of the one active ability // { x1,y1,x2,y2,life } // { x, y, r, maxR, life, maxLife }
 
 function triggerExplosion(x, y, radius, dmg) {
   explosions.push({ x, y, r: 4, maxR: radius, life: 20, maxLife: 20, dmg });
@@ -119,6 +123,60 @@ function shoot(tx, ty) {
 
 let enemies = [];
 let enemySpawnTimer = 0;
+
+
+// =====================================================================
+// BOSS DEFINITIONS — one per biome
+// Each boss: type, w, h, hp, speed, dmg, phase behavior description
+// =====================================================================
+const BOSSES = {
+  // 🌿 Forest Boss — Treant: massive, slow, stomps
+  forest: {
+    type: 'boss_treant', w: 64, h: 80, hp: 800, maxHp: 800,
+    speed: 0.6, dmg: 30, label: '🌳 Treant'
+  },
+  // 🌊 Swamp Boss — Bog Queen: huge slimeling, spawns minions
+  swamp: {
+    type: 'boss_bogqueen', w: 72, h: 56, hp: 600, maxHp: 600,
+    speed: 0.8, dmg: 25, label: '👸 Bog Queen'
+  },
+  // 🏜️ Desert Boss — Sandstorm King: giant scorpion, charges
+  desert: {
+    type: 'boss_sandking', w: 68, h: 52, hp: 700, maxHp: 700,
+    speed: 1.8, dmg: 20, label: '🦂 Sandstorm King'
+  },
+  // ❄️ Tundra Boss — Glacier Giant: colossal yeti, freezes on hit
+  tundra: {
+    type: 'boss_glacier', w: 80, h: 96, hp: 1000, maxHp: 1000,
+    speed: 0.5, dmg: 40, label: '🏔️ Glacier Giant'
+  },
+  // 🌋 Volcano Boss — Inferno Drake: fast fire dragon
+  volcano: {
+    type: 'boss_drake', w: 76, h: 60, hp: 650, maxHp: 650,
+    speed: 2.2, dmg: 18, label: '🔥 Inferno Drake'
+  },
+  // 💀 Void Boss — Void Lord: phase-shifting wraith
+  void: {
+    type: 'boss_voidlord', w: 60, h: 72, hp: 750, maxHp: 750,
+    speed: 1.4, dmg: 28, label: '👁️ Void Lord'
+  },
+};
+
+function spawnBoss(biome) {
+  if (bossActive) return;
+  const def = BOSSES[biome];
+  if (!def) return;
+  // Spawn near player but not on top
+  const angle = Math.random() * Math.PI * 2;
+  const dist = 300 + Math.random() * 100;
+  const bx = Math.min((MAP_W-3)*TILE, Math.max(TILE*2, player.x + Math.cos(angle)*dist));
+  const by = Math.min((MAP_H-3)*TILE, Math.max(TILE*2, player.y + Math.sin(angle)*dist));
+  const boss = { ...def, x: bx, y: by, isBoss: true,
+    phase: 1, phaseTimer: 0, spawnTimer: 0, chargeTarget: null };
+  enemies.unshift(boss); // bosses go first in array
+  bossActive = true;
+  showNotif('⚠️ ' + def.label + ' has appeared!', '#ff4400', 240);
+}
 
 function getBiome(tx, ty) {
   const cx = MAP_W/2, cy = MAP_H/2;
@@ -414,12 +472,37 @@ function update() {
   frame++;
   if (gameState !== 'playing') return;
 
+  // ── Biome timer & boss spawn ──────────────────────────────────────
+  const curBiome = getBiomeAtPixel(player.x, player.y);
+  if (curBiome !== lastBiome) {
+    biomeTimer = 0;    // left the biome, reset timer
+    lastBiome = curBiome;
+    // Despawn active boss if it was for the old biome
+    if (bossActive) {
+      enemies = enemies.filter(e => !e.isBoss);
+      bossActive = false;
+      showNotif('Boss retreated...', '#888', 120);
+    }
+  } else if (!bossActive && curBiome !== 'forest') {
+    biomeTimer++;
+    if (biomeTimer >= 3600) { // 60s at 60fps
+      biomeTimer = 0;
+      bossWarningTimer = 90;
+    }
+  }
+  if (bossWarningTimer > 0) {
+    bossWarningTimer--;
+    if (bossWarningTimer === 0) spawnBoss(curBiome);
+  }
+  // ─────────────────────────────────────────────────────────────────
+
   let dx = 0, dy = 0;
   if (keys['a']||keys['arrowleft'])  dx -= player.speed;
   if (keys['d']||keys['arrowright']) dx += player.speed;
   if (keys['w']||keys['arrowup'])    dy -= player.speed;
   if (keys['s']||keys['arrowdown'])  dy += player.speed;
   if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+  if (player.frozen > 0) { player.frozen--; dx *= 0.3; dy *= 0.3; }
   if (dx > 0) player.facing = 1;
   if (dx < 0) player.facing = -1;
 
@@ -465,6 +548,7 @@ function update() {
     for (let j = enemies.length - 1; j >= 0; j--) {
       const e = enemies[j];
       if (rectOverlap(b.x-4, b.y-4, 8, 8, e.x, e.y, e.w, e.h)) {
+        if (e.invincible) { hit = true; break; } // Void Lord phase
         let actualDmg = Math.round(10 * dmgMult);
         // Bleed: 1.5x damage taken
         if (e.bleeding > 0) actualDmg = Math.round(actualDmg * 1.5);
@@ -507,7 +591,8 @@ function update() {
 
         if (e.hp <= 0) {
           enemies.splice(j, 1);
-          const epGain = {crawler:10,runner:8,slimeling:14,scorpling:10,yeti:25,ember:12,wraith:18}[e.type]||10;
+          if (e.isBoss) { bossActive = false; showNotif('🏆 Boss defeated! +500 coins!', '#fbbf24', 240); savedCoins += 500; }
+          const epGain = {crawler:10,runner:8,slimeling:14,scorpling:10,yeti:25,ember:12,wraith:18,boss_treant:200,boss_bogqueen:180,boss_sandking:190,boss_glacier:220,boss_drake:175,boss_voidlord:200}[e.type]||10;
           player.ep += epGain;
           if (player.ep >= player.epMax) {
             player.ep = 0;
@@ -539,6 +624,31 @@ function update() {
     if (e.frozen > 0) e.frozen--;
     const effectiveSpeed = e.frozen > 0 ? e.speed * (e.frozenSpeedMult || 0.5) : e.speed;
 
+    // ── Boss phase behavior ─────────────────────────────────────────
+    if (e.isBoss) {
+      e.spawnTimer = (e.spawnTimer||0) + 1;
+      // Phase 2 at 50% hp
+      if (e.hp < e.maxHp * 0.5 && e.phase === 1) {
+        e.phase = 2; e.speed *= 1.5;
+        showNotif('⚠️ ' + (e.label||'Boss') + ' ENRAGED!', '#ff0000', 180);
+      }
+      // Bog Queen spawns minions every 5s
+      if (e.type === 'boss_bogqueen' && e.spawnTimer % 300 === 0 && enemies.length < 20) {
+        const angle2 = Math.random()*Math.PI*2;
+        enemies.push({type:'slimeling',x:e.x+Math.cos(angle2)*50,y:e.y+Math.sin(angle2)*50,w:28,h:20,hp:40,maxHp:40,speed:0.7,baseDmg:10,dmg:10});
+      }
+      // Glacier Giant freezes player on hit (handled in collision)
+      // Sandstorm King charges at player every 4s
+      if (e.type === 'boss_sandking' && e.spawnTimer % 240 === 120) {
+        e.chargeTarget = { x: player.x, y: player.y };
+        showNotif('⚡ Sandstorm King charges!', '#d4b020', 90);
+      }
+      // Void Lord flickers (becomes invincible briefly every 3s)
+      if (e.type === 'boss_voidlord') {
+        e.invincible = (e.spawnTimer % 180 < 30);
+      }
+    }
+    // ────────────────────────────────────────────────────────────────
     // BFS pathfinding — psychic enemies target nearest other enemy
     let targetX = player.x + player.w/2, targetY = player.y + player.h/2;
     if (e.psychic > 0) {
@@ -556,6 +666,14 @@ function update() {
     }
     e.pathTimer--;
 
+    // Charge override for Sandstorm King
+    if (e.chargeTarget) {
+      const cdx = e.chargeTarget.x - e.x, cdy = e.chargeTarget.y - e.y;
+      const clen = Math.sqrt(cdx*cdx+cdy*cdy)||1;
+      e.x += (cdx/clen) * effectiveSpeed * 4;
+      e.y += (cdy/clen) * effectiveSpeed * 4;
+      if (clen < 20) e.chargeTarget = null;
+    }
     // Follow path
     if (e.path && e.path.length > 0) {
       const wp = e.path[0];
@@ -609,6 +727,7 @@ function update() {
     if (e.psychic > 0) continue;
     if (player.invincible === 0 && rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)) {
       player.hp -= (e.dmg || 10); player.invincible = 40;
+      if (e.type === 'boss_glacier') { player.frozen = 90; } // freeze player briefly
       if (player.hp <= 0) {
         const lost = Math.floor(player.coins * 0.3);
         player.coins -= lost; player.hp = player.maxHp;
@@ -942,15 +1061,123 @@ function drawEnemyByType(e, x, y) {
   }
 }
 
+
+// =====================================================================
+// BOSS DRAW FUNCTIONS — one block per biome
+// =====================================================================
+function drawBoss(e, x, y) {
+  // ── Forest: Treant ───────────────────────────────────────────────
+  if (e.type === 'boss_treant') {
+    ctx.fillStyle='#2d4a1a'; ctx.fillRect(Math.round(x+e.w/2-8),Math.round(y+e.h*0.55),16,Math.round(e.h*0.45)); // trunk
+    ctx.fillStyle='#1a5c22'; ctx.fillRect(Math.round(x+4),Math.round(y+10),e.w-8,Math.round(e.h*0.5));
+    ctx.fillStyle='#228b22'; ctx.fillRect(Math.round(x+10),Math.round(y+2),e.w-20,Math.round(e.h*0.45));
+    ctx.fillStyle='#32cd32'; ctx.fillRect(Math.round(x+18),Math.round(y-4),e.w-36,16);
+    ctx.fillStyle='#ff4400'; ctx.fillRect(Math.round(x+12),Math.round(y+14),6,6); ctx.fillRect(Math.round(x+e.w-18),Math.round(y+14),6,6); // eyes
+    // Root arms
+    ctx.fillStyle='#2d4a1a'; ctx.fillRect(Math.round(x-12),Math.round(y+e.h*0.5),14,8); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+e.h*0.5),14,8);
+  }
+  // ── Swamp: Bog Queen ─────────────────────────────────────────────
+  else if (e.type === 'boss_bogqueen') {
+    const bq = Math.sin(frame*0.1+e.x)*3;
+    ctx.fillStyle='#0d4a0d'; ctx.fillRect(Math.round(x),Math.round(y+12+bq),e.w,e.h-14);
+    ctx.fillStyle='#1a7a1a'; ctx.fillRect(Math.round(x+4),Math.round(y+4+bq),e.w-8,18);
+    // Crown
+    ctx.fillStyle='#44ff44'; for(let ci=0;ci<5;ci++){ctx.fillRect(Math.round(x+8+ci*12),Math.round(y-6+bq+(ci%2)*4),6,8);}
+    ctx.fillStyle='#66ff66'; ctx.fillRect(Math.round(x+8),Math.round(y+6+bq),10,10); ctx.fillRect(Math.round(x+e.w-18),Math.round(y+6+bq),10,10);
+    ctx.fillStyle='#000'; ctx.fillRect(Math.round(x+11),Math.round(y+9+bq),5,5); ctx.fillRect(Math.round(x+e.w-15),Math.round(y+9+bq),5,5);
+    // Slime drips
+    ctx.fillStyle='#22cc22'; for(let si=0;si<4;si++){const sd=Math.sin(frame*0.08+si)*4;ctx.fillRect(Math.round(x+8+si*14),Math.round(y+e.h+sd),4,8);}
+  }
+  // ── Desert: Sandstorm King ───────────────────────────────────────
+  else if (e.type === 'boss_sandking') {
+    ctx.fillStyle='#8b6010'; ctx.fillRect(Math.round(x+4),Math.round(y+12),e.w-8,e.h-14);
+    ctx.fillStyle='#c8a040'; ctx.fillRect(Math.round(x+8),Math.round(y+4),e.w-16,16);
+    // Giant pincers
+    ctx.fillStyle='#6b4808'; ctx.fillRect(Math.round(x-16),Math.round(y+4),18,10); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+4),18,10);
+    ctx.fillRect(Math.round(x-18),Math.round(y),8,8); ctx.fillRect(Math.round(x+e.w+10),Math.round(y),8,8); // claw tips
+    // Giant stinger
+    ctx.fillStyle='#cc2200'; ctx.fillRect(Math.round(x+e.w/2-4),Math.round(y-14),8,16);
+    ctx.fillRect(Math.round(x+e.w/2-2),Math.round(y-20),5,8);
+    ctx.fillStyle='#ff4400'; ctx.fillRect(Math.round(x+12),Math.round(y+5),6,6); ctx.fillRect(Math.round(x+e.w-18),Math.round(y+5),6,6);
+    // Many legs
+    for(let li=0;li<4;li++){const la=Math.sin(frame*0.3+li+e.x)*5;ctx.fillStyle='#8b6010';ctx.fillRect(Math.round(x+4+li*14),Math.round(y+e.h-4+la),4,14);ctx.fillRect(Math.round(x+4+li*14),Math.round(y+e.h-4-la),4,14);}
+  }
+  // ── Tundra: Glacier Giant ────────────────────────────────────────
+  else if (e.type === 'boss_glacier') {
+    ctx.fillStyle='#4060a0'; ctx.fillRect(Math.round(x+4),Math.round(y+28),e.w-8,e.h-30); // legs
+    ctx.fillStyle='#6080c0'; ctx.fillRect(Math.round(x+2),Math.round(y+12),e.w-4,22); // torso
+    ctx.fillStyle='#80a0d8'; ctx.fillRect(Math.round(x+8),Math.round(y),e.w-16,16); // head
+    // Ice horns
+    ctx.fillStyle='#c0e8ff'; ctx.fillRect(Math.round(x+10),Math.round(y-10),6,12); ctx.fillRect(Math.round(x+e.w-16),Math.round(y-10),6,12);
+    // Eyes
+    ctx.fillStyle='#00ccff'; ctx.fillRect(Math.round(x+12),Math.round(y+3),7,7); ctx.fillRect(Math.round(x+e.w-19),Math.round(y+3),7,7);
+    ctx.fillStyle='#003366'; ctx.fillRect(Math.round(x+14),Math.round(y+5),4,4); ctx.fillRect(Math.round(x+e.w-17),Math.round(y+5),4,4);
+    // Massive arms
+    const ga=Math.sin(frame*0.08)*5;
+    ctx.fillStyle='#5070b0'; ctx.fillRect(Math.round(x-14),Math.round(y+14+ga),16,24); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+14-ga),16,24);
+    // Ice crystals on body
+    ctx.fillStyle='#c0e8ff'; ctx.fillRect(Math.round(x+6),Math.round(y+16),4,8); ctx.fillRect(Math.round(x+e.w-10),Math.round(y+20),4,8);
+  }
+  // ── Volcano: Inferno Drake ───────────────────────────────────────
+  else if (e.type === 'boss_drake') {
+    ctx.fillStyle='#5a0800'; ctx.fillRect(Math.round(x+4),Math.round(y+16),e.w-8,e.h-18); // body
+    ctx.fillStyle='#8b1000'; ctx.fillRect(Math.round(x+6),Math.round(y+6),e.w-12,16); // chest
+    ctx.fillStyle='#aa1800'; ctx.fillRect(Math.round(x+10),Math.round(y),e.w-20,12); // head/snout
+    // Wings
+    ctx.fillStyle='#3a0500'; ctx.fillRect(Math.round(x-20),Math.round(y+8),22,20); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+8),22,20);
+    // Flame crest
+    const df=Math.sin(frame*0.2+e.x)*3;
+    ctx.fillStyle='#ff6600'; ctx.fillRect(Math.round(x+10),Math.round(y-8+df),6,10); ctx.fillRect(Math.round(x+22),Math.round(y-12+df),6,14); ctx.fillRect(Math.round(x+34),Math.round(y-8-df),6,10);
+    // Eyes
+    ctx.fillStyle='#ffaa00'; ctx.fillRect(Math.round(x+12),Math.round(y+2),6,6); ctx.fillRect(Math.round(x+e.w-18),Math.round(y+2),6,6);
+    ctx.fillStyle='#ff0000'; ctx.fillRect(Math.round(x+14),Math.round(y+4),3,3); ctx.fillRect(Math.round(x+e.w-16),Math.round(y+4),3,3);
+    // Fire breath particles (periodic)
+    if (frame%20 < 10) { ctx.fillStyle='rgba(255,100,0,0.6)'; ctx.fillRect(Math.round(x+e.w+4),Math.round(y+6),20+frame%10,8); }
+  }
+  // ── Void: Void Lord ──────────────────────────────────────────────
+  else if (e.type === 'boss_voidlord') {
+    const va = e.invincible ? 0.25 + 0.2*Math.sin(frame*0.5) : 0.8+0.15*Math.sin(frame*0.1+e.y);
+    ctx.save(); ctx.globalAlpha=va;
+    ctx.fillStyle='#1a0030'; ctx.fillRect(Math.round(x+4),Math.round(y+16),e.w-8,e.h-18);
+    ctx.fillStyle='#2a0050'; ctx.fillRect(Math.round(x+6),Math.round(y+6),e.w-12,16);
+    ctx.fillStyle='#3a0070'; ctx.fillRect(Math.round(x+8),Math.round(y),e.w-16,12);
+    // Crown of void energy
+    ctx.globalAlpha=1; ctx.fillStyle='#9900ff';
+    for(let vi=0;vi<5;vi++){const vp=Math.sin(frame*0.15+vi)*3;ctx.fillRect(Math.round(x+8+vi*10),Math.round(y-8+vp),5,10);}
+    // Eyes — massive glowing
+    ctx.shadowColor='#cc00ff'; ctx.shadowBlur=16;
+    ctx.fillStyle='#ff00ff'; ctx.fillRect(Math.round(x+10),Math.round(y+2),10,10); ctx.fillRect(Math.round(x+e.w-20),Math.round(y+2),10,10);
+    ctx.shadowBlur=0;
+    ctx.restore();
+    // Void wisps orbiting
+    ctx.save(); ctx.globalAlpha=0.7;
+    for(let wi=0;wi<3;wi++){
+      const wangle=frame*0.03+wi*(Math.PI*2/3);
+      const wx2=x+e.w/2+Math.cos(wangle)*40, wy2=y+e.h/2+Math.sin(wangle)*40;
+      ctx.fillStyle='#8800ff'; ctx.beginPath(); ctx.arc(Math.round(wx2),Math.round(wy2),6,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+    if (e.invincible) { ctx.fillStyle='rgba(150,0,255,0.1)'; ctx.fillRect(Math.round(x-4),Math.round(y-4),e.w+8,e.h+8); }
+  }
+}
+// =====================================================================
+
 function drawEnemy(e) {
   const s = worldToScreen(e.x, e.y);
   if (s.x > canvas.width+40 || s.x < -40 || s.y > canvas.height+40 || s.y < -40) return;
   const {x, y} = s;
-  drawEnemyByType(e, x, y);
+  if (e.isBoss) { drawBoss(e, x, y); } else { drawEnemyByType(e, x, y); }
   // Health bar
   const hpColor = {runner:'#e74c3c',crawler:'#2ecc71',slimeling:'#22cc22',scorpling:'#d4b020',yeti:'#88ccff',ember:'#ff6600',wraith:'#cc44ff'}[e.type]||'#fff';
-  drawPixelRect(x, y-8, e.w, 4, '#333');
-  drawPixelRect(x, y-8, Math.round(e.w * e.hp / e.maxHp), 4, hpColor);
+  if (e.isBoss) {
+    drawPixelRect(x, y-14, e.w, 8, '#111');
+    drawPixelRect(x, y-14, Math.round(e.w * e.hp / e.maxHp), 8, e.phase===2?'#ff2200':'#cc0044');
+    ctx.fillStyle='#fff'; ctx.font='bold 9px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText((e.label||'BOSS')+' '+e.hp+'/'+e.maxHp, Math.round(x+e.w/2), Math.round(y-10));
+  } else {
+    drawPixelRect(x, y-8, e.w, 4, '#333');
+    drawPixelRect(x, y-8, Math.round(e.w * e.hp / e.maxHp), 4, hpColor);
+  }
 }
 
 function drawBullet(b) {
@@ -983,6 +1210,20 @@ function drawHUD() {
   ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(canvas.width/2-60, 10, 120, 22);
   ctx.fillStyle='#ffd700'; ctx.font='bold 12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(biomeLabel, canvas.width/2, 21);
+  // Boss warning
+  if (bossWarningTimer > 0 && bossWarningTimer % 12 < 6) {
+    ctx.fillStyle='rgba(255,0,0,0.8)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#fff'; ctx.font='bold 28px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⚠️ BOSS INCOMING ⚠️', canvas.width/2, canvas.height/2);
+  }
+  // Boss timer progress (when in biome, not boss active)
+  if (!bossActive && biomeTimer > 0 && lastBiome !== 'forest') {
+    const pct = biomeTimer/3600;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(canvas.width-134, canvas.height-28, 124, 18);
+    ctx.fillStyle='#ff4400'; ctx.fillRect(canvas.width-132, canvas.height-26, Math.round(120*pct), 14);
+    ctx.fillStyle='#fff'; ctx.font='10px monospace'; ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText('BOSS: '+Math.floor(pct*100)+'%', canvas.width-14, canvas.height-19);
+  }
   const ps = worldToScreen(player.x + player.w/2, player.y);
   const gap = 22, noteR = 10;
   const totalW = player.notes.length * gap;
