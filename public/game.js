@@ -143,7 +143,7 @@ function shoot(tx, ty) {
     const sy = nx * Math.sin(spread) + ny * Math.cos(spread);
     bullets.push({ x: player.x+player.w/2, y: player.y+player.h/2,
       vx: sx * gun.speed, vy: sy * gun.speed,
-      life: 60 + totalLevel('range')*15,
+      life: (gun.life || 60) + totalLevel('range')*10,
       dmg: gun.dmg, color: gun.color, size: gun.bulletSize });
   }
 }
