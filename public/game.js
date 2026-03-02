@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v5.4-debug';
+const VERSION = 'v5.5-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -1531,6 +1531,26 @@ function drawHUD() {
   ctx.fillStyle='#fbbf24'; ctx.font='bold 14px monospace'; ctx.textAlign='right';
   ctx.fillText('Coins: '+player.coins, canvas.width-14, 23);
 
+  // ── Current Upgrades box (bottom-left) ──────────────────────────
+  const activeUps = ALL_UPGRADES.filter(u => u.level > 0);
+  const equippedAb = equippedAbility ? ALL_UPGRADES.find(u => u.id === equippedAbility) : null;
+  const boxLines = activeUps.map(u => u.label + ' Lv' + u.level);
+  if (equippedAb) boxLines.unshift('⚡ ' + equippedAb.label + ' Lv' + equippedAb.level);
+  if (boxLines.length > 0) {
+    const lineH = 14, pad = 6;
+    const bw = 170, bh = pad*2 + boxLines.length * lineH;
+    const bx = 10, by = canvas.height - bh - 10;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText('UPGRADES', bx+pad, by+pad);
+    boxLines.forEach((line, i) => {
+      const isAbility = i === 0 && equippedAb;
+      ctx.fillStyle = isAbility ? '#22c55e' : '#d4d4d4';
+      ctx.font = '10px monospace';
+      ctx.fillText(line, bx+pad, by+pad + 12 + i*lineH);
+    });
+  }
   const biomeNow = getBiomeAtPixel(player.x, player.y);
   const biomeLabel = {forest:'🌿 Forest',swamp:'🌊 Swamp',desert:'🏜️ Desert',tundra:'❄️ Tundra',crystal:'💎 Crystal',storm:'🌪️ Storm',volcano:'🌋 Volcano',mushroom:'🍄 Mushroom',shadow:'🌑 Shadow',void:'💀 Void'}[biomeNow]||biomeNow;
   ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(canvas.width/2-60, 10, 120, 22);
