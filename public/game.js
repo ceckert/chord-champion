@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v2.8-debug';
+const VERSION = 'v2.9-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -120,6 +120,33 @@ const keys = {};
 let mouseX = 0, mouseY = 0;
 let mouseDown = false;
 
+window.addEventListener('keydown', e => {
+  if (['Escape','Backspace'].includes(e.key) && gameState !== 'playing') e.preventDefault();
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === 'Escape') {
+    if (gameState === 'playing') { gameState = 'paused'; document.getElementById('pause-overlay').style.display = 'flex'; }
+    else if (gameState === 'paused') { uiResume(); }
+    else { uiShow('scr-main'); }
+  }
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+window.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  mouseX = (e.clientX - rect.left) * scaleX;
+  mouseY = (e.clientY - rect.top) * scaleY;
+});
+canvas.addEventListener('mousedown', e => {
+  if (gameState !== 'playing') return;
+  mouseDown = true;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  shoot((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
+});
+window.addEventListener('mouseup', () => { mouseDown = false; });
+canvas.addEventListener('contextmenu', e => { e.preventDefault(); if (gameState === 'playing') forgeChord(); });
 
 // HTML UI — global functions called by inline onclick handlers
 function uiShow(screenId) {
