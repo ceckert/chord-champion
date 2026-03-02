@@ -127,24 +127,32 @@ function drawCharBody(cx, charName, frame) {
     cx.fillStyle='#292524'; cx.beginPath(); cx.arc(0,-18,8,Math.PI,0); cx.fill();
     cx.fillRect(-8,-20,16,4);
   } else {
-    // Max — golden retriever dog
-    // Body
-    cx.fillStyle='#d97706'; cx.fillRect(-10,-4,20,18); // tan body
-    cx.fillStyle='#b45309'; cx.fillRect(-10,-4,20,4);  // darker back
-    // Legs (4 stubby)
-    cx.fillStyle='#d97706'; cx.fillRect(-12,13,6,6); cx.fillRect(6,13,6,6); // back legs
-    cx.fillRect(-10,-2,5,4); cx.fillRect(5,-2,5,4);    // front legs (sides)
-    // Tail (top right)
-    cx.fillStyle='#f59e0b';
-    cx.save(); cx.translate(10,-2); cx.rotate(-0.6);
-    cx.fillRect(0,-2,4,10); cx.restore();
-    // Head
-    cx.fillStyle='#f59e0b'; cx.beginPath(); cx.arc(0,-13,10,0,Math.PI*2); cx.fill();
+    // Max — goldendoodle: cream/fluffy, curly poofy fur
+    // Body — fluffy/round, cream colored
+    cx.fillStyle='#fde68a'; cx.fillRect(-11,-4,22,18);
+    // Fluffy bumps on body (curly fur texture)
+    cx.fillStyle='#fef3c7';
+    for (let bx=-10; bx<=8; bx+=5) {
+      for (let by=-3; by<=12; by+=5) {
+        cx.beginPath(); cx.arc(bx,by,3,0,Math.PI*2); cx.fill();
+      }
+    }
+    // Stubby legs
+    cx.fillStyle='#fde68a'; cx.fillRect(-12,13,6,7); cx.fillRect(6,13,6,7);
+    // Curly tail (big poof)
+    cx.fillStyle='#fef3c7'; cx.beginPath(); cx.arc(12,-2,5,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(12,-2,3,0,Math.PI*2); cx.fill();
+    // Big fluffy round head
+    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(0,-14,11,0,Math.PI*2); cx.fill();
+    // Poofy fur on head
+    cx.fillStyle='#fef3c7';
+    [-8,-4,0,4,8].forEach(bx => { cx.beginPath(); cx.arc(bx,-21,4,0,Math.PI*2); cx.fill(); });
+    // Floppy fluffy ears
+    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(-12,-13,6,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(12,-13,6,0,Math.PI*2); cx.fill();
     // Snout
-    cx.fillStyle='#fbbf24'; cx.fillRect(-5,-12,10,8);
-    cx.fillStyle='#1c1917'; cx.beginPath(); cx.ellipse(0,-8,4,3,0,0,Math.PI*2); cx.fill(); // nose
-    // Floppy ears
-    cx.fillStyle='#b45309'; cx.fillRect(-13,-17,6,12); cx.fillRect(7,-17,6,12);
+    cx.fillStyle='#fef9c3'; cx.fillRect(-5,-12,10,8);
+    cx.fillStyle='#1c1917'; cx.beginPath(); cx.ellipse(0,-8,4,3,0,0,Math.PI*2); cx.fill();
     // Tongue
     cx.fillStyle='#f87171'; cx.beginPath(); cx.ellipse(0,-4,3,4,0,0,Math.PI*2); cx.fill();
   }
