@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v2.5-debug';
+const VERSION = 'v2.6-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -692,9 +692,11 @@ function drawDirectionArrowWorld() {
 }
 
 function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Always fill canvas so semi-transparent overlay has something to show over
+  ctx.fillStyle = '#1a0a2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (gameState !== 'playing' && gameState !== 'paused') return;
-  // Fill game background (dark forest green)
+  // Overwrite with game background when playing
   ctx.fillStyle = '#1a2e1a';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   drawMap();
