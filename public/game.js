@@ -557,9 +557,10 @@ function uiUpgrades() {
 }
 
 function uiTab(tabName, btnEl) {
-  ['gun','ability','stats'].forEach(t => {
-    document.getElementById('tab-' + t).className = 'tab-pane' + (t === tabName ? ' active' : '');
-    document.getElementById('tab-' + t).style.display = t === tabName ? 'flex' : 'none';
+  ['gun','ability','stats','gun-select'].forEach(t => {
+    const el = document.getElementById('tab-' + t); if (!el) return;
+    el.className = 'tab-pane' + (t === tabName ? ' active' : '');
+    el.style.display = t === tabName ? 'flex' : 'none';
   });
   btnEl.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btnEl.classList.add('active');
