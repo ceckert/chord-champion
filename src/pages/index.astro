@@ -1,0 +1,59 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Hero from '../components/Hero.astro';
+import ServiceCard from '../components/ServiceCard.astro';
+import TestimonialCard from '../components/TestimonialCard.astro';
+import siteData from '../data/site.json';
+---
+<Layout>
+  <Hero
+    image={siteData.theme?.heroImage}
+    headline={siteData.businessName}
+    subheadline={siteData.tagline}
+    ctaText="Contact Us"
+    ctaLink="/contact"
+  />
+
+  <!-- Services Overview -->
+  <section class="py-20 px-4 bg-gray-50">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">Our Services</h2>
+        <p class="text-gray-600 max-w-2xl mx-auto">{siteData.description}</p>
+      </div>
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {siteData.services.map(service => (
+          <ServiceCard {...service} />
+        ))}
+      </div>
+      <div class="text-center mt-8">
+        <a href="/services" class="btn-secondary">View All Services</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  {siteData.testimonials && siteData.testimonials.length > 0 && (
+    <section class="py-20 px-4">
+      <div class="max-w-7xl mx-auto">
+        <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">What Our Clients Say</h2>
+        <div class="grid md:grid-cols-3 gap-6">
+          {siteData.testimonials.map(t => (
+            <TestimonialCard {...t} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- CTA -->
+  <section class="py-20 px-4 text-center text-white" style="background-color: rgb(var(--color-primary))">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-3xl md:text-4xl font-bold mb-4">Ready to Get Started?</h2>
+      <p class="text-lg mb-8 opacity-90">Contact us today for a free consultation.</p>
+      <a href="/contact" class="inline-block px-8 py-4 bg-white font-semibold rounded-lg hover:bg-gray-100 transition" style="color: rgb(var(--color-primary))">
+        Get in Touch
+      </a>
+    </div>
+  </section>
+</Layout>

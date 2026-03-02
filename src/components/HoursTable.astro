@@ -1,0 +1,16 @@
+---
+import siteData from '../data/site.json';
+const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+---
+<div class="space-y-2">
+  {days.map(day => {
+    const h = (siteData.hours as any)[day];
+    const isToday = new Date().toLocaleDateString('en-US', { weekday: 'long' }) === day;
+    return (
+      <div class={`flex justify-between py-2 px-3 rounded ${isToday ? 'bg-gray-100 font-semibold' : ''}`}>
+        <span>{day}</span>
+        <span class={h === 'closed' ? 'text-red-500' : ''}>{h === 'closed' ? 'Closed' : `${h.open} – ${h.close}`}</span>
+      </div>
+    );
+  })}
+</div>

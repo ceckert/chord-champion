@@ -1,0 +1,132 @@
+---
+// Piano Boss Game
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Piano Boss - The Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a0a2e; margin: 0; overflow: hidden; }
+    canvas { display: block; image-rendering: pixelated; cursor: crosshair; position: fixed; top: 0; left: 0; }
+    #ui-overlay {
+      position: fixed; inset: 0;
+      display: flex; justify-content: center; align-items: center;
+      z-index: 100;
+      background: rgba(0,0,0,0.6);
+    }
+    #ui-overlay[hidden] { display: none; }
+    #pause-overlay {
+      position: fixed; inset: 0;
+      display: flex; justify-content: center; align-items: center;
+      z-index: 200;
+      background: rgba(0,0,0,0.75);
+    }
+    #pause-overlay[hidden] { display: none; }
+    .panel {
+      background: #0a0428;
+      border: 2px solid #7c3aed;
+      border-radius: 8px;
+      padding: 28px 36px;
+      min-width: 320px;
+      max-width: 820px;
+      width: 92vw;
+      max-height: 92vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    h2 { color: #fbbf24; font-family: monospace; font-size: 26px; text-align: center; margin-bottom: 6px; }
+    .subtitle { color: #a78bfa; font-family: monospace; font-size: 14px; margin-bottom: 8px; text-align: center; }
+    .coins { color: #22c55e; font-family: monospace; font-size: 16px; font-weight: bold; margin-bottom: 6px; }
+    button.mbtn {
+      width: 260px; padding: 12px 0;
+      background: #2d1b69; border: 2px solid #a78bfa; border-radius: 4px;
+      color: #f9fafb; font-family: monospace; font-size: 16px; font-weight: bold;
+      cursor: pointer;
+    }
+    button.mbtn:hover { background: #7c3aed; border-color: #fbbf24; }
+    button.mbtn.back { background: #1e1b4b; border-color: #6b7280; margin-top: 14px; }
+    button.mbtn.back:hover { background: #374151; }
+    .upg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+    .upg-col-hdr { color: #a78bfa; font-family: monospace; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 2px; }
+    .upg-card { background: #0f0a2e; border: 1.5px solid #374151; border-radius: 4px; padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; }
+    .upg-card.can { border-color: #7c3aed; }
+    .upg-card.maxed { border-color: #22c55e; }
+    .upg-name { color: #f9fafb; font-family: monospace; font-size: 12px; font-weight: bold; }
+    .upg-desc { color: #9ca3af; font-family: monospace; font-size: 11px; }
+    .upg-dots { display: flex; gap: 3px; margin-top: 2px; }
+    .upg-dot { width: 10px; height: 8px; background: #374151; border-radius: 1px; }
+    .upg-dot.on { background: #22c55e; }
+    button.buy-btn { margin-top: 5px; padding: 5px 0; background: #1e1b4b; border: 1.5px solid #fbbf24; border-radius: 3px; color: #fbbf24; font-family: monospace; font-size: 11px; font-weight: bold; cursor: pointer; }
+    button.buy-btn:hover { background: #7c3aed; }
+    button.buy-btn:disabled { border-color: #4b5563; color: #6b7280; background: #111827; cursor: not-allowed; }
+    .upg-max { color: #22c55e; font-family: monospace; font-size: 12px; font-weight: bold; text-align: center; margin-top: 5px; }
+    .txt { color: #e2e8f0; font-family: monospace; font-size: 13px; line-height: 1.8; width: 100%; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<div id="ui-overlay">
+  <div id="scr-main" class="panel" style="display:flex">
+    <h2>PIANO BOSS</h2>
+    <div class="subtitle">Collect notes. Forge chords. Fight music.</div>
+    <button class="mbtn" onclick="uiPlay()">PLAY</button>
+    <button class="mbtn" onclick="uiUpgrades()">UPGRADES</button>
+    <button class="mbtn" onclick="uiShow('scr-levelplan')">LEVEL PLAN</button>
+    <button class="mbtn" onclick="uiShow('scr-howtoplay')">HOW TO PLAY</button>
+  </div>
+  <div id="scr-upgrades" class="panel" style="display:none">
+    <h2>UPGRADES</h2>
+    <div class="coins" id="coins-display">Banked: 0</div>
+    <div class="upg-grid" id="upg-grid"></div>
+    <button class="mbtn back" onclick="uiShow('scr-main')">BACK</button>
+  </div>
+  <div id="scr-levelplan" class="panel" style="display:none">
+    <h2>LEVEL PLAN</h2>
+    <div class="txt">Stage 1:  Grass Plains       - Bass Brute
+Stage 2:  Desert Dunes       - Trumpet Tyrant
+Stage 3:  Frozen Tundra      - Drum Destroyer
+Stage 4:  Beach              - Violin Viper
+Stage 5:  Night Forest       - Sax Specter
+Stage 6:  Volcano            - Keyboard Killer
+Stage 7:  City Ruins         - Guitar Golem
+Stage 8:  Underworld         - Flute Phantom
+Stage 9:  Sky Kingdom        - Harp Hunter
+Stage 10: Music Meisters Lair - Music Meiser</div>
+    <button class="mbtn back" onclick="uiShow('scr-main')">BACK</button>
+  </div>
+  <div id="scr-howtoplay" class="panel" style="display:none">
+    <h2>HOW TO PLAY</h2>
+    <div class="txt">WASD - Move     Left Click - Shoot (hold to fire)
+Right Click - Forge chord from notes    ESC - Pause
+
+Collect notes on the map (max 12, one per pitch).
+Right-click to forge the best chord for coins.
+Wrong combo = ALL notes lost!
+
+2 notes: Major3rd/5th=Pistol  Minor3rd=Force  Tritone=Lightning
+3 notes: Major=Rifle  Minor=Shotgun  Dim=Grenade
+4 notes: Dom7th = Machine Gun
+
+Hit the glowing SAVE flag to bank coins for upgrades.</div>
+    <button class="mbtn back" onclick="uiShow('scr-main')">BACK</button>
+  </div>
+</div>
+
+<div id="pause-overlay" style="display:none">
+  <div class="panel" style="min-width:260px; gap:12px">
+    <h2>PAUSED</h2>
+    <button class="mbtn" onclick="uiResume()">RESUME</button>
+    <button class="mbtn back" onclick="uiQuit()">QUIT TO MENU</button>
+  </div>
+</div>
+
+<script is:inline src="/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+{
+  "businessName": "Julian Seasholtz \u2014 Piano Lessons",
+  "businessType": "music lessons",
+  "tagline": "Offering piano lessons in the Seattle area \u2014 $70/hour",
+  "description": "Private piano lessons with Julian Seasholtz, an experienced pianist with 12 years of piano and 7 years of viola. Available weekends in the Seattle area.",
+  "ownerName": "Julian Seasholtz",
+  "phone": "",
+  "email": "julian.seasholtz@gmail.com",
+  "address": {
+    "street": "",
+    "city": "Seattle",
+    "state": "WA",
+    "zip": ""
+  },
+  "hours": {
+    "Monday": "closed",
+    "Tuesday": "closed",
+    "Wednesday": "closed",
+    "Thursday": "closed",
+    "Friday": "closed",
+    "Saturday": {
+      "open": "10:00 AM",
+      "close": "6:00 PM"
+    },
+    "Sunday": {
+      "open": "10:00 AM",
+      "close": "6:00 PM"
+    }
+  },
+  "services": [
+    {
+      "name": "Private Piano Lessons",
+      "description": "One-on-one piano instruction for all skill levels \u2014 beginner to advanced. Classical, pop, or whatever you want to learn.",
+      "price": "$70/hour"
+    },
+    {
+      "name": "Beginner Piano",
+      "description": "Never touched a piano before? No problem. We start from scratch and make it fun.",
+      "price": "$70/hour"
+    },
+    {
+      "name": "Music Theory",
+      "description": "Understand the language of music. Great for students who want to go deeper.",
+      "price": "$70/hour"
+    }
+  ],
+  "testimonials": [],
+  "gallery": [],
+  "social": {},
+  "seo": {
+    "title": "Piano Lessons Seattle \u2014 Julian Seasholtz",
+    "description": "Private piano lessons in the Seattle area with Julian Seasholtz. $70/hour, weekends available. All skill levels welcome.",
+    "keywords": [
+      "piano lessons Seattle",
+      "private piano teacher Seattle",
+      "weekend piano lessons",
+      "piano lessons $70",
+      "Julian Seasholtz piano"
+    ]
+  },
+  "theme": {
+    "id": "bold-vibrant",
+    "heroImage": "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=1400&q=80",
+    "primaryColor": "#7c3aed",
+    "accentColor": "#fbbf24",
+    "textColor": "#f9fafb",
+    "bgColor": "#1e1b4b"
+  },
+  "nucrew": {
+    "customerId": "piano-lessons",
+    "poweredBy": true
+  }
+}

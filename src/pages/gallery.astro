@@ -1,0 +1,14 @@
+---
+import Layout from '../layouts/Layout.astro';
+import GalleryGrid from '../components/GalleryGrid.astro';
+import siteData from '../data/site.json';
+---
+<Layout title={`Gallery | ${siteData.businessName}`} description={`Photo gallery for ${siteData.businessName}`}>
+  <section class="py-20 px-4">
+    <div class="max-w-7xl mx-auto">
+      <h1 class="text-4xl md:text-5xl font-bold text-center mb-4">Gallery</h1>
+      <p class="text-gray-600 text-center mb-12 max-w-2xl mx-auto">Take a look at our work and workspace.</p>
+      <GalleryGrid images={siteData.gallery} />
+    </div>
+  </section>
+</Layout>

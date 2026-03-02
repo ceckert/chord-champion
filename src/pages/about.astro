@@ -1,0 +1,54 @@
+---
+import Layout from '../layouts/Layout.astro';
+import siteData from '../data/site.json';
+---
+<Layout title={`About | ${siteData.businessName}`} description={`Learn about ${siteData.businessName} and our team`}>
+  <!-- About Hero -->
+  <section class="py-20 px-4">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div>
+          <h1 class="text-4xl md:text-5xl font-bold mb-6">About {siteData.businessName}</h1>
+          <p class="text-gray-600 text-lg leading-relaxed mb-4">{siteData.description}</p>
+          {siteData.yearEstablished && (
+            <p class="text-gray-600 text-lg">Proudly serving our community since {siteData.yearEstablished}.</p>
+          )}
+        </div>
+        <div class="rounded-xl overflow-hidden shadow-lg">
+          <img src={siteData.gallery[0]?.url || siteData.theme?.heroImage} alt={`About ${siteData.businessName}`} class="w-full h-80 object-cover" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Owner Story -->
+  <section class="py-20 px-4 bg-gray-50">
+    <div class="max-w-4xl mx-auto text-center">
+      <h2 class="text-3xl md:text-4xl font-bold mb-6">Our Story</h2>
+      <p class="text-gray-600 text-lg leading-relaxed">
+        Founded by {siteData.ownerName} in {siteData.yearEstablished || 'our early years'}, {siteData.businessName} started with a simple mission: to provide exceptional service that our customers can rely on. Over the years, we've grown into a trusted partner for businesses and individuals alike, never losing sight of the personal touch that sets us apart.
+      </p>
+    </div>
+  </section>
+
+  <!-- Team -->
+  {siteData.team && siteData.team.length > 0 && (
+    <section class="py-20 px-4">
+      <div class="max-w-7xl mx-auto">
+        <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Meet Our Team</h2>
+        <div class="grid md:grid-cols-3 gap-8">
+          {siteData.team.map(member => (
+            <div class="text-center">
+              {member.image && (
+                <img src={member.image} alt={member.name} class="w-32 h-32 rounded-full mx-auto mb-4 object-cover shadow-md" loading="lazy" />
+              )}
+              <h3 class="text-xl font-bold">{member.name}</h3>
+              <p class="font-medium mb-2" style="color: rgb(var(--color-primary))">{member.role}</p>
+              {member.bio && <p class="text-gray-600 text-sm">{member.bio}</p>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+</Layout>
