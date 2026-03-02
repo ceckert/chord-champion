@@ -1426,7 +1426,7 @@ function drawPlayer(sx, sy) {
   // === GUN ARM (rotates from shoulder, model depends on selectedGunId) ===
   ctx.save();
   if (selectedCharacter === 'max') {
-    ctx.translate(10, 4); ctx.scale(0.55, 0.55); // gun from tail end
+    ctx.translate(10, 4); ctx.scale(0.78, 0.78); // gun from tail end
   } else {
     ctx.translate(9, -1);
   }
