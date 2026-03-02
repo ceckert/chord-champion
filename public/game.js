@@ -382,7 +382,7 @@ const BOSSES = {
   },
 };
 
-function spawnBoss(biome) {
+function spawnBoss(biome) { sfxBossSpawn();
   if (bossActive) return;
   const def = BOSSES[biome];
   if (!def) return;
@@ -565,7 +565,8 @@ function uiShow(screenId) {
 function uiPlay() {
   document.getElementById('ui-overlay').style.display = 'none';
   gameState = 'playing';
-  interiorCooldown = 180; // prevent spawning inside a structure
+  interiorCooldown = 180;
+  initAudio(); playBgMusic();
   // Pre-spawn starting enemies so world feels alive immediately
   initRivers();
   initLandmarks();
@@ -578,6 +579,7 @@ function awardBossLevel() {
   player.ep = player.epMax; // fills EP bar to trigger level up on next frame
 }
 function openLevelUp() {
+  sfxLevelUp();
   gameState = 'paused';
   // Pick 3 random upgrades (not maxed)
   function ownedCount(list) { return list.filter(u => (u.level+(player.bonusUpgrades[u.id]||0)) > 0).length; }
@@ -793,6 +795,7 @@ function forgeChord() {
     if (idx !== -1) { usedPitches.splice(idx, 1); return false; }
     return true;
   });
+  sfxChord(best.needed);
   showNotif(rootName + ' ' + best.def.name + '! +' + best.def.coins + ' MP', '#fbbf24', 140);
 }
 
@@ -862,6 +865,7 @@ function enterInterior(lm) {
     bullets: [],
     shootCooldown: 0,
   };
+  sfxStructureEnter();
   showNotif('📦 ' + theme.intro, '#fbbf24', 180);
 }
 
@@ -883,6 +887,7 @@ function updateInterior() {
   if (mouseDown && s.shootCooldown <= 0) {
     const gun = getSelectedGun();
     s.shootCooldown = gun.rate;
+    sfxShoot(selectedGunId);
     const dx = mouseX - s.px, dy = mouseY - s.py;
     const len = Math.sqrt(dx*dx+dy*dy)||1;
     s.bullets.push({ x:s.px, y:s.py, vx:dx/len*12, vy:dy/len*12, life:60, dmg:gun.dmg });
@@ -893,7 +898,7 @@ function updateInterior() {
     s.enemies.forEach((e,ei) => {
       if (Math.abs(b.x-e.x)<e.w&&Math.abs(b.y-e.y)<e.h) {
         e.hp -= b.dmg; s.bullets.splice(i,1);
-        if (e.hp<=0) { s.enemies.splice(ei,1); showNotif('+5 MP!','#22c55e',60); savedCoins+=5; }
+        if (e.hp<=0) { sfxEnemyDie(); s.enemies.splice(ei,1); showNotif('+5 MP!','#22c55e',60); savedCoins+=5; }
       }
     });
   });
@@ -1006,7 +1011,7 @@ function updateInterior() {
         b.hp -= bl.dmg; b.invincible = 8; s.bullets.splice(bi,1);
         if (b.hp <= 0) {
           s.bossDefeated = true;
-          awardBossLevel(); showNotif('🏆 ' + b.label + ' defeated! +1 LEVEL!','#fbbf24',240);
+          sfxBossDie(); awardBossLevel(); showNotif('🏆 ' + b.label + ' defeated! +1 LEVEL!','#fbbf24',240);
           // Trigger level-up immediately inside interior
           if (player.ep >= player.epMax) {
             player.ep = 0;
@@ -1431,7 +1436,7 @@ function update() {
 
         if (e.hp <= 0) {
           enemies.splice(j, 1);
-          if (e.isBoss) { bossActive = false; awardBossLevel(); showNotif('🏆 Boss defeated! +1 LEVEL!', '#fbbf24', 240); }
+          if (e.isBoss) { bossActive = false; sfxBossDie(); awardBossLevel(); showNotif('🏆 Boss defeated! +1 LEVEL!', '#fbbf24', 240); }
           const epGain = {crawler:10,runner:8,slimeling:14,bogcrawler:18,scorpling:12,dunestalker:14,yeti:28,frostimp:12,crystalgolem:25,gemsprite:12,windelemental:16,stormhawk:14,ember:14,magmacrab:22,sporepuff:15,myceliumcreep:14,wraith:20,voidshade:20,boss_treant:200,boss_bogqueen:180,boss_sandking:190,boss_glacier:220,boss_drake:175,boss_voidlord:200}[e.type]||10;
           player.ep += epGain;
           if (player.ep >= player.epMax) {
@@ -1608,7 +1613,7 @@ function update() {
         if (Math.sqrt(dx*dx+dy*dy) < ex.maxR) {
           e.hp -= ex.dmg;
           e.burnFlash = 12;
-          if (e.hp <= 0) { player.ep += 5; enemies.splice(ei, 1); }
+          if (e.hp <= 0) { player.ep += 5; sfxEnemyDie(); enemies.splice(ei, 1); }
         }
       }
     }
@@ -1617,7 +1622,7 @@ function update() {
   }
   if (mapNotes.length < 1000 && frame % 15 === 0) spawnMapNote();
   if (player.shootCooldown > 0) player.shootCooldown--;
-  if (mouseDown && gameState === 'playing') shoot(mouseX, mouseY);
+  if (mouseDown && gameState === 'playing') { shoot(mouseX, mouseY); }
 
   // Checkpoint detection
 
@@ -3084,6 +3089,122 @@ function shiftColor(hex, shift) {
   return `rgb(${clamp(r)},${clamp(g)},${clamp(b)})`;
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 🎵 AUDIO ENGINE — Web Audio API, procedurally generated (no external files)
+// ══════════════════════════════════════════════════════════════════════════════
+let audioCtx = null, masterGain = null, musicGain = null, sfxGain = null;
+let bgMusicTimer = null, bgNoteIdx = 0;
+
+// Korobeiniki (Tetris A) melody: [freq_hz, duration_ms] — 0 = rest
+const BG_MELODY = [
+  [659,400],[494,200],[523,200],[587,400],[523,200],[494,200],
+  [440,400],[440,200],[523,200],[659,400],[587,200],[523,200],
+  [494,400],[494,200],[523,200],[587,400],[659,400],
+  [523,400],[440,400],[440,800],
+  [587,400],[698,200],[880,400],[784,200],[698,200],
+  [659,600],[523,200],[659,400],[587,200],[523,200],
+  [494,400],[494,200],[523,200],[587,400],[659,400],
+  [523,400],[440,400],[440,800],
+];
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain(); masterGain.gain.value = 0.55;
+  musicGain  = audioCtx.createGain(); musicGain.gain.value  = 0.28;
+  sfxGain    = audioCtx.createGain(); sfxGain.gain.value    = 0.72;
+  musicGain.connect(masterGain); sfxGain.connect(masterGain);
+  masterGain.connect(audioCtx.destination);
+}
+
+function _osc(freq, type, start, dur, vol, dest, freqEnd) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const g   = audioCtx.createGain();
+  osc.type = type; osc.frequency.value = freq;
+  if (freqEnd !== undefined) osc.frequency.linearRampToValueAtTime(freqEnd, start + dur);
+  g.gain.setValueAtTime(vol, start);
+  g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+  osc.connect(g); g.connect(dest || sfxGain);
+  osc.start(start); osc.stop(start + dur);
+}
+
+function playBgMusic() {
+  if (!audioCtx) return;
+  clearTimeout(bgMusicTimer);
+  const [freq, dur] = BG_MELODY[bgNoteIdx % BG_MELODY.length];
+  bgNoteIdx++;
+  if (freq > 0) {
+    _osc(freq,     'square',   audioCtx.currentTime, dur/1000*0.85, 0.4, musicGain);
+    _osc(freq/2,   'square',   audioCtx.currentTime, dur/1000*0.85, 0.15, musicGain);
+    _osc(freq*1.5, 'triangle', audioCtx.currentTime, dur/1000*0.6,  0.08, musicGain);
+  }
+  bgMusicTimer = setTimeout(playBgMusic, dur * 0.92);
+}
+
+function stopBgMusic() { clearTimeout(bgMusicTimer); bgNoteIdx = 0; }
+
+// ── SFX ───────────────────────────────────────────────────────────────────────
+function sfxShoot(gunId) {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  if (gunId === 'pistol')     { _osc(520, 'square',   t, 0.08, 0.5, sfxGain, 180); }
+  else if (gunId === 'rifle') { _osc(900, 'sawtooth', t, 0.06, 0.4, sfxGain, 350); }
+  else if (gunId === 'shotgun') {
+    _osc(120, 'sawtooth', t, 0.14, 0.7, sfxGain, 40);
+    _osc(80,  'square',   t, 0.14, 0.4, sfxGain, 30);
+  }
+  else { _osc(440, 'square', t, 0.04, 0.35, sfxGain, 280); } // machinegun
+}
+
+function sfxEnemyDie() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  _osc(440, 'square', t,      0.06, 0.5, sfxGain, 200);
+  _osc(200, 'square', t+0.06, 0.10, 0.4, sfxGain, 60);
+}
+
+function sfxBossDie() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  for (let i=0;i<5;i++) { _osc(300-i*40,'square',t+i*0.09,0.12,0.6-i*0.08,sfxGain,80-i*10); }
+  _osc(80,'square',t+0.45,0.5,0.4,sfxGain,20);
+}
+
+function sfxBossSpawn() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  _osc(80, 'sawtooth', t,      0.3, 0.4, sfxGain, 220);
+  _osc(160,'square',   t+0.25, 0.2, 0.35, sfxGain, 320);
+  _osc(320,'triangle', t+0.42, 0.2, 0.3, sfxGain, 480);
+}
+
+function sfxChord(noteNumbers) {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const BASE = 261.63; // C4
+  noteNumbers.forEach((n, i) => {
+    const freq = BASE * Math.pow(2, n/12);
+    _osc(freq,     'square',   t+i*0.03, 0.5, 0.3, sfxGain);
+    _osc(freq*2,   'triangle', t+i*0.03, 0.35, 0.1, sfxGain);
+  });
+  // satisfying little ding at end
+  _osc(1047, 'triangle', t+0.18, 0.25, 0.2, sfxGain);
+}
+
+function sfxStructureEnter() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  [262,330,392,523].forEach((f,i) => _osc(f,'square',t+i*0.07,0.12,0.35,sfxGain));
+}
+
+function sfxLevelUp() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  [262,330,392,523,659,784].forEach((f,i) => _osc(f,'square',t+i*0.08,0.18,0.4,sfxGain));
+}
+// ══════════════════════════════════════════════════════════════════════════════
 function loop() { update(); render(); requestAnimationFrame(loop); }
 window.addEventListener('resize', () => { CW = window.innerWidth; CH = window.innerHeight; });
 loop();
