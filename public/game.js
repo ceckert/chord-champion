@@ -2383,6 +2383,7 @@ function render() {
   ctx.fillStyle = '#1a2e1a';
   ctx.fillRect(0, 0, CW, CH);
   drawMap();
+  drawRivers();
   drawLandmarks();
   for (const n of mapNotes) drawMapNote(n);
   for (const b of bullets) drawBullet(b);
@@ -2520,74 +2521,83 @@ function initRivers() {
     [{b:'volcano',col:0,row:2},{b:'mushroom',col:1,row:2},{b:'shadow',col:2,row:2}]
   ];
   const rng = (seed) => { let s=seed+1; return ()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; }; };
+  const RIVER_RADIUS = 2; // tile radius around path centre
+  const BRIDGE_LEN   = 8; // tiles long bridge crossing
+  const NUM_BRIDGES  = 4; // per river
 
   BIOME_CELLS.forEach(rowArr => rowArr.forEach(({b, col, row}) => {
     const rand = rng(col*999+row*333+b.charCodeAt(0)*7);
-    const bx0 = VOID_BORDER + col*CELL; // tile coord start of biome cell
+    const bx0 = VOID_BORDER + col*CELL;
     const by0 = VOID_BORDER + row*CELL;
-    const RIVER_W = 3; // tiles wide
-    const BRIDGE_W = 5; // tiles wide bridge gap
-    const BRIDGE_MARGIN = 12;
-
-    // Generate 1-2 rivers per biome (alternating h/v so they don't always align)
     const numRivers = 1 + Math.floor(rand()*2);
+
     for (let ri = 0; ri < numRivers; ri++) {
       const axis = (col + row + ri) % 2 === 0 ? 'h' : 'v';
-      let coord, rangeStart, rangeEnd;
-      if (axis === 'h') {
-        // Horizontal river: fixed ty row, avoid edges
-        coord = by0 + 20 + Math.floor(rand()*(CELL-40));
-        rangeStart = bx0 + 4;
-        rangeEnd   = bx0 + CELL - 4;
-      } else {
-        // Vertical river: fixed tx col
-        coord = bx0 + 20 + Math.floor(rand()*(CELL-40));
-        rangeStart = by0 + 4;
-        rangeEnd   = by0 + CELL - 4;
+      // Generate winding path as array of {tx,ty} tile coords
+      const STEPS = 50;
+      const amplitude = 10 + rand()*14; // tiles of lateral swing
+      const frequency = 1.5 + rand()*2; // sine cycles across the river
+      const phaseShift = rand()*Math.PI*2;
+      const margin = 12;
+      // Path goes from one side of biome to the other
+      const pathTiles = [];
+      for (let si = 0; si <= STEPS; si++) {
+        const t = si / STEPS;
+        let cx2, cy2;
+        if (axis === 'h') {
+          cx2 = bx0 + margin + Math.round(t*(CELL-margin*2));
+          const mid = by0 + Math.round(CELL/2 + (rand()-0.5)*CELL*0.3);
+          cy2 = Math.round(mid + amplitude*Math.sin(t*Math.PI*frequency + phaseShift));
+        } else {
+          cy2 = by0 + margin + Math.round(t*(CELL-margin*2));
+          const mid = bx0 + Math.round(CELL/2 + (rand()-0.5)*CELL*0.3);
+          cx2 = Math.round(mid + amplitude*Math.sin(t*Math.PI*frequency + phaseShift));
+        }
+        cx2 = Math.max(VOID_BORDER+2, Math.min(MAP_W-VOID_BORDER-3, cx2));
+        cy2 = Math.max(VOID_BORDER+2, Math.min(MAP_H-VOID_BORDER-3, cy2));
+        pathTiles.push({tx:cx2, ty:cy2});
       }
-      const span = rangeEnd - rangeStart;
 
-      // 4-5 bridges per river
-      const numBridges = 4 + Math.floor(rand());
-      const bridges = [];
-      for (let bi = 0; bi < numBridges; bi++) {
-        const t = Math.floor(rangeStart + BRIDGE_MARGIN + rand()*(span - BRIDGE_MARGIN*2));
-        bridges.push(t);
-      }
-
-      // Write water tiles into map (tile value 2), then carve bridge gaps
-      for (let rw = 0; rw < RIVER_W; rw++) {
-        for (let t = rangeStart; t < rangeEnd; t++) {
-          let tx, ty;
-          if (axis === 'h') { tx = t; ty = coord + rw; }
-          else              { tx = coord + rw; ty = t; }
-          if (tx < 0||ty < 0||tx >= MAP_W||ty >= MAP_H) continue;
-          // Check if this position is a bridge gap
-          const onBridge = bridges.some(bt => t >= bt && t < bt + BRIDGE_W);
-          map[ty][tx] = onBridge ? TILE_BRIDGE : TILE_WATER;
+      // Place bridge segments at even intervals along path
+      const bridgeSegments = []; // set of tile indices (along path) that are bridges
+      for (let bi = 0; bi < NUM_BRIDGES; bi++) {
+        const centre = Math.floor(STEPS*0.1 + (bi+0.5)*(STEPS*0.8/NUM_BRIDGES));
+        for (let bk = -Math.floor(BRIDGE_LEN/2); bk <= Math.floor(BRIDGE_LEN/2); bk++) {
+          bridgeSegments.push(Math.max(0,Math.min(STEPS,centre+bk)));
         }
       }
+      const bridgeSet = new Set(bridgeSegments);
 
-      // Clear walls inside bridge zones
-      for (let bi = 0; bi < numBridges; bi++) {
-        for (let bw = 0; bw < RIVER_W; bw++) {
-          for (let bt2 = bridges[bi]; bt2 < bridges[bi]+BRIDGE_W; bt2++) {
-            let tx2, ty2;
-            if (axis === 'h') { tx2=bt2; ty2=coord+bw; } else { tx2=coord+bw; ty2=bt2; }
-            if (tx2>=0&&ty2>=0&&tx2<MAP_W&&ty2<MAP_H) map[ty2][tx2]=TILE_BRIDGE;
+      // Mark tiles in map
+      pathTiles.forEach((pt, si) => {
+        const isBridge = bridgeSet.has(si);
+        const tileType = isBridge ? TILE_BRIDGE : TILE_WATER;
+        for (let dy2 = -RIVER_RADIUS; dy2 <= RIVER_RADIUS; dy2++) {
+          for (let dx2 = -RIVER_RADIUS; dx2 <= RIVER_RADIUS; dx2++) {
+            const tx2=pt.tx+dx2, ty2=pt.ty+dy2;
+            if (tx2<1||ty2<1||tx2>=MAP_W-1||ty2>=MAP_H-1) continue;
+            // Don't overwrite bridge with water
+            if (isBridge || map[ty2][tx2] !== TILE_BRIDGE) map[ty2][tx2] = tileType;
           }
         }
-      }
+      });
+
+      // Store world-pixel path points for smooth bezier rendering
+      const worldPoints = pathTiles.map(pt => ({
+        x: (pt.tx + 0.5)*TILE,
+        y: (pt.ty + 0.5)*TILE,
+      }));
 
       RIVER_DATA.push({
-        axis, coord, rangeStart, rangeEnd, bridges,
-        biome: b, riverW: RIVER_W, bridgeW: BRIDGE_W,
+        axis, pathTiles, worldPoints, bridgeSet,
+        biome: b, riverRadius: RIVER_RADIUS, bridgeLen: BRIDGE_LEN,
         waterColor: RIVER_WATER_COLORS[b] || '#1565c0',
         bridgeColor: RIVER_BRIDGE_COLORS[b] || '#8d6e63'
       });
     }
   }));
 }
+
 function initLandmarks() {
   LANDMARK_INSTANCES = [];
   const rng = (seed) => { let s=seed; return ()=>{ s=(s*16807+0)%2147483647; return (s-1)/2147483646; }; };
@@ -2606,6 +2616,53 @@ function initLandmarks() {
       LANDMARK_INSTANCES.push({ px, py, fn, scale, colorShift, biome: b });
     }
   }));
+}
+
+
+function drawRivers() {
+  for (const rv of RIVER_DATA) {
+    const pts = rv.worldPoints;
+    if (pts.length < 2) continue;
+    const lineW = (rv.riverRadius*2+1)*TILE;
+
+    // ── Draw smooth water path ────────────────────────────────────────────────
+    ctx.save();
+    ctx.strokeStyle = rv.waterColor;
+    ctx.lineWidth   = lineW;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+    ctx.beginPath();
+    const s0 = worldToScreen(pts[0].x, pts[0].y);
+    ctx.moveTo(s0.x, s0.y);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const sx1 = worldToScreen(pts[i].x, pts[i].y);
+      const sx2 = worldToScreen(pts[i+1].x, pts[i+1].y);
+      const mx = (sx1.x+sx2.x)/2, my = (sx1.y+sx2.y)/2;
+      ctx.quadraticCurveTo(sx1.x, sx1.y, mx, my);
+    }
+    const sLast = worldToScreen(pts[pts.length-1].x, pts[pts.length-1].y);
+    ctx.lineTo(sLast.x, sLast.y);
+    ctx.stroke();
+
+    // ── Shimmer overlay ───────────────────────────────────────────────────────
+    ctx.globalAlpha = 0.18 + Math.sin(frame*0.06)*0.08;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth   = lineW * 0.35;
+    ctx.setLineDash([TILE*3, TILE*5]);
+    ctx.lineDashOffset = -(frame * 0.5) % (TILE*8);
+    ctx.beginPath();
+    ctx.moveTo(s0.x, s0.y);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const sx1 = worldToScreen(pts[i].x, pts[i].y);
+      const sx2 = worldToScreen(pts[i+1].x, pts[i+1].y);
+      const mx = (sx1.x+sx2.x)/2, my = (sx1.y+sx2.y)/2;
+      ctx.quadraticCurveTo(sx1.x, sx1.y, mx, my);
+    }
+    ctx.lineTo(sLast.x, sLast.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
 }
 
 function drawLandmarks() {
