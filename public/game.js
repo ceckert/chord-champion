@@ -54,8 +54,8 @@ const GUNS = [
     tier:{ dmg:'High', rate:'Slow', range:'Medium' } },
   { id:'rifle',      label:'🎯 Rifle',        dmg:14, rate:35, speed:16, spread:0.02, pellets:1, color:'#60a5fa', bulletSize:4, life:90,
     tier:{ dmg:'Medium', rate:'Medium', range:'High' } },
-  { id:'shotgun',    label:'💥 Shotgun',      dmg:28, rate:72, speed:10, spread:0.18, pellets:1, color:'#f97316', bulletSize:6, life:38,
-    tier:{ dmg:'High', rate:'Slow', range:'Low' } },
+  { id:'shotgun',    label:'💥 Shotgun',      dmg:40, rate:72, speed:10, spread:0.18, pellets:1, color:'#f97316', bulletSize:6, life:38,
+    tier:{ dmg:'V.High', rate:'Slow', range:'Low' } },
   { id:'machinegun', label:'⚡ Machine Gun',  dmg:6,  rate:10, speed:14, spread:0.10, pellets:1, color:'#a78bfa', bulletSize:3, life:55,
     tier:{ dmg:'Low', rate:'Fast', range:'Medium' } },
 ];
@@ -545,7 +545,7 @@ function uiUpgrades() {
       const selected = selectedGunId === gun.id;
       card.className = 'upg-card' + (selected ? ' maxed' : ' can');
       card.style.cursor = 'pointer';
-      const tierColor = t => t==='High'||t==='Fast' ? '#4ade80' : t==='Low'||t==='Slow' ? '#f87171' : '#fbbf24';
+      const tierColor = t => t==='V.High' ? '#e879f9' : t==='High'||t==='Fast' ? '#4ade80' : t==='Low'||t==='Slow' ? '#f87171' : '#fbbf24';
       card.innerHTML = `<div class="upg-name">${gun.label}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px">
           <div style="text-align:center;background:rgba(0,0,0,0.3);border-radius:6px;padding:6px 4px">
