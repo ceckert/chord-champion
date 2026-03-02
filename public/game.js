@@ -371,18 +371,21 @@ function openLevelUp() {
   gameState = 'paused';
   // Pick 3 random upgrades (not maxed)
   const ownedAbilities = ALL_UPGRADES.filter(u => u.id.startsWith('ab_') && (u.level+(player.bonusUpgrades[u.id]||0))>0).length;
-  const pool = ALL_UPGRADES.filter(u => {
-    const tot = u.level+(player.bonusUpgrades[u.id]||0);
-    if (tot >= u.max) return false;
-    if (u.id.startsWith('ab_') && ownedAbilities >= 3 && tot === 0) return false; // no new abilities if 3 owned
-    return true;
-  });
-  const picks = [];
-  const used = new Set();
-  while (picks.length < Math.min(3, pool.length)) {
-    const idx = Math.floor(Math.random() * pool.length);
-    if (!used.has(idx)) { used.add(idx); picks.push(pool[idx]); }
+  function pickFrom(list) {
+    const valid = list.filter(u => {
+      const tot = u.level+(player.bonusUpgrades[u.id]||0);
+      if (tot >= u.max) return false;
+      if (u.id.startsWith('ab_') && ownedAbilities >= 3 && tot === 0) return false;
+      return true;
+    });
+    if (!valid.length) return null;
+    return valid[Math.floor(Math.random() * valid.length)];
   }
+  const picks = [
+    pickFrom(UPGRADES.gun),
+    pickFrom(UPGRADES.ability),
+    pickFrom(UPGRADES.stats)
+  ].filter(Boolean);
   const el = document.getElementById('levelup-overlay');
   const title = document.getElementById('levelup-title');
   const opts = document.getElementById('levelup-options');
