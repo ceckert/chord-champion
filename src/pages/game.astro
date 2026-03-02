@@ -124,6 +124,9 @@
     .tab-btn:hover:not(.active) { background: #2d1b69; }
     .tab-pane { display: none; width: 100%; flex-direction: column; gap: 8px; }
     .tab-pane.active { display: flex; }
+    .diff-btn { padding:6px 10px; background:#1a0a2e; border:2px solid #374151; border-radius:8px; color:#9ca3af; font-family:monospace; font-size:11px; font-weight:bold; cursor:pointer; transition:all 0.1s; }
+    .diff-btn:hover { border-color:#7c3aed; color:#c4b5fd; }
+    .diff-btn.active { background:linear-gradient(135deg,#7c3aed,#a855f7); border-color:#a855f7; color:#fff; box-shadow:0 0 10px rgba(124,58,237,0.4); }
     @keyframes buyFlash {
       0%   { background: linear-gradient(180deg,#16a34a,#14532d); border-color:#4ade80; color:#fff; transform:scale(1.03); box-shadow:0 0 20px rgba(34,197,94,0.7); }
       60%  { background: linear-gradient(180deg,#16a34a,#14532d); border-color:#4ade80; color:#fff; transform:scale(1.03); box-shadow:0 0 20px rgba(34,197,94,0.7); }
@@ -138,7 +141,15 @@
 <div id="ui-overlay">
   <div id="scr-main" class="panel" style="display:flex">
     <h2>CHORD CHAMPION</h2>
-    <div id="mp-display" style="color:#fbbf24;font-family:monospace;font-size:14px;margin:-8px 0 4px">🎵 0 MP</div>
+    <div id="mp-display" style="color:#fbbf24;font-family:monospace;font-size:14px;margin:-8px 0 4px">🎵 0 MP</div>    <div style="margin:6px 0 10px;display:flex;flex-direction:column;align-items:center;gap:5px">
+      <div style="font-family:monospace;font-size:11px;color:#6b7280">DIFFICULTY</div>
+      <div style="display:flex;gap:6px">
+        <button class="diff-btn" id="diff-mom" onclick="setDifficulty('mom')">👩 Mom</button>
+        <button class="diff-btn" id="diff-easy" onclick="setDifficulty('easy')">😌 Easy</button>
+        <button class="diff-btn active" id="diff-medium" onclick="setDifficulty('medium')">⚔️ Med</button>
+        <button class="diff-btn" id="diff-hard" onclick="setDifficulty('hard')">💀 Hard</button>
+      </div>
+    </div>
     <div class="subtitle">Collect notes. Forge chords. Fight music.</div>
     <div id="version-display" style="font-family:monospace;font-size:10px;color:#4b5563;margin-top:-4px">v10.2</div>
     <button class="mbtn" onclick="uiPlay()">PLAY</button>
@@ -261,6 +272,6 @@ Stay in a biome 30s to trigger a boss fight. Survive!</div>
   </div>
 </div>
 
-<script is:inline src="/game.js?v=1772468645"></script>
+<script is:inline src="/game.js?v=1772469302"></script>
 </body>
 </html>

@@ -60,6 +60,16 @@ const GUNS = [
     tier:{ dmg:'Low', rate:'Fast', range:'Medium' } },
 ];
 let selectedGunId = 'pistol';
+// ── Difficulty ────────────────────────────────────────────────
+const DIFFICULTIES = {
+  mom:    { label:'👩 Mom',   enemySpeed:0.5, enemyDmg:0.5, playerDmg:0.5 },
+  easy:   { label:'😌 Easy',  enemySpeed:0.5, enemyDmg:0.5, playerDmg:1.0 },
+  medium: { label:'⚔️ Medium', enemySpeed:1.0, enemyDmg:1.0, playerDmg:1.0 },
+  hard:   { label:'💀 Hard',  enemySpeed:1.5, enemyDmg:1.5, playerDmg:1.0 },
+};
+let selectedDifficulty = 'medium';
+function getDiff() { return DIFFICULTIES[selectedDifficulty] || DIFFICULTIES.medium; }
+
 let charPreviewAngle = 0;
 let _charShowcaseRAF = null;
 
@@ -128,8 +138,13 @@ function selectChar(name) {
   });
 }
 
-function startFromCharSelect() {
-  uiPlay();
+function startFromCharSelect() { uiPlay(); }
+function setDifficulty(d) {
+  selectedDifficulty = d;
+  ['mom','easy','medium','hard'].forEach(k => {
+    const el = document.getElementById('diff-'+k);
+    if (el) el.classList.toggle('active', k === d);
+  });
 }
 
 function drawCharPreview(canvasId, charName) {
@@ -908,7 +923,7 @@ function update() {
       const e = enemies[j];
       if (rectOverlap(b.x-4, b.y-4, 8, 8, e.x, e.y, e.w, e.h)) {
         if (e.invincible) { hit = true; break; } // Void Lord phase
-        let actualDmg = Math.round((b.dmg || 10) * dmgMult);
+        let actualDmg = Math.round((b.dmg || 10) * dmgMult * getDiff().playerDmg);
         // Bleed: 1.5x damage taken
         if (e.bleeding > 0) actualDmg = Math.round(actualDmg * (e.bleedMult || 1.5));
         e.hp -= actualDmg;
