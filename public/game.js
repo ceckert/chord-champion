@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v4.8-debug';
+const VERSION = 'v4.9-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -924,17 +924,82 @@ function drawMap() {
     for (let tx = stx; tx < etx; tx++) {
       const sx = tx*TILE - camera.x, sy = ty*TILE - camera.y;
       if (map[ty][tx] === 1) {
-        // Tree trunk
-        ctx.fillStyle = '#5c3d1e';
-        ctx.fillRect(Math.round(sx + TILE/2 - 4), Math.round(sy + TILE*0.55), 8, Math.round(TILE*0.45));
-        // Tree canopy (layered circles for pixel look)
-        ctx.fillStyle = '#1a5c2a';
-        ctx.fillRect(Math.round(sx + 4), Math.round(sy + 6), TILE-8, TILE*0.55);
-        ctx.fillStyle = '#22803a';
-        ctx.fillRect(Math.round(sx + 7), Math.round(sy + 3), TILE-14, TILE*0.45);
-        ctx.fillStyle = '#2ecc5a';
-        ctx.fillRect(Math.round(sx + TILE/2 - 4), Math.round(sy + 1), 8, 8);
-        // Shadow on grass under tree
+        const biomeW = getBiome(tx, ty);
+        const seed2 = tx*31+ty*17;
+        // ── Forest / default: tree ────────────────────────────────
+        if (!biomeW || biomeW === 'forest') {
+          ctx.fillStyle='#5d4037'; ctx.fillRect(Math.round(sx+TILE/2-3),Math.round(sy+TILE*0.55),6,Math.round(TILE*0.45));
+          ctx.fillStyle='#2e7d32'; ctx.fillRect(Math.round(sx+4),Math.round(sy+6),TILE-8,TILE*0.55);
+          ctx.fillStyle='#22803a'; ctx.fillRect(Math.round(sx+7),Math.round(sy+3),TILE-14,TILE*0.45);
+          ctx.fillStyle='#2ecc5a'; ctx.fillRect(Math.round(sx+TILE/2-4),Math.round(sy+1),8,8);
+        // ── Swamp: mangrove with roots ────────────────────────────
+        } else if (biomeW === 'swamp') {
+          ctx.fillStyle='#3a2010'; ctx.fillRect(Math.round(sx+TILE/2-3),Math.round(sy+TILE*0.4),6,Math.round(TILE*0.6));
+          ctx.fillStyle='#2a5020'; ctx.fillRect(Math.round(sx+2),Math.round(sy+4),TILE-4,TILE*0.5);
+          ctx.fillStyle='#1a3a10'; ctx.fillRect(Math.round(sx+6),Math.round(sy),TILE-12,TILE*0.4);
+          ctx.fillStyle='#3a2010'; ctx.fillRect(Math.round(sx),Math.round(sy+TILE*0.7),5,TILE*0.3); ctx.fillRect(Math.round(sx+TILE-5),Math.round(sy+TILE*0.7),5,TILE*0.3);
+          ctx.fillStyle='#1a5010'; for(let mi=0;mi<4;mi++){ctx.fillRect(Math.round(sx+4+mi*7),Math.round(sy+TILE*0.5),2,8);}
+        // ── Desert: cactus ────────────────────────────────────────
+        } else if (biomeW === 'desert') {
+          ctx.fillStyle='#2a6020'; ctx.fillRect(Math.round(sx+TILE/2-4),Math.round(sy+4),8,TILE-6);
+          ctx.fillStyle='#388a2a'; ctx.fillRect(Math.round(sx+TILE/2-3),Math.round(sy+5),4,TILE-8);
+          if(seed2%2===0){ctx.fillStyle='#2a6020';ctx.fillRect(Math.round(sx+4),Math.round(sy+TILE*0.35),TILE/2-4,5);ctx.fillRect(Math.round(sx+4),Math.round(sy+TILE*0.2),5,TILE*0.2);}
+          if(seed2%3===0){ctx.fillStyle='#2a6020';ctx.fillRect(Math.round(sx+TILE/2),Math.round(sy+TILE*0.45),TILE/2-4,5);ctx.fillRect(Math.round(sx+TILE-9),Math.round(sy+TILE*0.3),5,TILE*0.2);}
+          ctx.fillStyle='#ddc88a'; for(let si2=0;si2<5;si2++){ctx.fillRect(Math.round(sx+TILE/2-6),Math.round(sy+8+si2*6),3,1);ctx.fillRect(Math.round(sx+TILE/2+3),Math.round(sy+8+si2*6),3,1);}
+        // ── Tundra: ice boulder / frozen tree ────────────────────
+        } else if (biomeW === 'tundra') {
+          if(seed2%3<2){
+            ctx.fillStyle='#6080a0'; ctx.fillRect(Math.round(sx+2),Math.round(sy+TILE*0.3),TILE-4,TILE*0.7);
+            ctx.fillStyle='#80a8c8'; ctx.fillRect(Math.round(sx+4),Math.round(sy+TILE*0.2),TILE-8,TILE*0.5);
+            ctx.fillStyle='#c0dff0'; ctx.fillRect(Math.round(sx+6),Math.round(sy+TILE*0.2),6,4); ctx.fillRect(Math.round(sx+TILE-12),Math.round(sy+TILE*0.3),4,4);
+          } else {
+            ctx.fillStyle='#4a3020'; ctx.fillRect(Math.round(sx+TILE/2-3),Math.round(sy+TILE*0.5),6,TILE*0.5);
+            ctx.fillStyle='#c0dff0'; ctx.fillRect(Math.round(sx+4),Math.round(sy+4),TILE-8,TILE*0.5);
+            ctx.fillStyle='#ffffff'; ctx.fillRect(Math.round(sx+7),Math.round(sy+1),TILE-14,TILE*0.4);
+          }
+        // ── Crystal: crystal spires ───────────────────────────────
+        } else if (biomeW === 'crystal') {
+          const numSpires=2+(seed2%3);
+          for(let ci=0;ci<numSpires;ci++){
+            const cx2=Math.round(sx+4+ci*(TILE-8)/Math.max(1,numSpires-1)), ch=8+((seed2*(ci+1))%16);
+            ctx.fillStyle='#2255aa'; ctx.fillRect(cx2-3,Math.round(sy+TILE-ch),6,ch);
+            ctx.fillStyle='#55aaee'; ctx.fillRect(cx2-2,Math.round(sy+TILE-ch),4,ch-2);
+            ctx.fillStyle='#88ddff'; ctx.fillRect(cx2-1,Math.round(sy+TILE-ch-4),2,5);
+          }
+        // ── Storm: dark rock / lightning rod ─────────────────────
+        } else if (biomeW === 'storm') {
+          ctx.fillStyle='#303040'; ctx.fillRect(Math.round(sx+2),Math.round(sy+TILE*0.4),TILE-4,TILE*0.6);
+          ctx.fillStyle='#404060'; ctx.fillRect(Math.round(sx+4),Math.round(sy+TILE*0.3),TILE-8,TILE*0.4);
+          ctx.fillStyle='#888899'; ctx.fillRect(Math.round(sx+TILE/2-1),Math.round(sy+4),3,TILE*0.4);
+          ctx.fillStyle='#ffff44'; ctx.fillRect(Math.round(sx+TILE/2-2),Math.round(sy+2),5,5);
+          if(frame%60<4){ctx.fillStyle='rgba(255,255,100,0.6)';ctx.fillRect(Math.round(sx),Math.round(sy),TILE,TILE*0.4);}
+        // ── Volcano: lava rock ────────────────────────────────────
+        } else if (biomeW === 'volcano') {
+          ctx.fillStyle='#2a0800'; ctx.fillRect(Math.round(sx+2),Math.round(sy+TILE*0.2),TILE-4,TILE*0.8);
+          ctx.fillStyle='#4a1000'; ctx.fillRect(Math.round(sx+4),Math.round(sy+TILE*0.1),TILE-8,TILE*0.6);
+          ctx.fillStyle='#ff4400'; ctx.fillRect(Math.round(sx+6),Math.round(sy+TILE*0.3),2,TILE*0.5); ctx.fillRect(Math.round(sx+TILE-8),Math.round(sy+TILE*0.25),2,TILE*0.4);
+          if(seed2%4===0){ctx.save();ctx.globalAlpha=0.3;ctx.fillStyle='#ff4400';ctx.beginPath();ctx.arc(Math.round(sx+TILE/2),Math.round(sy+TILE*0.3),6,0,Math.PI*2);ctx.fill();ctx.restore();}
+        // ── Mushroom: giant mushroom ──────────────────────────────
+        } else if (biomeW === 'mushroom') {
+          ctx.fillStyle='#6a3a7a'; ctx.fillRect(Math.round(sx+TILE/2-4),Math.round(sy+TILE*0.45),8,TILE*0.55);
+          ctx.fillStyle='#cc44cc'; ctx.fillRect(Math.round(sx+2),Math.round(sy+8),TILE-4,TILE*0.5);
+          ctx.fillStyle='#aa22aa'; ctx.fillRect(Math.round(sx+4),Math.round(sy+4),TILE-8,TILE*0.4);
+          ctx.fillStyle='#ffaaff'; for(let sp2=0;sp2<3;sp2++){ctx.fillRect(Math.round(sx+5+sp2*8),Math.round(sy+8),5,5);}
+          ctx.save();ctx.globalAlpha=0.15+0.1*Math.sin(frame*0.05+tx);ctx.fillStyle='#ff88ff';ctx.beginPath();ctx.arc(Math.round(sx+TILE/2),Math.round(sy+TILE/2),TILE*0.6,0,Math.PI*2);ctx.fill();ctx.restore();
+        // ── Shadow: dark obelisk ──────────────────────────────────
+        } else if (biomeW === 'shadow') {
+          ctx.fillStyle='#0a0015'; ctx.fillRect(Math.round(sx+TILE/2-5),Math.round(sy+2),10,TILE-4);
+          ctx.fillStyle='#150025'; ctx.fillRect(Math.round(sx+TILE/2-3),Math.round(sy+4),6,TILE-6);
+          ctx.fillStyle='#cc00ff'; ctx.fillRect(Math.round(sx+TILE/2-1),Math.round(sy+2),2,2);
+          ctx.save();ctx.globalAlpha=0.12+0.08*Math.sin(frame*0.08+ty);ctx.fillStyle='#aa00ff';ctx.fillRect(Math.round(sx),Math.round(sy),TILE,TILE);ctx.restore();
+        // ── Void: void pillar ─────────────────────────────────────
+        } else {
+          ctx.save();ctx.globalAlpha=0.7+0.2*Math.sin(frame*0.1+tx+ty);
+          ctx.fillStyle='#050008'; ctx.fillRect(Math.round(sx+TILE/2-5),Math.round(sy+4),10,TILE-6);
+          ctx.restore();
+          ctx.fillStyle='#6600aa'; ctx.fillRect(Math.round(sx+TILE/2-1),Math.round(sy+2),2,3);
+        }
+        // Shadow under obstacle
         ctx.fillStyle = 'rgba(0,0,0,0.18)';
         ctx.fillRect(Math.round(sx+3), Math.round(sy + TILE*0.7), TILE-6, 5);
       } else {
