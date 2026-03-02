@@ -919,7 +919,7 @@ function updateInterior() {
     const b = s.boss;
     b.wobble += 0.05;
     if (b.invincible > 0) b.invincible--;
-    if (!b.phase2 && b.hp <= b.maxHp*0.5) {
+    if (!b.phase2 && b.hp <= b.maxHp*0.65) {
       b.phase2 = true; b.speed *= 1.5;
       showNotif('⚠️ ' + b.label + ' ENRAGED!', '#ff4444', 120);
     }
@@ -935,53 +935,55 @@ function updateInterior() {
     }
     b.x = Math.max(40,Math.min(CW-40,b.x)); b.y = Math.max(110,Math.min(CH-80,b.y));
     // Contact damage
-    if (Math.abs(s.px-b.x)<b.w*0.6&&Math.abs(s.py-b.y)<b.h*0.6&&frame%50===0) {
-      player.hp -= Math.round(b.dmg*getDiff().enemyDmg); player.invincible=40;
+    if (Math.abs(s.px-b.x)<b.w*0.6&&Math.abs(s.py-b.y)<b.h*0.6&&frame%28===0) {
+      player.hp -= Math.round(b.dmg*1.3*getDiff().enemyDmg); player.invincible=30;
     }
     // ── Special attacks ────────────────────────────────────────────────────────
     b.specialCooldown--;
-    const cooldownBase = b.phase2 ? 90 : 140;
+    const cooldownBase = b.phase2 ? 55 : 95;
     if (b.specialCooldown <= 0) {
       b.specialCooldown = cooldownBase + Math.floor(Math.random()*60);
       const type = b.type;
       // CHARGE (sandstorm king, tempest): telegraphed dash at player
       if (type==='boss_sandking'||type==='boss_tempest') {
         showNotif('⚡ CHARGE!','#ffcc00',60);
-        const spd = 14*(b.phase2?1.5:1);
+        const spd = 20*(b.phase2?1.7:1);
         b.chargeVx = (bdx/bdist)*spd; b.chargeVy = (bdy/bdist)*spd;
-        b.charging = 18;
+        b.charging = 22;
       }
       // PROJECTILE VOLLEY (glacier, crystal titan, void lord)
       else if (type==='boss_glacier'||type==='boss_crystaltitan'||type==='boss_voidlord') {
-        const numShots = b.phase2 ? 8 : 5;
+        const numShots = b.phase2 ? 14 : 10;
         for (let pi=0; pi<numShots; pi++) {
           const ang = (pi/numShots)*Math.PI*2;
-          b.specialAttacks.push({ kind:'proj', x:b.x, y:b.y, vx:Math.cos(ang)*3.5, vy:Math.sin(ang)*3.5, life:90, color:type==='boss_glacier'?'#80d8ff':type==='boss_crystaltitan'?'#69f0ae':'#ce93d8' });
+          const spd2 = b.phase2 ? 6.5 : 5;
+          b.specialAttacks.push({ kind:'proj', x:b.x, y:b.y, vx:Math.cos(ang)*spd2, vy:Math.sin(ang)*spd2, life:100, color:type==='boss_glacier'?'#80d8ff':type==='boss_crystaltitan'?'#69f0ae':'#ce93d8' });
+          if (b.phase2) b.specialAttacks.push({ kind:'proj', x:b.x, y:b.y, vx:Math.cos(ang+Math.PI/numShots)*spd2*0.7, vy:Math.sin(ang+Math.PI/numShots)*spd2*0.7, life:100, color:type==='boss_glacier'?'#80d8ff':type==='boss_crystaltitan'?'#69f0ae':'#ce93d8' });
         }
         showNotif('💫 Projectile volley!','#80d8ff',60);
       }
       // SPAWN MINION (bog queen, mycelium)
       else if (type==='boss_bogqueen'||type==='boss_mycelqueen') {
-        const num = b.phase2 ? 3 : 2;
+        const num = b.phase2 ? 5 : 3;
         for (let mi=0; mi<num; mi++) {
-          const ang = Math.random()*Math.PI*2, dist=80+Math.random()*60;
+          const ang = Math.random()*Math.PI*2, dist=60+Math.random()*80;
           s.enemies.push({ x:b.x+Math.cos(ang)*dist, y:b.y+Math.sin(ang)*dist,
-            vx:(Math.random()-.5)*1.5, vy:(Math.random()-.5)*1.5,
-            hp:15, maxHp:15, w:20, h:20, wobble:Math.random()*Math.PI*2 });
+            vx:(Math.random()-.5)*2.2, vy:(Math.random()-.5)*2.2,
+            hp:25, maxHp:25, w:22, h:22, wobble:Math.random()*Math.PI*2 });
         }
         showNotif('🐛 Minions summoned!','#88ff44',80);
       }
       // AOE SHOCKWAVE (treant, shadow titan)
       else if (type==='boss_treant'||type==='boss_shadowtitan') {
-        b.specialAttacks.push({ kind:'aoe', x:b.x, y:b.y, r:0, maxR: b.phase2?200:150, life:40, color:type==='boss_treant'?'#66bb6a':'#ce93d8' });
+        b.specialAttacks.push({ kind:'aoe', x:b.x, y:b.y, r:0, maxR: b.phase2?260:185, life:36, color:type==='boss_treant'?'#66bb6a':'#ce93d8' });
         showNotif('💥 SHOCKWAVE!','#ff6666',60);
       }
       // GROUND HAZARD (volcano, mushroom)
       else if (type==='boss_drake'||type==='boss_mycelqueen') {
-        const numH = b.phase2 ? 4 : 2;
+        const numH = b.phase2 ? 6 : 3;
         for (let hi=0; hi<numH; hi++) {
-          const hx = 100+Math.random()*(CW-200), hy = 120+Math.random()*(CH-200);
-          b.specialAttacks.push({ kind:'hazard', x:hx, y:hy, life:200, maxLife:200, r:28, color:type==='boss_drake'?'#ff6d00':'#aed581' });
+          const hx = 80+Math.random()*(CW-160), hy = 110+Math.random()*(CH-180);
+          b.specialAttacks.push({ kind:'hazard', x:hx, y:hy, life:240, maxLife:240, r:36, color:type==='boss_drake'?'#ff6d00':'#aed581' });
         }
         showNotif(type==='boss_drake'?'🔥 Lava pools!':'☠️ Spore clouds!','#ff8800',80);
       }
@@ -993,16 +995,16 @@ function updateInterior() {
         a.x+=a.vx; a.y+=a.vy;
         if (a.x<0||a.x>CW||a.y<80||a.y>CH) return false;
         if (Math.abs(s.px-a.x)<16&&Math.abs(s.py-a.y)<16) {
-          player.hp -= Math.round(b.dmg*0.7*getDiff().enemyDmg); player.invincible=30; return false;
+          player.hp -= Math.round(b.dmg*1.4*getDiff().enemyDmg); player.invincible=25; return false;
         }
       } else if (a.kind==='aoe') {
         a.r += a.maxR/a.life;
         if (Math.sqrt((s.px-a.x)**2+(s.py-a.y)**2) < a.r+10) {
-          if (player.invincible<=0) { player.hp -= Math.round(b.dmg*0.5*getDiff().enemyDmg); player.invincible=60; }
+          if (player.invincible<=0) { player.hp -= Math.round(b.dmg*1.1*getDiff().enemyDmg); player.invincible=55; }
         }
       } else if (a.kind==='hazard') {
-        if (Math.sqrt((s.px-a.x)**2+(s.py-a.y)**2) < a.r && frame%40===0) {
-          player.hp -= Math.round(b.dmg*0.4*getDiff().enemyDmg);
+        if (Math.sqrt((s.px-a.x)**2+(s.py-a.y)**2) < a.r && frame%25===0) {
+          player.hp -= Math.round(b.dmg*0.9*getDiff().enemyDmg);
         }
       }
       return a.life > 0;
