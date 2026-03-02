@@ -60,7 +60,7 @@ function getTile(x, y) {
 const camera = { x: 0, y: 0 };
 function worldToScreen(wx, wy) { return { x: wx - camera.x, y: wy - camera.y }; }
 
-let savedCoins = 99999; // DEBUG // banked at checkpoint — spent in upgrades
+let savedCoins = 0; // banked MP — spent in upgrades
 const player = {
   x: MAP_W / 2 * TILE, y: MAP_H / 2 * TILE,
   level: 1, ep: 0, epMax: 100, bonusUpgrades: {},
