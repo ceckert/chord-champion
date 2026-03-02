@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v2.0-debug';
+const VERSION = 'v2.1-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -333,7 +333,29 @@ function update() {
   for (const e of enemies) {
     const edx = player.x - e.x, edy = player.y - e.y;
     const elen = Math.sqrt(edx*edx + edy*edy) || 1;
-    e.x += edx/elen * e.speed; e.y += edy/elen * e.speed;
+    const nx = edx/elen, ny = edy/elen;
+
+    // Try direct movement first
+    const prevX = e.x, prevY = e.y;
+    e.x += nx * e.speed;
+    if (getTile(Math.floor((e.x + e.w/2)/TILE), Math.floor((e.y + e.h/2)/TILE)) === 1 ||
+        getTile(Math.floor(e.x/TILE), Math.floor(e.y/TILE)) === 1 ||
+        getTile(Math.floor((e.x+e.w)/TILE), Math.floor(e.y/TILE)) === 1) {
+      e.x = prevX; // blocked horizontally — try sliding
+      // Try perpendicular slide
+      if (!e.slideDir) e.slideDir = (Math.random() < 0.5) ? 1 : -1;
+      e.x += ny * e.speed * e.slideDir;
+      if (getTile(Math.floor((e.x + e.w/2)/TILE), Math.floor((e.y + e.h/2)/TILE)) === 1) {
+        e.x = prevX; e.slideDir *= -1; // flip slide direction
+      }
+    } else { e.slideDir = null; }
+
+    e.y += ny * e.speed;
+    if (getTile(Math.floor((e.x + e.w/2)/TILE), Math.floor((e.y + e.h/2)/TILE)) === 1 ||
+        getTile(Math.floor(e.x/TILE), Math.floor((e.y+e.h)/TILE)) === 1 ||
+        getTile(Math.floor((e.x+e.w)/TILE), Math.floor((e.y+e.h)/TILE)) === 1) {
+      e.y = prevY; // blocked vertically
+    }
     if (player.invincible === 0 && rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)) {
       player.hp -= 10; player.invincible = 40;
       if (player.hp <= 0) {
