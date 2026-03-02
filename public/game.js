@@ -1,7 +1,12 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const PIXEL_RATIO = 2;
+const CW = window.innerWidth, CH = window.innerHeight;
+canvas.style.width  = CW + 'px';
+canvas.style.height = CH + 'px';
+CW  = CW * PIXEL_RATIO;
+CH = CH * PIXEL_RATIO;
+ctx.scale(PIXEL_RATIO, PIXEL_RATIO);
 
 const VERSION = 'v10.2';
 const TILE = 32;
@@ -424,8 +429,8 @@ function spawnEnemy(nearPlayer) {
   let ex, ey;
   {
     // Always spawn at the edges of the player's current camera view
-    const halfW = Math.ceil(canvas.width / 2) + TILE;
-    const halfH = Math.ceil(canvas.height / 2) + TILE;
+    const halfW = Math.ceil(CW / 2) + TILE;
+    const halfH = Math.ceil(CH / 2) + TILE;
     const cx = player.x + player.w/2;
     const cy = player.y + player.h/2;
     const side = Math.floor(Math.random() * 4);
@@ -530,8 +535,8 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 window.addEventListener('mousemove', e => {
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
+  const scaleX = CW / rect.width;
+  const scaleY = CH / rect.height;
   mouseX = (e.clientX - rect.left) * scaleX;
   mouseY = (e.clientY - rect.top) * scaleY;
 });
@@ -539,8 +544,8 @@ canvas.addEventListener('mousedown', e => {
   if (gameState !== 'playing') return;
   mouseDown = true;
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
+  const scaleX = CW / rect.width;
+  const scaleY = CH / rect.height;
   shoot((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
 });
 window.addEventListener('mouseup', () => { mouseDown = false; });
@@ -890,10 +895,10 @@ function update() {
   player.x = Math.max(TILE, Math.min((MAP_W-1)*TILE - player.w, player.x));
   player.y = Math.max(TILE, Math.min((MAP_H-1)*TILE - player.h, player.y));
 
-  camera.x = player.x + player.w/2 - canvas.width/2;
-  camera.y = player.y + player.h/2 - canvas.height/2;
-  camera.x = Math.max(0, Math.min(MAP_W*TILE - canvas.width, camera.x));
-  camera.y = Math.max(0, Math.min(MAP_H*TILE - canvas.height, camera.y));
+  camera.x = player.x + player.w/2 - CW/2;
+  camera.y = player.y + player.h/2 - CH/2;
+  camera.x = Math.max(0, Math.min(MAP_W*TILE - CW, camera.x));
+  camera.y = Math.max(0, Math.min(MAP_H*TILE - CH, camera.y));
 
   for (let i = mapNotes.length - 1; i >= 0; i--) {
     const n = mapNotes[i];
@@ -1265,8 +1270,8 @@ function applyUpgrade(u) {
 function drawPauseOverlay() {
   menuButtons = [];
   ctx.fillStyle = 'rgba(0,0,0,0.72)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const cw = canvas.width, ch = canvas.height;
+  ctx.fillRect(0, 0, CW, CH);
+  const cw = CW, ch = CH;
   const pw = 340, ph = 230;
   const px = cw/2 - pw/2, py = ch/2 - ph/2;
   ctx.fillStyle = '#1a0a2e';
@@ -1299,9 +1304,9 @@ function drawPauseOverlay() {
 
 function drawMap() {
   const stx = Math.max(0, Math.floor(camera.x/TILE));
-  const etx = Math.min(MAP_W, stx + Math.ceil(canvas.width/TILE) + 2);
+  const etx = Math.min(MAP_W, stx + Math.ceil(CW/TILE) + 2);
   const sty = Math.max(0, Math.floor(camera.y/TILE));
-  const ety = Math.min(MAP_H, sty + Math.ceil(canvas.height/TILE) + 2);
+  const ety = Math.min(MAP_H, sty + Math.ceil(CH/TILE) + 2);
   for (let ty = sty; ty < ety; ty++) {
     for (let tx = stx; tx < etx; tx++) {
       const sx = tx*TILE - camera.x, sy = ty*TILE - camera.y;
@@ -1407,7 +1412,7 @@ function drawMap() {
 
 function drawMapNote(n) {
   const s = worldToScreen(n.x, n.y);
-  if (s.x > canvas.width+20 || s.x < -20 || s.y > canvas.height+20 || s.y < -20) return;
+  if (s.x > CW+20 || s.x < -20 || s.y > CH+20 || s.y < -20) return;
   const bob = Math.sin(n.glow + n.bobOffset) * 4;
   const radius = 10 + Math.sin(n.glow * 2) * 2;
   const col = NOTE_COLORS[n.pitch];
@@ -1837,7 +1842,7 @@ function drawBoss(e, x, y) {
 
 function drawEnemy(e) {
   const s = worldToScreen(e.x, e.y);
-  if (s.x > canvas.width+40 || s.x < -40 || s.y > canvas.height+40 || s.y < -40) return;
+  if (s.x > CW+40 || s.x < -40 || s.y > CH+40 || s.y < -40) return;
   const {x, y} = s;
   if (e.isBoss) { drawBoss(e, x, y); } else {
     ctx.save();
@@ -1897,9 +1902,9 @@ function drawHUD() {
   ctx.fillStyle='#ddd'; ctx.font='bold 10px monospace'; ctx.textBaseline='middle';
   ctx.fillText('Lv'+player.level+' EP: '+player.ep+'/'+player.epMax, 16, 44);
 
-  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(canvas.width-130, 10, 120, 26);
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(CW-130, 10, 120, 26);
   ctx.fillStyle='#fbbf24'; ctx.font='bold 14px monospace'; ctx.textAlign='right';
-  ctx.fillText('MP: '+player.coins, canvas.width-14, 23);
+  ctx.fillText('MP: '+player.coins, CW-14, 23);
 
   // ── Current Upgrades box (bottom-left) ──────────────────────────
   const activeUps = ALL_UPGRADES.filter(u => u.level > 0 || (player.bonusUpgrades[u.id]||0) > 0);
@@ -1913,7 +1918,7 @@ function drawHUD() {
   if (boxLines.length > 0) {
     const lineH = 14, pad = 6;
     const bw = 170, bh = pad*2 + boxLines.length * lineH;
-    const bx = 10, by = canvas.height - 26 - bh - 6; // 26px controls bar + 6px gap
+    const bx = 10, by = CH - 26 - bh - 6; // 26px controls bar + 6px gap
     ctx.fillStyle = 'rgba(0,0,0,0.65)';
     ctx.fillRect(bx, by, bw, bh);
     ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
@@ -1927,22 +1932,22 @@ function drawHUD() {
   }
   const biomeNow = getBiomeAtPixel(player.x, player.y);
   const biomeLabel = {forest:'🌿 Forest',swamp:'🌊 Swamp',desert:'🏜️ Desert',tundra:'❄️ Tundra',crystal:'💎 Crystal',storm:'🌪️ Storm',volcano:'🌋 Volcano',mushroom:'🍄 Mushroom',shadow:'🌑 Shadow',void:'💀 Void'}[biomeNow]||biomeNow;
-  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(canvas.width/2-60, 10, 120, 22);
+  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(CW/2-60, 10, 120, 22);
   ctx.fillStyle='#ffd700'; ctx.font='bold 12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(biomeLabel, canvas.width/2, 21);
+  ctx.fillText(biomeLabel, CW/2, 21);
   // Boss warning
   if (bossWarningTimer > 0 && bossWarningTimer % 12 < 6) {
-    ctx.fillStyle='rgba(255,0,0,0.8)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='rgba(255,0,0,0.8)'; ctx.fillRect(0,0,CW,CH);
     ctx.fillStyle='#fff'; ctx.font='bold 28px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('⚠️ BOSS INCOMING ⚠️', canvas.width/2, canvas.height/2);
+    ctx.fillText('⚠️ BOSS INCOMING ⚠️', CW/2, CH/2);
   }
   // Boss timer progress (when in biome, not boss active)
   if (!bossActive && biomeTimer > 0 && lastBiome !== 'forest') {
     const pct = biomeTimer/3600;
-    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(canvas.width-134, canvas.height-28, 124, 18);
-    ctx.fillStyle='#ff4400'; ctx.fillRect(canvas.width-132, canvas.height-26, Math.round(120*pct), 14);
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(CW-134, CH-28, 124, 18);
+    ctx.fillStyle='#ff4400'; ctx.fillRect(CW-132, CH-26, Math.round(120*pct), 14);
     ctx.fillStyle='#fff'; ctx.font='10px monospace'; ctx.textAlign='right'; ctx.textBaseline='middle';
-    ctx.fillText('BOSS: '+Math.floor(pct*100)+'%', canvas.width-14, canvas.height-19);
+    ctx.fillText('BOSS: '+Math.floor(pct*100)+'%', CW-14, CH-19);
   }
   const ps = worldToScreen(player.x + player.w/2, player.y);
   const gap = 22, noteR = 10;
@@ -1966,27 +1971,27 @@ function drawHUD() {
     ctx.font='bold 22px monospace'; ctx.textAlign='center';
     ctx.textBaseline='middle';
     ctx.strokeStyle='#000'; ctx.lineWidth=4;
-    ctx.strokeText(notification.text, canvas.width/2, canvas.height/2-40);
+    ctx.strokeText(notification.text, CW/2, CH/2-40);
     ctx.fillStyle=notification.color;
-    ctx.fillText(notification.text, canvas.width/2, canvas.height/2-40);
+    ctx.fillText(notification.text, CW/2, CH/2-40);
     ctx.restore();
   }
 
-  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0, canvas.height-26, canvas.width, 26);
+  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0, CH-26, CW, 26);
   ctx.fillStyle='#a78bfa'; ctx.font='11px monospace'; ctx.textAlign='center';
   ctx.textBaseline='middle';
-  ctx.fillText('WASD move  |  Left-click shoot  |  Right-click forge chord  |  ESC pause', canvas.width/2, canvas.height-13);
+  ctx.fillText('WASD move  |  Left-click shoot  |  Right-click forge chord  |  ESC pause', CW/2, CH-13);
 }
 
 
 function render() {
   // Always fill canvas so semi-transparent overlay has something to show over
   ctx.fillStyle = '#1a0a2e';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, CW, CH);
   if (gameState !== 'playing' && gameState !== 'paused') return;
   // Overwrite with game background when playing
   ctx.fillStyle = '#1a2e1a';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, CW, CH);
   drawMap();
   drawLandmarks();
   for (const n of mapNotes) drawMapNote(n);
@@ -2124,7 +2129,7 @@ function drawLandmarks() {
   ctx.save();
   for (const lm of LANDMARK_INSTANCES) {
     const s = worldToScreen(lm.px, lm.py);
-    if (s.x < -300 || s.x > canvas.width+300 || s.y < -300 || s.y > canvas.height+300) continue;
+    if (s.x < -300 || s.x > CW+300 || s.y < -300 || s.y > CH+300) continue;
     ctx.save();
     ctx.translate(s.x, s.y);
     ctx.scale(lm.scale, lm.scale);
@@ -2270,5 +2275,5 @@ function shiftColor(hex, shift) {
 }
 
 function loop() { update(); render(); requestAnimationFrame(loop); }
-window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+window.addEventListener('resize', () => { CW = window.innerWidth; CH = window.innerHeight; });
 loop();
