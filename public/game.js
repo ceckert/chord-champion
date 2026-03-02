@@ -431,6 +431,27 @@ function uiQuit() {
   uiShow('scr-main');
 }
 let _fromPause = false;
+function uiRefundAll() {
+  let refund = 0;
+  ALL_UPGRADES.forEach(u => {
+    if (u.level > 0) {
+      // Refund all tiers: baseCost * (2^level - 1)
+      refund += Math.floor(u.baseCost * (Math.pow(2, u.level) - 1));
+      u.level = 0;
+    }
+  });
+  // Reset equipped abilities
+  equippedAbilities = equippedAbilities.filter(id => {
+    const u = ALL_UPGRADES.find(u=>u.id===id);
+    return u && (u.level + (player.bonusUpgrades[id]||0)) > 0;
+  });
+  // Reset stat effects
+  player.shootRate = 40; player.speed = 3; player.maxHp = 150;
+  player.hp = Math.min(player.hp, player.maxHp);
+  savedCoins += refund;
+  showNotif('↩ Refunded ' + refund + ' MP!', '#22c55e', 180);
+  uiUpgrades();
+}
 function uiUpgradesFromPause() {
   _fromPause = true;
   document.getElementById('pause-overlay').style.display = 'none';
@@ -463,7 +484,8 @@ function uiUpgrades() {
       } else {
         const btn = document.createElement('button');
         btn.className = 'buy-btn'; btn.disabled = !canAfford;
-        btn.textContent = cost + ' MP — BUY';
+        btn.textContent = u.level > 0 ? 'UPGRADE → Lv' + (u.level+1) + ' (' + cost + ' MP)' : 'BUY — ' + cost + ' MP';
+        if (u.level > 0) btn.classList.add('purchased');
         btn.onclick = () => { if (applyUpgrade(u)) uiUpgrades(); };
         card.appendChild(btn);
       }

@@ -127,7 +127,10 @@
       <div id="tab-ability" class="tab-pane"></div>
       <div id="tab-stats" class="tab-pane"></div>
     </div>
-    <button class="mbtn back" style="flex-shrink:0;margin-top:10px" onclick="uiShow('scr-main')">BACK</button>
+    <div style="display:flex;gap:8px;flex-shrink:0;margin-top:10px">
+      <button class="mbtn back" style="flex:1" onclick="uiShow('scr-main')">BACK</button>
+      <button class="mbtn" style="flex:1;background:linear-gradient(135deg,#7f1d1d,#991b1b);border-color:#ef4444;font-size:12px" onclick="uiRefundAll()">↩ REFUND ALL</button>
+    </div>
   </div>
   <div id="scr-levelplan" class="panel" style="display:none">
     <h2>LEVEL PLAN</h2>
