@@ -48,16 +48,16 @@ const CHORD_DEFS = [
 ];
 
 // ── Gun Definitions ─────────────────────────────────────────────
-// Gun balance: each has a clear identity
-// Pistol   — highest single-shot dmg, slow, pinpoint. Best with damage upgrades
-// Rifle     — fastest bullet, long range (life:90), pierce-friendly, medium dmg
-// Shotgun   — massive burst up close (5×10=50 dmg/shot), useless at range
-// MachineGun— lowest dmg/shot but highest sustained DPS, shreds with bleed/poison
 const GUNS = [
-  { id:'pistol',     label:'🔫 Pistol',      desc:'Highest dmg/shot • Slow • Pinpoint accurate',   dmg:22, rate:58, speed:12, spread:0,    pellets:1, color:'#fbbf24', bulletSize:5, life:60 },
-  { id:'rifle',      label:'🎯 Rifle',        desc:'Fast bullet • Long range • Pierce-friendly',    dmg:13, rate:30, speed:18, spread:0.02, pellets:1, color:'#60a5fa', bulletSize:4, life:90 },
-  { id:'shotgun',    label:'💥 Shotgun',      desc:'5 pellets • Devastating up close • Slow',       dmg:10, rate:75, speed:10, spread:0.32, pellets:5, color:'#f97316', bulletSize:5, life:40 },
-  { id:'machinegun', label:'⚡ Machine Gun',   desc:'Highest DPS • Stacks DoTs • Low per-shot dmg', dmg:5,  rate:10, speed:15, spread:0.12, pellets:1, color:'#a78bfa', bulletSize:3, life:55 },
+  // dmg = per-bullet damage | rate = frames between shots (lower=faster) | life = bullet range
+  { id:'pistol',     label:'🔫 Pistol',      dmg:24, rate:60, speed:12, spread:0,    pellets:1, color:'#fbbf24', bulletSize:5, life:55,
+    tier:{ dmg:'High', rate:'Slow', range:'Medium' } },
+  { id:'rifle',      label:'🎯 Rifle',        dmg:14, rate:35, speed:16, spread:0.02, pellets:1, color:'#60a5fa', bulletSize:4, life:90,
+    tier:{ dmg:'Medium', rate:'Medium', range:'High' } },
+  { id:'shotgun',    label:'💥 Shotgun',      dmg:10, rate:72, speed:10, spread:0.30, pellets:5, color:'#f97316', bulletSize:5, life:38,
+    tier:{ dmg:'High', rate:'Slow', range:'Low' } },
+  { id:'machinegun', label:'⚡ Machine Gun',  dmg:6,  rate:10, speed:14, spread:0.10, pellets:1, color:'#a78bfa', bulletSize:3, life:55,
+    tier:{ dmg:'Low', rate:'Fast', range:'Medium' } },
 ];
 let selectedGunId = 'pistol';
 function getSelectedGun() { return GUNS.find(g=>g.id===selectedGunId) || GUNS[0]; }
@@ -545,10 +545,21 @@ function uiUpgrades() {
       const selected = selectedGunId === gun.id;
       card.className = 'upg-card' + (selected ? ' maxed' : ' can');
       card.style.cursor = 'pointer';
+      const tierColor = t => t==='High'||t==='Fast' ? '#4ade80' : t==='Low'||t==='Slow' ? '#f87171' : '#fbbf24';
       card.innerHTML = `<div class="upg-name">${gun.label}</div>
-        <div class="upg-desc">${gun.desc}</div>
-        <div style="font-family:monospace;font-size:11px;color:#94a3b8;margin-top:4px">
-          DMG: ${gun.dmg} &nbsp; RATE: ${gun.pellets>1?'Slow':''+Math.round(60/gun.rate*10)/10+'/s'} &nbsp; PELLETS: ${gun.pellets} &nbsp; SPEED: ${gun.speed}
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px">
+          <div style="text-align:center;background:rgba(0,0,0,0.3);border-radius:6px;padding:6px 4px">
+            <div style="font-family:monospace;font-size:10px;color:#94a3b8">DAMAGE</div>
+            <div style="font-family:monospace;font-size:13px;font-weight:bold;color:${tierColor(gun.tier.dmg)}">${gun.tier.dmg}</div>
+          </div>
+          <div style="text-align:center;background:rgba(0,0,0,0.3);border-radius:6px;padding:6px 4px">
+            <div style="font-family:monospace;font-size:10px;color:#94a3b8">FIRE RATE</div>
+            <div style="font-family:monospace;font-size:13px;font-weight:bold;color:${tierColor(gun.tier.rate)}">${gun.tier.rate}</div>
+          </div>
+          <div style="text-align:center;background:rgba(0,0,0,0.3);border-radius:6px;padding:6px 4px">
+            <div style="font-family:monospace;font-size:10px;color:#94a3b8">RANGE</div>
+            <div style="font-family:monospace;font-size:13px;font-weight:bold;color:${tierColor(gun.tier.range)}">${gun.tier.range}</div>
+          </div>
         </div>`;
       const btn = document.createElement('button');
       btn.className = 'buy-btn' + (selected ? ' purchased' : '');
