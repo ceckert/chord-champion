@@ -170,9 +170,6 @@ function drawCharBody(cx, charName, frame) {
     cx.fillStyle='#1d4ed8'; cx.fillRect(-11,14,10,7); cx.fillRect(2,14,10,7); // blue shorts
     // Chubby head (bigger)
     cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,-11,11,0,Math.PI*2); cx.fill();
-    // Rounder cheeks
-    cx.fillStyle='#fca5a5'; cx.beginPath(); cx.arc(-7,-10,4,0,Math.PI*2); cx.fill();
-    cx.beginPath(); cx.arc(7,-10,4,0,Math.PI*2); cx.fill();
     // Short dark hair
     cx.fillStyle='#292524'; cx.beginPath(); cx.arc(0,-18,8,Math.PI,0); cx.fill();
     cx.fillRect(-8,-20,16,4);
@@ -208,6 +205,17 @@ function drawCharBody(cx, charName, frame) {
   }
   // Eyes (shared)
   cx.fillStyle='#1a0a2e'; cx.fillRect(-4,-14,3,3); cx.fillRect(2,-14,3,3);
+  // Mouth
+  cx.strokeStyle='#1a0a2e'; cx.lineWidth=1.5; cx.beginPath();
+  if (charName==='max') {
+    // dog - no human mouth (has snout/tongue already)
+  } else if (charName==='bob') {
+    // big happy grin
+    cx.arc(0,-9,4,0.2,Math.PI-0.2); cx.stroke();
+  } else {
+    // small smile
+    cx.arc(0,-10,3,0.3,Math.PI-0.3); cx.stroke();
+  }
 }
 
 function getSelectedGun() { return GUNS.find(g=>g.id===selectedGunId) || GUNS[0]; }
