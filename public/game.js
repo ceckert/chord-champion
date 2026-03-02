@@ -769,7 +769,8 @@ function update() {
 
   enemySpawnTimer++;
   enemySpawnCap = Math.min(20, 5 + Math.floor(frame / 7200)); // ramp slowly
-  if (enemySpawnTimer >= 300 && enemies.filter(e=>!e.isBoss).length < enemySpawnCap) { spawnEnemy(); enemySpawnTimer = 0; }
+  const spawnInterval = Math.max(60, Math.floor(300 * Math.pow(0.9, player.level - 1))); // -10% per level, min 60 frames
+  if (enemySpawnTimer >= spawnInterval && enemies.filter(e=>!e.isBoss).length < enemySpawnCap) { spawnEnemy(); enemySpawnTimer = 0; }
   if (player.invincible > 0) player.invincible--;
 
   for (const e of enemies) {
