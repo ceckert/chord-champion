@@ -1757,9 +1757,13 @@ function drawHUD() {
 
   // ── Current Upgrades box (bottom-left) ──────────────────────────
   const activeUps = ALL_UPGRADES.filter(u => u.level > 0 || (player.bonusUpgrades[u.id]||0) > 0);
-  const equippedAb = equippedAbilities.length ? ALL_UPGRADES.find(u => u.id === equippedAbilities[0]) : null;
-  const boxLines = activeUps.map(u => { const t=u.level+(player.bonusUpgrades[u.id]||0); return u.label+' Lv'+t+(player.bonusUpgrades[u.id]?'(+'+player.bonusUpgrades[u.id]+')':''); });
-  if (equippedAb) boxLines.unshift('⚡ ' + equippedAb.label + ' Lv' + equippedAb.level);
+  const boxLines = activeUps.filter(u => !u.id.startsWith('ab_')).map(u => { const t=u.level+(player.bonusUpgrades[u.id]||0); return u.label+' Lv'+t+(player.bonusUpgrades[u.id]?'(+'+player.bonusUpgrades[u.id]+')':''); });
+  // Show all equipped abilities at top
+  equippedAbilities.slice().reverse().forEach(abId => {
+    const ab = ALL_UPGRADES.find(u=>u.id===abId); if(!ab) return;
+    const t = ab.level+(player.bonusUpgrades[ab.id]||0);
+    boxLines.unshift('✨ ' + ab.label + ' Lv' + t);
+  });
   if (boxLines.length > 0) {
     const lineH = 14, pad = 6;
     const bw = 170, bh = pad*2 + boxLines.length * lineH;
@@ -1769,7 +1773,7 @@ function drawHUD() {
     ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText('UPGRADES', bx+pad, by+pad);
     boxLines.forEach((line, i) => {
-      const isAbility = i === 0 && equippedAb;
+      const isAbility = boxLines[i] && boxLines[i].startsWith('✨');
       ctx.fillStyle = isAbility ? '#22c55e' : '#d4d4d4';
       ctx.font = '10px monospace';
       ctx.fillText(line, bx+pad, by+pad + 12 + i*lineH);
