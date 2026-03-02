@@ -207,15 +207,13 @@ function drawCharBody(cx, charName, frame) {
   // Eyes (shared)
   cx.fillStyle='#1a0a2e'; cx.fillRect(-4,-14,3,3); cx.fillRect(2,-14,3,3);
   // Mouth
-  cx.strokeStyle='#1a0a2e'; cx.lineWidth=1.5; cx.beginPath();
+  cx.strokeStyle='#92400e'; cx.lineWidth=1; cx.beginPath();
   if (charName==='max') {
-    // dog - no human mouth (has snout/tongue already)
+    // dog has snout already
   } else if (charName==='bob') {
-    // big happy grin
-    cx.arc(0,-9,4,0.2,Math.PI-0.2); cx.stroke();
+    cx.arc(0,-9,2.5,0.4,Math.PI-0.4); cx.stroke();
   } else {
-    // small smile
-    cx.arc(0,-10,3,0.3,Math.PI-0.3); cx.stroke();
+    cx.arc(0,-10,2,0.5,Math.PI-0.5); cx.stroke();
   }
 }
 
