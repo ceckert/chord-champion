@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v3.8-debug';
+const VERSION = 'v3.9-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -939,10 +939,16 @@ function render() {
       ctx.restore();
     }
     if (e.poisonStacks > 0 && e.poisonTimer > 0) {
-      const sp3 = worldToScreen(e.x, e.y);
-      ctx.save(); ctx.globalAlpha = Math.min(0.6, e.poisonStacks*0.08);
-      ctx.fillStyle = '#44ff44';
-      ctx.fillRect(Math.round(sp3.x), Math.round(sp3.y), e.w, e.h);
+      const sp3 = worldToScreen(e.x + e.w/2, e.y + e.h/2);
+      const pflicker = 0.5 + 0.5 * Math.sin(frame * 0.4 + e.y * 0.3);
+      const palpha = Math.min(1, e.poisonTimer / 60) * (0.6 + 0.4 * pflicker);
+      ctx.save();
+      ctx.globalAlpha = palpha;
+      ctx.fillStyle = '#22cc22';
+      ctx.beginPath(); ctx.arc(sp3.x, sp3.y - 8, 7 + pflicker * 4, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = palpha * 0.8;
+      ctx.fillStyle = '#88ff44';
+      ctx.beginPath(); ctx.arc(sp3.x, sp3.y - 10, 4 + pflicker * 2, 0, Math.PI*2); ctx.fill();
       ctx.restore();
     }
     if (e.bleeding > 0) {
