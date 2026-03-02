@@ -645,7 +645,7 @@ function update() {
     let hit = false;
     // Wall hit — check explosive
     if (getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE)) === 1) {
-      if (equippedAbility === 'ab_explode') { const lv=totalLevel('ab_explode'); triggerExplosion(b.x, b.y, 40+lv*15, 15+lv*5); }
+      if (equippedAbility === 'ab_explode') { const lv=totalLevel('ab_explode'); triggerExplosion(b.x, b.y, 40+lv*10, 5); }
       bullets.splice(i, 1); continue;
     }
     const dmgMult = 1 + totalLevel('dmg') * 0.2;
@@ -703,8 +703,9 @@ function update() {
             showNotif('🧠 Psychic!', '#a855f7', 60);
           }
           if (ab.id === 'ab_explode') {
-            triggerExplosion(b.x, b.y, 50 + abLv*20, 20 + abLv*8);
-            showNotif('💥 Boom! (' + (50+abLv*20) + 'r)', '#f97316', 50);
+            const splashR = 40 + abLv*10;
+            const splashDmg = Math.round(actualDmg * 0.6); // 60% of bullet dmg, not extra
+            triggerExplosion(b.x, b.y, splashR, splashDmg);
           }
           if (ab.id === 'ab_lightning') {
             let closest = null, closestDist = 220;
