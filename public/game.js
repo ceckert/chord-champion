@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v3.9-debug';
+const VERSION = 'v4.0-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -91,7 +91,8 @@ for (let i = 0; i < 40; i++) spawnMapNote();
 
 let bullets = [];
 let explosions = [];
-let lightningArcs = []; // { x1,y1,x2,y2,life } // { x, y, r, maxR, life, maxLife }
+let lightningArcs = [];
+let equippedAbility = null; // id of the one active ability // { x1,y1,x2,y2,life } // { x, y, r, maxR, life, maxLife }
 
 function triggerExplosion(x, y, radius, dmg) {
   explosions.push({ x, y, r: 4, maxR: radius, life: 20, maxLife: 20, dmg });
@@ -204,7 +205,8 @@ function uiUpgrades() {
       const maxed = u.level >= u.max;
       const canAfford = savedCoins >= cost && !maxed;
       const card = document.createElement('div');
-      card.className = 'upg-card' + (maxed ? ' maxed' : canAfford ? ' can' : '');
+      const isEquipped = tab === 'ability' && equippedAbility === u.id;
+      card.className = 'upg-card' + (maxed ? ' maxed' : canAfford ? ' can' : '') + (isEquipped ? ' maxed' : '');
       card.innerHTML =
         '<div class="upg-name">' + u.label + ' <span style="color:#a78bfa">[Lv ' + u.level + '/' + u.max + ']</span></div>' +
         '<div class="upg-desc">' + u.desc + '</div>';
@@ -223,6 +225,16 @@ function uiUpgrades() {
         btn.textContent = cost + ' coins — BUY';
         btn.onclick = () => { if (applyUpgrade(u)) uiUpgrades(); };
         card.appendChild(btn);
+      }
+      // Ability tab: equip button
+      if (tab === 'ability' && u.level > 0) {
+        const equipped = equippedAbility === u.id;
+        const eq = document.createElement('button');
+        eq.className = 'buy-btn'; eq.style.marginTop = '4px';
+        eq.style.background = equipped ? '#22c55e' : '#7c3aed';
+        eq.textContent = equipped ? '✅ EQUIPPED' : 'EQUIP';
+        eq.onclick = () => { equippedAbility = equipped ? null : u.id; uiUpgrades(); };
+        card.appendChild(eq);
       }
       pane.appendChild(card);
     });
@@ -384,46 +396,26 @@ function update() {
         if (e.bleeding > 0) actualDmg = Math.round(actualDmg * 1.5);
         e.hp -= actualDmg;
 
-        // Fire DOT
-        const fireLv = ALL_UPGRADES.find(u => u.id === 'ab_fire')?.level || 0;
-        if (fireLv > 0) { e.burning = 300; e.burnDmg = 1 + fireLv; }
-        // Bleed
-        const bleedLv = ALL_UPGRADES.find(u => u.id === 'ab_bleed')?.level || 0;
-        if (bleedLv > 0) e.bleeding = 300;
-        // Freeze
-        const frostLv = ALL_UPGRADES.find(u => u.id === 'ab_freeze')?.level || 0;
-        if (frostLv > 0) { e.frozen = Math.min(450, (e.frozen||0) + 150); e.frozenSpeedMult = Math.max(0.15, 1 - frostLv * 0.17); }
-        // Weaken
-        const weakenLv = ALL_UPGRADES.find(u => u.id === 'ab_weaken')?.level || 0;
-        if (weakenLv > 0 && !e.weakened) { e.weakened = 300; e.dmg = Math.round((e.dmg || 10) * 0.9); }
-        // Poison (stacking)
-        const poisonLv = ALL_UPGRADES.find(u => u.id === 'ab_poison')?.level || 0;
-        if (poisonLv > 0) { e.poisonStacks = Math.min(8, (e.poisonStacks||0) + 1); e.poisonTimer = 300; }
-        // Life Steal
-        const leechLv = ALL_UPGRADES.find(u => u.id === 'ab_leech')?.level || 0;
-        if (leechLv > 0) player.hp = Math.min(player.maxHp, player.hp + Math.ceil(actualDmg * 0.1));
-        // Knockback
-        const kbLv = ALL_UPGRADES.find(u => u.id === 'ab_knockback')?.level || 0;
-        if (kbLv > 0) {
-          const kbdx = e.x - player.x, kbdy = e.y - player.y;
-          const kblen = Math.sqrt(kbdx*kbdx+kbdy*kbdy)||1;
-          e.x += (kbdx/kblen) * (20 + kbLv*8);
-          e.y += (kbdy/kblen) * (20 + kbLv*8);
-        }
-        // Magnetic (pull toward player)
-        const magLv = ALL_UPGRADES.find(u => u.id === 'ab_magnetic')?.level || 0;
-        if (magLv > 0) {
-          const mgdx = player.x - e.x, mgdy = player.y - e.y;
-          const mglen = Math.sqrt(mgdx*mgdx+mgdy*mgdy)||1;
-          e.x += (mgdx/mglen) * (15 + magLv*6);
-          e.y += (mgdy/mglen) * (15 + magLv*6);
-        }
-        // Psychic
-        const psychicLv = ALL_UPGRADES.find(u => u.id === 'ab_psychic')?.level || 0;
-        if (psychicLv > 0 && Math.random() < 0.25 + psychicLv*0.05) e.psychic = 150;
-        // Lightning chain
-        const lightLv = ALL_UPGRADES.find(u => u.id === 'ab_lightning')?.level || 0;
-        if (lightLv > 0) {
+        // Active ability effect (only one equipped at a time)
+        const ab = equippedAbility ? ALL_UPGRADES.find(u => u.id === equippedAbility) : null;
+        const abLv = ab?.level || 0;
+        if (ab && abLv > 0) {
+          if (ab.id === 'ab_fire')    { e.burning = 300; e.burnDmg = 1 + abLv; }
+          if (ab.id === 'ab_bleed')   { e.bleeding = 300; }
+          if (ab.id === 'ab_freeze')  { e.frozen = Math.min(450,(e.frozen||0)+150); e.frozenSpeedMult = Math.max(0.15,1-abLv*0.17); }
+          if (ab.id === 'ab_weaken' && !e.weakened) { e.weakened=300; e.dmg=Math.round((e.dmg||10)*0.9); }
+          if (ab.id === 'ab_poison')  { e.poisonStacks=Math.min(8,(e.poisonStacks||0)+1); e.poisonTimer=300; }
+          if (ab.id === 'ab_leech')   { player.hp=Math.min(player.maxHp,player.hp+Math.ceil(actualDmg*0.1)); }
+          if (ab.id === 'ab_knockback') {
+            const kbdx=e.x-player.x,kbdy=e.y-player.y,kbl=Math.sqrt(kbdx*kbdx+kbdy*kbdy)||1;
+            e.x+=(kbdx/kbl)*(20+abLv*8); e.y+=(kbdy/kbl)*(20+abLv*8);
+          }
+          if (ab.id === 'ab_magnetic') {
+            const mgdx=player.x-e.x,mgdy=player.y-e.y,mgl=Math.sqrt(mgdx*mgdx+mgdy*mgdy)||1;
+            e.x+=(mgdx/mgl)*(15+abLv*6); e.y+=(mgdy/mgl)*(15+abLv*6);
+          }
+          if (ab.id === 'ab_psychic' && Math.random()<0.25+abLv*0.05) e.psychic=150;
+          if (ab.id === 'ab_lightning') {
           let closest = null, closestDist = 180;
           for (const oe of enemies) {
             if (oe === e) continue;
@@ -436,10 +428,11 @@ function update() {
             lightningArcs.push({ x1:e.x+e.w/2, y1:e.y+e.h/2, x2:closest.x+closest.w/2, y2:closest.y+closest.h/2, life:12 });
             if (closest.hp <= 0) enemies.splice(enemies.indexOf(closest), 1);
           }
-        }
+          } // end lightning
+        } // end ab check
 
         if (e.hp <= 0) enemies.splice(j, 1);
-        if (explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
+        if (equippedAbility === 'ab_explode' && explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
 
         // Piercing — don't mark as hit if pierce level active
         const pierceLv = (ALL_UPGRADES.find(u => u.id === 'ab_pierce')?.level || 0) + (ALL_UPGRADES.find(u => u.id === 'pierce')?.level || 0);
