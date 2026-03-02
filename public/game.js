@@ -56,7 +56,7 @@ const GUNS = [
     tier:{ dmg:'Medium', rate:'Medium', range:'High' } },
   { id:'shotgun',    label:'💥 Shotgun',      dmg:40, rate:105, speed:10, spread:0.18, pellets:1, color:'#f97316', bulletSize:6, life:38,
     tier:{ dmg:'Insane', rate:'Slow', range:'Low' } },
-  { id:'machinegun', label:'⚡ Machine Gun',  dmg:6,  rate:10, speed:14, spread:0.10, pellets:1, color:'#a78bfa', bulletSize:3, life:55,
+  { id:'machinegun', label:'⚡ Machine Gun',  dmg:6,  rate:30, speed:14, spread:0.10, pellets:1, color:'#a78bfa', bulletSize:3, life:55,
     tier:{ dmg:'Low', rate:'Fast', range:'Medium' } },
 ];
 let selectedGunId = 'pistol';
