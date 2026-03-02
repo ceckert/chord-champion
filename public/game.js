@@ -1702,82 +1702,173 @@ function drawMap() {
       } else if (map[ty][tx] === 1) {
         const biomeW = getBiome(tx, ty);
         const seed2 = tx*31+ty*17;
-        // ── Forest / default: tree ────────────────────────────────
+        const cx3=Math.round(sx+TILE/2), cy3=Math.round(sy+TILE/2);
+        ctx.save();
+
         if (!biomeW || biomeW === 'forest') {
-          ctx.fillStyle='#5d4037'; ctx.fillRect(Math.round(sx+TILE/2-3),Math.round(sy+TILE*0.55),6,Math.round(TILE*0.45));
-          ctx.fillStyle='#2e7d32'; ctx.fillRect(Math.round(sx+4),Math.round(sy+6),TILE-8,TILE*0.55);
-          ctx.fillStyle='#22803a'; ctx.fillRect(Math.round(sx+7),Math.round(sy+3),TILE-14,TILE*0.45);
-          ctx.fillStyle='#2ecc5a'; ctx.fillRect(Math.round(sx+TILE/2-4),Math.round(sy+1),8,8);
-        // ── Swamp: mangrove with roots ────────────────────────────
+          // ── Forest: round leafy tree, top-down ─────────────────
+          // Ground shadow
+          ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(cx3+3,cy3+4,12,9,0,0,Math.PI*2); ctx.fill();
+          // Trunk (peek at south edge)
+          ctx.fillStyle='#5d4037'; ctx.fillRect(cx3-3,cy3+4,6,9);
+          ctx.fillStyle='#4e342e'; ctx.fillRect(cx3-2,cy3+5,2,7);
+          // Outer canopy (dark edge)
+          ctx.fillStyle='#1b5e20'; ctx.beginPath(); ctx.arc(cx3-1,cy3-2,13,0,Math.PI*2); ctx.fill();
+          // Mid canopy
+          ctx.fillStyle='#2e7d32'; ctx.beginPath(); ctx.arc(cx3-1,cy3-3,11,0,Math.PI*2); ctx.fill();
+          // Canopy clusters
+          ctx.fillStyle='#388e3c';
+          ctx.beginPath(); ctx.arc(cx3-5,cy3-6,6,0,Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(cx3+4,cy3-5,6,0,Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(cx3,cy3-9,5,0,Math.PI*2); ctx.fill();
+          // Highlight (top-left light)
+          ctx.fillStyle='#66bb6a'; ctx.beginPath(); ctx.arc(cx3-4,cy3-7,4,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.arc(cx3-3,cy3-6,2,0,Math.PI*2); ctx.fill();
+
         } else if (biomeW === 'swamp') {
-          ctx.fillStyle='#3a2010'; ctx.fillRect(Math.round(sx+TILE/2-3),Math.round(sy+TILE*0.4),6,Math.round(TILE*0.6));
-          ctx.fillStyle='#2a5020'; ctx.fillRect(Math.round(sx+2),Math.round(sy+4),TILE-4,TILE*0.5);
-          ctx.fillStyle='#1a3a10'; ctx.fillRect(Math.round(sx+6),Math.round(sy),TILE-12,TILE*0.4);
-          ctx.fillStyle='#3a2010'; ctx.fillRect(Math.round(sx),Math.round(sy+TILE*0.7),5,TILE*0.3); ctx.fillRect(Math.round(sx+TILE-5),Math.round(sy+TILE*0.7),5,TILE*0.3);
-          ctx.fillStyle='#1a5010'; for(let mi=0;mi<4;mi++){ctx.fillRect(Math.round(sx+4+mi*7),Math.round(sy+TILE*0.5),2,8);}
-        // ── Desert: cactus ────────────────────────────────────────
+          // ── Swamp: twisted mangrove, aerial roots ───────────────
+          ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+5,13,7,0,0,Math.PI*2); ctx.fill();
+          // Roots spreading out
+          ctx.strokeStyle='#3e2723'; ctx.lineWidth=2; ctx.lineCap='round';
+          [[-8,8],[-10,3],[8,9],[10,4],[0,11]].forEach(([rx,ry])=>{ctx.beginPath();ctx.moveTo(cx3,cy3+2);ctx.quadraticCurveTo(cx3+rx/2,cy3+ry/2,cx3+rx,cy3+ry);ctx.stroke();});
+          // Trunk
+          ctx.fillStyle='#3e2723'; ctx.beginPath(); ctx.ellipse(cx3,cy3,4,5,0,0,Math.PI*2); ctx.fill();
+          // Dark canopy
+          ctx.fillStyle='#1a3a10'; ctx.beginPath(); ctx.arc(cx3,cy3-4,12,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#2e5a20'; ctx.beginPath(); ctx.arc(cx3-2,cy3-5,9,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#33691e'; ctx.beginPath(); ctx.arc(cx3+3,cy3-6,7,0,Math.PI*2); ctx.fill();
+          // Moss spots
+          ctx.fillStyle='#558b2f';
+          for(let mi=0;mi<4;mi++){ctx.beginPath();ctx.arc(cx3-5+mi*3,cy3-4+((mi*7)%5),2,0,Math.PI*2);ctx.fill();}
+
         } else if (biomeW === 'desert') {
-          ctx.fillStyle='#2a6020'; ctx.fillRect(Math.round(sx+TILE/2-4),Math.round(sy+4),8,TILE-6);
-          ctx.fillStyle='#388a2a'; ctx.fillRect(Math.round(sx+TILE/2-3),Math.round(sy+5),4,TILE-8);
-          if(seed2%2===0){ctx.fillStyle='#2a6020';ctx.fillRect(Math.round(sx+4),Math.round(sy+TILE*0.35),TILE/2-4,5);ctx.fillRect(Math.round(sx+4),Math.round(sy+TILE*0.2),5,TILE*0.2);}
-          if(seed2%3===0){ctx.fillStyle='#2a6020';ctx.fillRect(Math.round(sx+TILE/2),Math.round(sy+TILE*0.45),TILE/2-4,5);ctx.fillRect(Math.round(sx+TILE-9),Math.round(sy+TILE*0.3),5,TILE*0.2);}
-          ctx.fillStyle='#ddc88a'; for(let si2=0;si2<5;si2++){ctx.fillRect(Math.round(sx+TILE/2-6),Math.round(sy+8+si2*6),3,1);ctx.fillRect(Math.round(sx+TILE/2+3),Math.round(sy+8+si2*6),3,1);}
-        // ── Tundra: ice boulder / frozen tree ────────────────────
+          // ── Desert: saguaro cactus, top-down ───────────────────
+          ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(cx3+3,cy3+5,7,4,0,0,Math.PI*2); ctx.fill();
+          // Main trunk (oval)
+          ctx.fillStyle='#2e7d32'; ctx.beginPath(); ctx.ellipse(cx3,cy3,5,8,0,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.ellipse(cx3-1,cy3-1,3,6,0,0,Math.PI*2); ctx.fill();
+          // Arms
+          if(seed2%2===0){
+            ctx.fillStyle='#2e7d32'; ctx.beginPath(); ctx.ellipse(cx3-8,cy3-2,4,3,Math.PI*0.15,0,Math.PI*2); ctx.fill();
+            ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.ellipse(cx3-8,cy3-2,2,2,0,0,Math.PI*2); ctx.fill();
+          }
+          if(seed2%3!==0){
+            ctx.fillStyle='#2e7d32'; ctx.beginPath(); ctx.ellipse(cx3+8,cy3,4,3,Math.PI*0.85,0,Math.PI*2); ctx.fill();
+          }
+          // Spine dots
+          ctx.fillStyle='#f9a825';
+          for(let si2=0;si2<6;si2++){ctx.fillRect(cx3-4+((si2*5)%8),cy3-6+si2*2,1,1);}
+
         } else if (biomeW === 'tundra') {
-          if(seed2%3<2){
-            ctx.fillStyle='#6080a0'; ctx.fillRect(Math.round(sx+2),Math.round(sy+TILE*0.3),TILE-4,TILE*0.7);
-            ctx.fillStyle='#80a8c8'; ctx.fillRect(Math.round(sx+4),Math.round(sy+TILE*0.2),TILE-8,TILE*0.5);
-            ctx.fillStyle='#c0dff0'; ctx.fillRect(Math.round(sx+6),Math.round(sy+TILE*0.2),6,4); ctx.fillRect(Math.round(sx+TILE-12),Math.round(sy+TILE*0.3),4,4);
-          } else {
-            ctx.fillStyle='#4a3020'; ctx.fillRect(Math.round(sx+TILE/2-3),Math.round(sy+TILE*0.5),6,TILE*0.5);
-            ctx.fillStyle='#c0dff0'; ctx.fillRect(Math.round(sx+4),Math.round(sy+4),TILE-8,TILE*0.5);
-            ctx.fillStyle='#ffffff'; ctx.fillRect(Math.round(sx+7),Math.round(sy+1),TILE-14,TILE*0.4);
-          }
-        // ── Crystal: crystal spires ───────────────────────────────
+          // ── Tundra: snow-covered boulder ───────────────────────
+          ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(cx3+3,cy3+4,12,8,0,0,Math.PI*2); ctx.fill();
+          // Rock base
+          ctx.fillStyle='#546e7a'; ctx.beginPath(); ctx.ellipse(cx3,cy3+1,12,10,0,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#607d8b'; ctx.beginPath(); ctx.ellipse(cx3-1,cy3,10,8,0,0,Math.PI*2); ctx.fill();
+          // Crack lines
+          ctx.strokeStyle='#37474f'; ctx.lineWidth=1;
+          ctx.beginPath(); ctx.moveTo(cx3-3,cy3+3); ctx.lineTo(cx3+2,cy3-2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx3+4,cy3+2); ctx.lineTo(cx3+6,cy3-3); ctx.stroke();
+          // Snow cap
+          ctx.fillStyle='#eceff1'; ctx.beginPath(); ctx.ellipse(cx3-2,cy3-3,7,5,Math.PI*0.1,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.ellipse(cx3-3,cy3-4,4,3,0,0,Math.PI*2); ctx.fill();
+
         } else if (biomeW === 'crystal') {
-          const numSpires=2+(seed2%3);
-          for(let ci=0;ci<numSpires;ci++){
-            const cx2=Math.round(sx+4+ci*(TILE-8)/Math.max(1,numSpires-1)), ch=8+((seed2*(ci+1))%16);
-            ctx.fillStyle='#2255aa'; ctx.fillRect(cx2-3,Math.round(sy+TILE-ch),6,ch);
-            ctx.fillStyle='#55aaee'; ctx.fillRect(cx2-2,Math.round(sy+TILE-ch),4,ch-2);
-            ctx.fillStyle='#88ddff'; ctx.fillRect(cx2-1,Math.round(sy+TILE-ch-4),2,5);
-          }
-        // ── Storm: dark rock / lightning rod ─────────────────────
+          // ── Crystal: faceted gem spire cluster ─────────────────
+          ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx3+3,cy3+4,11,6,0,0,Math.PI*2); ctx.fill();
+          const numSpires = 2+(seed2%3);
+          const spirePos = [[-6,2],[0,-2],[6,1],[-3,-4],[4,-3]].slice(0,numSpires);
+          spirePos.forEach(([ox,oy],i)=>{
+            const sh = 6+((seed2*(i+1))%10);
+            // Spire body
+            ctx.fillStyle='#1565c0'; ctx.beginPath(); ctx.moveTo(cx3+ox,cy3+oy+sh); ctx.lineTo(cx3+ox-3,cy3+oy); ctx.lineTo(cx3+ox+3,cy3+oy); ctx.closePath(); ctx.fill();
+            ctx.fillStyle='#42a5f5'; ctx.beginPath(); ctx.moveTo(cx3+ox,cy3+oy+sh); ctx.lineTo(cx3+ox-1,cy3+oy); ctx.lineTo(cx3+ox+3,cy3+oy); ctx.closePath(); ctx.fill();
+            // Tip highlight
+            ctx.fillStyle='#e3f2fd'; ctx.fillRect(cx3+ox-1,cy3+oy-2,2,2);
+            // Facet glint
+            ctx.save(); ctx.globalAlpha=0.4+0.3*Math.sin(frame*0.08+i); ctx.fillStyle='#fff'; ctx.fillRect(cx3+ox+1,cy3+oy+2,1,3); ctx.restore();
+          });
+
         } else if (biomeW === 'storm') {
-          ctx.fillStyle='#303040'; ctx.fillRect(Math.round(sx+2),Math.round(sy+TILE*0.4),TILE-4,TILE*0.6);
-          ctx.fillStyle='#404060'; ctx.fillRect(Math.round(sx+4),Math.round(sy+TILE*0.3),TILE-8,TILE*0.4);
-          ctx.fillStyle='#888899'; ctx.fillRect(Math.round(sx+TILE/2-1),Math.round(sy+4),3,TILE*0.4);
-          ctx.fillStyle='#ffff44'; ctx.fillRect(Math.round(sx+TILE/2-2),Math.round(sy+2),5,5);
-          if(frame%60<4){ctx.fillStyle='rgba(255,255,100,0.6)';ctx.fillRect(Math.round(sx),Math.round(sy),TILE,TILE*0.4);}
-        // ── Volcano: lava rock ────────────────────────────────────
+          // ── Storm: jagged dark rock with lightning rod ──────────
+          ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(cx3+3,cy3+4,12,8,0,0,Math.PI*2); ctx.fill();
+          // Rock base (jagged polygon)
+          ctx.fillStyle='#263238';
+          ctx.beginPath(); ctx.moveTo(cx3-10,cy3+6); ctx.lineTo(cx3-12,cy3); ctx.lineTo(cx3-6,cy3-6); ctx.lineTo(cx3,cy3-9); ctx.lineTo(cx3+8,cy3-5); ctx.lineTo(cx3+11,cy3+1); ctx.lineTo(cx3+8,cy3+7); ctx.closePath(); ctx.fill();
+          ctx.fillStyle='#37474f';
+          ctx.beginPath(); ctx.moveTo(cx3-8,cy3+4); ctx.lineTo(cx3-9,cy3); ctx.lineTo(cx3-4,cy3-5); ctx.lineTo(cx3+2,cy3-7); ctx.lineTo(cx3+6,cy3-3); ctx.lineTo(cx3+8,cy3+2); ctx.closePath(); ctx.fill();
+          // Highlight edge
+          ctx.fillStyle='#546e7a'; ctx.fillRect(cx3-5,cy3-7,3,2); ctx.fillRect(cx3+2,cy3-7,3,2);
+          // Lightning rod
+          ctx.strokeStyle='#b0bec5'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx3,cy3-4); ctx.lineTo(cx3,cy3-12); ctx.stroke();
+          ctx.fillStyle='#ffee58'; ctx.beginPath(); ctx.moveTo(cx3-3,cy3-10); ctx.lineTo(cx3+3,cy3-12); ctx.lineTo(cx3+1,cy3-8); ctx.closePath(); ctx.fill();
+          if(frame%60<5){ctx.save();ctx.globalAlpha=0.5;ctx.fillStyle='#ffff88';ctx.beginPath();ctx.arc(cx3,cy3-11,5,0,Math.PI*2);ctx.fill();ctx.restore();}
+
         } else if (biomeW === 'volcano') {
-          ctx.fillStyle='#2a0800'; ctx.fillRect(Math.round(sx+2),Math.round(sy+TILE*0.2),TILE-4,TILE*0.8);
-          ctx.fillStyle='#4a1000'; ctx.fillRect(Math.round(sx+4),Math.round(sy+TILE*0.1),TILE-8,TILE*0.6);
-          ctx.fillStyle='#ff4400'; ctx.fillRect(Math.round(sx+6),Math.round(sy+TILE*0.3),2,TILE*0.5); ctx.fillRect(Math.round(sx+TILE-8),Math.round(sy+TILE*0.25),2,TILE*0.4);
-          if(seed2%4===0){ctx.save();ctx.globalAlpha=0.3;ctx.fillStyle='#ff4400';ctx.beginPath();ctx.arc(Math.round(sx+TILE/2),Math.round(sy+TILE*0.3),6,0,Math.PI*2);ctx.fill();ctx.restore();}
-        // ── Mushroom: giant mushroom ──────────────────────────────
-        } else if (biomeW === 'mushroom') {
-          ctx.fillStyle='#6a3a7a'; ctx.fillRect(Math.round(sx+TILE/2-4),Math.round(sy+TILE*0.45),8,TILE*0.55);
-          ctx.fillStyle='#cc44cc'; ctx.fillRect(Math.round(sx+2),Math.round(sy+8),TILE-4,TILE*0.5);
-          ctx.fillStyle='#aa22aa'; ctx.fillRect(Math.round(sx+4),Math.round(sy+4),TILE-8,TILE*0.4);
-          ctx.fillStyle='#ffaaff'; for(let sp2=0;sp2<3;sp2++){ctx.fillRect(Math.round(sx+5+sp2*8),Math.round(sy+8),5,5);}
-          ctx.save();ctx.globalAlpha=0.15+0.1*Math.sin(frame*0.05+tx);ctx.fillStyle='#ff88ff';ctx.beginPath();ctx.arc(Math.round(sx+TILE/2),Math.round(sy+TILE/2),TILE*0.6,0,Math.PI*2);ctx.fill();ctx.restore();
-        // ── Shadow: dark obelisk ──────────────────────────────────
-        } else if (biomeW === 'shadow') {
-          ctx.fillStyle='#0a0015'; ctx.fillRect(Math.round(sx+TILE/2-5),Math.round(sy+2),10,TILE-4);
-          ctx.fillStyle='#150025'; ctx.fillRect(Math.round(sx+TILE/2-3),Math.round(sy+4),6,TILE-6);
-          ctx.fillStyle='#cc00ff'; ctx.fillRect(Math.round(sx+TILE/2-1),Math.round(sy+2),2,2);
-          ctx.save();ctx.globalAlpha=0.12+0.08*Math.sin(frame*0.08+ty);ctx.fillStyle='#aa00ff';ctx.fillRect(Math.round(sx),Math.round(sy),TILE,TILE);ctx.restore();
-        // ── Void: void pillar ─────────────────────────────────────
-        } else {
-          ctx.save();ctx.globalAlpha=0.7+0.2*Math.sin(frame*0.1+tx+ty);
-          ctx.fillStyle='#050008'; ctx.fillRect(Math.round(sx+TILE/2-5),Math.round(sy+4),10,TILE-6);
+          // ── Volcano: lava rock with glowing cracks ─────────────
+          ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(cx3+3,cy3+4,12,8,0,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#1a0000';
+          ctx.beginPath(); ctx.moveTo(cx3-11,cy3+5); ctx.lineTo(cx3-10,cy3-2); ctx.lineTo(cx3-4,cy3-8); ctx.lineTo(cx3+5,cy3-8); ctx.lineTo(cx3+10,cy3-2); ctx.lineTo(cx3+10,cy3+5); ctx.closePath(); ctx.fill();
+          ctx.fillStyle='#3e0000';
+          ctx.beginPath(); ctx.moveTo(cx3-8,cy3+3); ctx.lineTo(cx3-7,cy3-3); ctx.lineTo(cx3,cy3-7); ctx.lineTo(cx3+6,cy3-3); ctx.lineTo(cx3+6,cy3+4); ctx.closePath(); ctx.fill();
+          // Lava cracks
+          ctx.strokeStyle='#ff6d00'; ctx.lineWidth=1; ctx.lineCap='round';
+          ctx.beginPath(); ctx.moveTo(cx3-4,cy3+3); ctx.lineTo(cx3-1,cy3); ctx.lineTo(cx3+3,cy3+2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx3+2,cy3-4); ctx.lineTo(cx3-1,cy3-1); ctx.stroke();
+          const glow = 0.3+0.2*Math.sin(frame*0.1+tx);
+          ctx.save(); ctx.globalAlpha=glow; ctx.fillStyle='#ff6d00';
+          ctx.beginPath(); ctx.arc(cx3-1,cy3,3,0,Math.PI*2); ctx.fill();
           ctx.restore();
-          ctx.fillStyle='#6600aa'; ctx.fillRect(Math.round(sx+TILE/2-1),Math.round(sy+2),2,3);
+
+        } else if (biomeW === 'mushroom') {
+          // ── Mushroom: giant top-down cap with gills ─────────────
+          ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx3+3,cy3+3,13,9,0,0,Math.PI*2); ctx.fill();
+          // Stem
+          ctx.fillStyle='#d7ccc8'; ctx.beginPath(); ctx.ellipse(cx3,cy3+3,4,5,0,0,Math.PI*2); ctx.fill();
+          // Cap underside (gills visible around edge)
+          ctx.fillStyle='#e1bee7'; ctx.beginPath(); ctx.arc(cx3,cy3-1,13,0,Math.PI*2); ctx.fill();
+          // Gill lines
+          ctx.strokeStyle='#ba68c8'; ctx.lineWidth=1;
+          for(let gi=0;gi<8;gi++){const ga=gi*Math.PI/4;ctx.beginPath();ctx.moveTo(cx3+Math.cos(ga)*5,cy3-1+Math.sin(ga)*5);ctx.lineTo(cx3+Math.cos(ga)*12,cy3-1+Math.sin(ga)*10);ctx.stroke();}
+          // Cap top
+          ctx.fillStyle='#8e24aa'; ctx.beginPath(); ctx.arc(cx3-1,cy3-2,10,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle='#ab47bc'; ctx.beginPath(); ctx.arc(cx3-2,cy3-3,7,0,Math.PI*2); ctx.fill();
+          // Spots
+          ctx.fillStyle='#ffffff';
+          [[0,-5],[4,-1],[-4,-2],[1,2]].forEach(([ox,oy])=>{ctx.beginPath();ctx.arc(cx3+ox,cy3+oy,2,0,Math.PI*2);ctx.fill();});
+          // Bioluminescent glow
+          ctx.save(); ctx.globalAlpha=0.12+0.08*Math.sin(frame*0.06+tx+ty); ctx.fillStyle='#ea80fc';
+          ctx.beginPath(); ctx.arc(cx3,cy3-1,14,0,Math.PI*2); ctx.fill(); ctx.restore();
+
+        } else if (biomeW === 'shadow') {
+          // ── Shadow: void obelisk with arcane runes ─────────────
+          ctx.fillStyle='rgba(0,0,30,0.5)'; ctx.beginPath(); ctx.ellipse(cx3+3,cy3+5,8,5,0,0,Math.PI*2); ctx.fill();
+          // Obelisk shaft
+          ctx.fillStyle='#0d0020';
+          ctx.beginPath(); ctx.moveTo(cx3-4,cy3+10); ctx.lineTo(cx3-5,cy3-2); ctx.lineTo(cx3-2,cy3-10); ctx.lineTo(cx3+2,cy3-10); ctx.lineTo(cx3+5,cy3-2); ctx.lineTo(cx3+4,cy3+10); ctx.closePath(); ctx.fill();
+          ctx.fillStyle='#1a0040';
+          ctx.beginPath(); ctx.moveTo(cx3-2,cy3+9); ctx.lineTo(cx3-3,cy3-1); ctx.lineTo(cx3-1,cy3-9); ctx.lineTo(cx3+1,cy3-9); ctx.lineTo(cx3+3,cy3-1); ctx.lineTo(cx3+2,cy3+9); ctx.closePath(); ctx.fill();
+          // Rune glyphs
+          const rp=0.2+0.15*Math.sin(frame*0.07+tx);
+          ctx.save(); ctx.globalAlpha=rp; ctx.fillStyle='#b388ff';
+          ctx.fillRect(cx3-2,cy3-7,4,2); ctx.fillRect(cx3-1,cy3-4,2,5); ctx.fillRect(cx3-2,cy3+1,4,2); ctx.restore();
+          // Top gem
+          ctx.fillStyle='#7c4dff'; ctx.beginPath(); ctx.arc(cx3,cy3-9,3,0,Math.PI*2); ctx.fill();
+          ctx.save(); ctx.globalAlpha=0.4+0.3*Math.sin(frame*0.1+ty); ctx.fillStyle='#ea80fc';
+          ctx.beginPath(); ctx.arc(cx3,cy3-9,5,0,Math.PI*2); ctx.fill(); ctx.restore();
+
+        } else {
+          // ── Void: swirling void pillar ─────────────────────────
+          ctx.save(); ctx.globalAlpha=0.6+0.2*Math.sin(frame*0.1+tx+ty);
+          ctx.fillStyle='#050008'; ctx.beginPath(); ctx.ellipse(cx3,cy3,8,10,0,0,Math.PI*2); ctx.fill();
+          ctx.globalAlpha=0.3+0.2*Math.sin(frame*0.12+tx); ctx.fillStyle='#6600aa';
+          ctx.beginPath(); ctx.arc(cx3,cy3,6+2*Math.sin(frame*0.08+tx+ty),0,Math.PI*2); ctx.fill();
+          ctx.restore();
         }
-        // Shadow under obstacle
-        ctx.fillStyle = 'rgba(0,0,0,0.18)';
-        ctx.fillRect(Math.round(sx+3), Math.round(sy + TILE*0.7), TILE-6, 5);
+        ctx.restore();
+        // Ground shadow cast (soft, south-east)
+        ctx.fillStyle='rgba(0,0,0,0.16)';
+        ctx.beginPath(); ctx.ellipse(cx3+4,cy3+9,10,4,0,0,Math.PI*2); ctx.fill();
       } else {
         const biomeHere = getBiome(tx, ty);
         let base, detail;
