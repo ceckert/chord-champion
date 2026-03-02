@@ -3,9 +3,9 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v4.1-debug';
+const VERSION = 'v4.2-debug';
 const TILE = 32;
-const MAP_W = 60, MAP_H = 60;
+const MAP_W = 160, MAP_H = 160;
 
 // Generate tile map: 0=grass, 1=wall
 const map = (() => {
@@ -118,6 +118,24 @@ function shoot(tx, ty) {
 
 let enemies = [];
 let enemySpawnTimer = 0;
+
+function getBiome(tx, ty) {
+  const cx = MAP_W/2, cy = MAP_H/2;
+  const dx = tx - cx, dy = ty - cy;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist < 22) return 'forest';
+  if (dist > 68) return 'void';
+  const angle = Math.atan2(dy, dx);
+  if (angle > -Math.PI/4 && angle < Math.PI/4)       return 'desert';   // east
+  if (angle > Math.PI*3/4 || angle < -Math.PI*3/4)   return 'swamp';    // west
+  if (angle > Math.PI/4 && angle < Math.PI*3/4)      return 'volcano';  // south
+  return 'tundra'; // north
+}
+
+function getBiomeAtPixel(px, py) {
+  return getBiome(Math.floor(px/TILE), Math.floor(py/TILE));
+}
+
 function spawnEnemy() {
   let ex, ey;
   const side = Math.floor(Math.random() * 4);
@@ -125,12 +143,34 @@ function spawnEnemy() {
   else if (side === 1) { ex = (MAP_W-2)*TILE; ey = (1+Math.floor(Math.random()*(MAP_H-2)))*TILE; }
   else if (side === 2) { ex = (1+Math.floor(Math.random()*(MAP_W-2)))*TILE; ey = (MAP_H-2)*TILE; }
   else { ex = TILE; ey = (1+Math.floor(Math.random()*(MAP_H-2)))*TILE; }
-  const type = Math.random() < 0.55 ? 'crawler' : 'runner';
-  if (type === 'crawler') {
-    enemies.push({ type, x: ex, y: ey, w: 28, h: 20, hp: 50, maxHp: 50, speed: 0.8 + Math.random()*0.4, dmg: 15, damageCooldown: 0 });
-  } else {
-    enemies.push({ type, x: ex, y: ey, w: 18, h: 38, hp: 25, maxHp: 25, speed: 2.2 + Math.random()*0.8, dmg: 6, damageCooldown: 0 });
+  const biome = getBiomeAtPixel(player.x, player.y);
+  const r = Math.random();
+  let type, w, h, hp, speed, dmg;
+  if (biome === 'swamp') {
+    type = r < 0.6 ? 'slimeling' : 'crawler';
+    if (type === 'slimeling') { w=36;h=24;hp=80;speed=0.6+r*0.3;dmg=12; }
+    else { w=28;h=20;hp=50;speed=0.7;dmg=15; }
+  } else if (biome === 'desert') {
+    type = r < 0.65 ? 'scorpling' : 'runner';
+    if (type === 'scorpling') { w=24;h=20;hp=30;speed=2.5+r*0.8;dmg=8; }
+    else { w=18;h=38;hp=25;speed=2.4;dmg=6; }
+  } else if (biome === 'tundra') {
+    type = r < 0.5 ? 'yeti' : 'crawler';
+    if (type === 'yeti') { w=40;h=44;hp=140;speed=0.7+r*0.3;dmg=22; }
+    else { w=28;h=20;hp=60;speed=0.8;dmg=15; }
+  } else if (biome === 'volcano') {
+    type = r < 0.6 ? 'ember' : 'runner';
+    if (type === 'ember') { w=20;h=28;hp=35;speed=2.8+r*0.7;dmg=10; }
+    else { w=18;h=38;hp=25;speed=2.5;dmg=7; }
+  } else if (biome === 'void') {
+    type = 'wraith';
+    w=26;h=32;hp=60;speed=1.8+r*0.8;dmg=18;
+  } else { // forest
+    type = r < 0.55 ? 'crawler' : 'runner';
+    if (type === 'crawler') { w=28;h=20;hp=50;speed=0.8+r*0.4;dmg=15; }
+    else { w=18;h=38;hp=25;speed=2.2+r*0.8;dmg=6; }
   }
+  enemies.push({ type, x:ex, y:ey, w, h, hp, maxHp:hp, speed, baseDmg:dmg, dmg, damageCooldown:0 });
 }
 
 let notification = null;
@@ -672,10 +712,17 @@ function drawMap() {
         ctx.fillStyle = 'rgba(0,0,0,0.18)';
         ctx.fillRect(Math.round(sx+3), Math.round(sy + TILE*0.7), TILE-6, 5);
       } else {
-        const base = ((tx+ty)%2===0) ? '#2d6a4f' : '#27ae60';
+        const biomeHere = getBiome(tx, ty);
+        let base, detail;
+        if (biomeHere==='swamp')   { base=((tx+ty)%2===0)?'#1a3a1a':'#243a24'; detail='#0f2a0f'; }
+        else if (biomeHere==='desert') { base=((tx+ty)%2===0)?'#c8a84b':'#d4b860'; detail='#b89030'; }
+        else if (biomeHere==='tundra') { base=((tx+ty)%2===0)?'#a8c0d0':'#bcd0e0'; detail='#80a0b8'; }
+        else if (biomeHere==='volcano') { base=((tx+ty)%2===0)?'#3a1008':'#4a1a10'; detail='#6b1010'; }
+        else if (biomeHere==='void') { base=((tx+ty)%2===0)?'#0a0818':'#12101e'; detail='#1a1028'; }
+        else { base=((tx+ty)%2===0)?'#2d6a4f':'#27ae60'; detail='#1e5631'; } // forest
         drawPixelRect(sx, sy, TILE, TILE, base);
         const seed = tx*73+ty*137;
-        if (seed%5===0) { ctx.fillStyle='#1e5631'; ctx.fillRect(Math.round(sx+(seed%TILE)), Math.round(sy+((seed*3)%TILE)), 2, 2); }
+        if (seed%5===0) { ctx.fillStyle=detail; ctx.fillRect(Math.round(sx+(seed%TILE)), Math.round(sy+((seed*3)%TILE)), 2, 2); }
       }
     }
   }
@@ -761,51 +808,103 @@ function drawPlayer(sx, sy) {
   ctx.restore();
 }
 
+function drawEnemyByType(e, x, y) {
+  if (e.type === 'slimeling') {
+    // Fat green blob
+    drawPixelRect(x+2, y+6, e.w-4, e.h-6, '#1a7a1a');
+    drawPixelRect(x, y+10, e.w, e.h-14, '#22aa22');
+    // Wobbly eyes
+    const wob = Math.sin(frame*0.15+e.x)*2;
+    ctx.fillStyle='#aaff44'; ctx.fillRect(Math.round(x+6), Math.round(y+7+wob),6,6);
+    ctx.fillRect(Math.round(x+e.w-12), Math.round(y+7-wob),6,6);
+    ctx.fillStyle='#000'; ctx.fillRect(Math.round(x+8),Math.round(y+9+wob),3,3); ctx.fillRect(Math.round(x+e.w-10),Math.round(y+9-wob),3,3);
+    // Slime drips
+    ctx.fillStyle='#44ff44'; ctx.fillRect(Math.round(x+4),Math.round(y+e.h-2),3,4); ctx.fillRect(Math.round(x+e.w-7),Math.round(y+e.h-4),3,6);
+  } else if (e.type === 'scorpling') {
+    // Sandy scorpion - low & fast
+    drawPixelRect(x+2, y+6, e.w-4, e.h-8, '#c8a040');
+    drawPixelRect(x+4, y+2, e.w-8, 8, '#d4b050');
+    // Pincers
+    ctx.fillStyle='#a07820'; ctx.fillRect(Math.round(x-4),Math.round(y+4),6,4); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+4),6,4);
+    // Stinger tail
+    ctx.fillStyle='#c83030'; ctx.fillRect(Math.round(x+e.w/2-1),Math.round(y-4),3,6);
+    // Eyes
+    ctx.fillStyle='#ff4400'; ctx.fillRect(Math.round(x+5),Math.round(y+3),3,3); ctx.fillRect(Math.round(x+e.w-8),Math.round(y+3),3,3);
+    // Leg animation
+    const leg=Math.sin(frame*0.3+e.x)*3;
+    for(let i=0;i<3;i++){ctx.fillStyle='#a07820';ctx.fillRect(Math.round(x-3+i*2),Math.round(y+8+leg),2,8);ctx.fillRect(Math.round(x+e.w+1-i*2),Math.round(y+8-leg),2,8);}
+  } else if (e.type === 'yeti') {
+    // Big white/blue beast
+    drawPixelRect(x+2, y+16, e.w-4, e.h-16, '#8898b8');
+    drawPixelRect(x+4, y+6, e.w-8, 14, '#aabbd0');
+    drawPixelRect(x+8, y, e.w-16, 10, '#c8d8e8'); // head
+    // Horns
+    ctx.fillStyle='#d0e0f0'; ctx.fillRect(Math.round(x+8),Math.round(y-4),3,5); ctx.fillRect(Math.round(x+e.w-11),Math.round(y-4),3,5);
+    // Eyes
+    ctx.fillStyle='#88ccff'; ctx.fillRect(Math.round(x+10),Math.round(y+2),5,5); ctx.fillRect(Math.round(x+e.w-15),Math.round(y+2),5,5);
+    ctx.fillStyle='#001040'; ctx.fillRect(Math.round(x+12),Math.round(y+4),3,3); ctx.fillRect(Math.round(x+e.w-13),Math.round(y+4),3,3);
+    // Arms
+    const arm=Math.sin(frame*0.1+e.y)*4;
+    drawPixelRect(x-6, y+14+arm, 8, 16, '#8898b8'); drawPixelRect(x+e.w-2, y+14-arm, 8, 16, '#8898b8');
+  } else if (e.type === 'ember') {
+    // Fast flaming imp
+    drawPixelRect(x+3, y+12, e.w-6, e.h-12, '#8b1a00');
+    drawPixelRect(x+4, y+4, e.w-8, 12, '#aa2200');
+    drawPixelRect(x+5, y, e.w-10, 7, '#cc3300');
+    // Flame head
+    const fl=Math.sin(frame*0.25+e.x)*2;
+    ctx.fillStyle='#ff6600'; ctx.fillRect(Math.round(x+5),Math.round(y-3+fl),4,5); ctx.fillRect(Math.round(x+e.w-9),Math.round(y-3-fl),4,5); ctx.fillRect(Math.round(x+e.w/2-2),Math.round(y-5),4,6);
+    // Eyes - glowing
+    ctx.fillStyle='#ffaa00'; ctx.fillRect(Math.round(x+6),Math.round(y+1),4,4); ctx.fillRect(Math.round(x+e.w-10),Math.round(y+1),4,4);
+    // Legs fast
+    const lf=Math.sin(frame*0.4+e.x)*4;
+    drawPixelRect(x+4,y+e.h-8+lf,4,8,'#6b1000'); drawPixelRect(x+e.w-8,y+e.h-8-lf,4,8,'#6b1000');
+  } else if (e.type === 'wraith') {
+    // Translucent void ghost
+    const wa = 0.5+0.3*Math.sin(frame*0.12+e.y);
+    ctx.save(); ctx.globalAlpha=wa;
+    drawPixelRect(x+3, y+10, e.w-6, e.h-10, '#2a0a4a');
+    drawPixelRect(x+5, y+2, e.w-10, 12, '#3a1060');
+    // Glowing eyes
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#cc44ff'; ctx.fillRect(Math.round(x+7),Math.round(y+5),4,4); ctx.fillRect(Math.round(x+e.w-11),Math.round(y+5),4,4);
+    ctx.shadowColor='#cc44ff'; ctx.shadowBlur=8;
+    ctx.fillRect(Math.round(x+7),Math.round(y+5),4,4); ctx.fillRect(Math.round(x+e.w-11),Math.round(y+5),4,4);
+    ctx.restore();
+    // Wispy bottom
+    ctx.save(); ctx.globalAlpha=wa*0.6; ctx.fillStyle='#3a1060';
+    for(let wi=0;wi<3;wi++){const wo=Math.sin(frame*0.1+wi+e.x)*3;ctx.fillRect(Math.round(x+4+wi*7),Math.round(y+e.h-4+wo),5,6);}
+    ctx.restore();
+  } else if (e.type === 'runner') {
+    drawPixelRect(x+3, y+14, e.w-6, e.h-14, '#a00020');
+    drawPixelRect(x+4, y+6, e.w-8, 12, '#cc1a35');
+    drawPixelRect(x+5, y, e.w-10, 9, '#e8203f');
+    ctx.fillStyle='#ff4466'; ctx.fillRect(Math.round(x+6),Math.round(y-4),2,5); ctx.fillRect(Math.round(x+10),Math.round(y-6),2,7); ctx.fillRect(Math.round(x+14),Math.round(y-4),2,5);
+    ctx.fillStyle='#fff'; ctx.fillRect(Math.round(x+6),Math.round(y+2),3,3); ctx.fillRect(Math.round(x+12),Math.round(y+2),3,3);
+    ctx.fillStyle='#000'; ctx.fillRect(Math.round(x+7),Math.round(y+3),2,2); ctx.fillRect(Math.round(x+13),Math.round(y+3),2,2);
+    const legSwing=Math.sin(frame*0.25+e.x)*3;
+    drawPixelRect(x+4,y+e.h-8,5,8+legSwing,'#a00020'); drawPixelRect(x+e.w-9,y+e.h-8,5,8-legSwing,'#a00020');
+  } else {
+    // crawler (default)
+    const crawl=Math.sin(frame*0.18+e.y)*2;
+    drawPixelRect(x+2, y+8+crawl, e.w-4, e.h-8, '#1a6b2a');
+    drawPixelRect(x+4, y+crawl, e.w-8, 12, '#25923a');
+    ctx.fillStyle='#aaff44'; ctx.fillRect(Math.round(x+5),Math.round(y+2+crawl),7,7); ctx.fillRect(Math.round(x+16),Math.round(y+2+crawl),7,7);
+    ctx.fillStyle='#000'; ctx.fillRect(Math.round(x+7),Math.round(y+4+crawl),4,4); ctx.fillRect(Math.round(x+18),Math.round(y+4+crawl),4,4);
+    const armSwing=Math.sin(frame*0.18+e.y)*4;
+    drawPixelRect(x-4,y+10+armSwing,7,4,'#1a6b2a'); drawPixelRect(x+e.w-3,y+10-armSwing,7,4,'#1a6b2a');
+  }
+}
+
 function drawEnemy(e) {
   const s = worldToScreen(e.x, e.y);
   if (s.x > canvas.width+40 || s.x < -40 || s.y > canvas.height+40 || s.y < -40) return;
   const {x, y} = s;
-  if (e.type === 'runner') {
-    // Tall red boy — slim, elongated, spiky head
-    drawPixelRect(x+3, y+14, e.w-6, e.h-14, '#a00020'); // legs/body
-    drawPixelRect(x+4, y+6, e.w-8, 12, '#cc1a35');       // torso
-    drawPixelRect(x+5, y, e.w-10, 9, '#e8203f');          // head
-    // Spiky hair
-    ctx.fillStyle='#ff4466';
-    ctx.fillRect(Math.round(x+6), Math.round(y-4), 2, 5);
-    ctx.fillRect(Math.round(x+10), Math.round(y-6), 2, 7);
-    ctx.fillRect(Math.round(x+14), Math.round(y-4), 2, 5);
-    // Eyes — beady white
-    ctx.fillStyle='#fff';
-    ctx.fillRect(Math.round(x+6), Math.round(y+2), 3, 3);
-    ctx.fillRect(Math.round(x+12), Math.round(y+2), 3, 3);
-    ctx.fillStyle='#000';
-    ctx.fillRect(Math.round(x+7), Math.round(y+3), 2, 2);
-    ctx.fillRect(Math.round(x+13), Math.round(y+3), 2, 2);
-    // Legs animate
-    const legSwing = Math.sin(frame * 0.25 + e.x) * 3;
-    drawPixelRect(x+4, y+e.h-8, 5, 8+legSwing, '#a00020');
-    drawPixelRect(x+e.w-9, y+e.h-8, 5, 8-legSwing, '#a00020');
-  } else {
-    // Little green man — squat, crawling
-    const crawl = Math.sin(frame * 0.18 + e.y) * 2;
-    drawPixelRect(x+2, y+8+crawl, e.w-4, e.h-8, '#1a6b2a'); // body
-    drawPixelRect(x+4, y+crawl, e.w-8, 12, '#25923a');        // head
-    // Big eyes
-    ctx.fillStyle='#aaff44';
-    ctx.fillRect(Math.round(x+5), Math.round(y+2+crawl), 7, 7);
-    ctx.fillRect(Math.round(x+16), Math.round(y+2+crawl), 7, 7);
-    ctx.fillStyle='#000';
-    ctx.fillRect(Math.round(x+7), Math.round(y+4+crawl), 4, 4);
-    ctx.fillRect(Math.round(x+18), Math.round(y+4+crawl), 4, 4);
-    // Little arms crawling
-    const armSwing = Math.sin(frame * 0.18 + e.y) * 4;
-    drawPixelRect(x-4, y+10+armSwing, 7, 4, '#1a6b2a');
-    drawPixelRect(x+e.w-3, y+10-armSwing, 7, 4, '#1a6b2a');
-  }
+  drawEnemyByType(e, x, y);
   // Health bar
+  const hpColor = {runner:'#e74c3c',crawler:'#2ecc71',slimeling:'#22cc22',scorpling:'#d4b020',yeti:'#88ccff',ember:'#ff6600',wraith:'#cc44ff'}[e.type]||'#fff';
   drawPixelRect(x, y-8, e.w, 4, '#333');
-  drawPixelRect(x, y-8, Math.round(e.w * e.hp / e.maxHp), 4, e.type==='runner'?'#e74c3c':'#2ecc71');
+  drawPixelRect(x, y-8, Math.round(e.w * e.hp / e.maxHp), 4, hpColor);
 }
 
 function drawBullet(b) {
@@ -828,6 +927,11 @@ function drawHUD() {
   ctx.fillStyle='#fbbf24'; ctx.font='bold 14px monospace'; ctx.textAlign='right';
   ctx.fillText('Coins: '+player.coins, canvas.width-14, 23);
 
+  const biomeNow = getBiomeAtPixel(player.x, player.y);
+  const biomeLabel = {forest:'🌿 Forest',swamp:'🌊 Swamp',desert:'🏜️ Desert',tundra:'❄️ Tundra',volcano:'🌋 Volcano',void:'💀 Void'}[biomeNow]||biomeNow;
+  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(canvas.width/2-60, 10, 120, 22);
+  ctx.fillStyle='#ffd700'; ctx.font='bold 12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(biomeLabel, canvas.width/2, 21);
   const ps = worldToScreen(player.x + player.w/2, player.y);
   const gap = 22, noteR = 10;
   const totalW = player.notes.length * gap;
