@@ -832,13 +832,24 @@ function enterInterior(lm) {
       wobble: Math.random()*Math.PI*2
     });
   }
+  const bDef = BOSSES[lm.biome] || BOSSES.forest;
+  const iBoss = {
+    ...bDef,
+    x: iW*0.5, y: iH*0.30,
+    hp: Math.round(bDef.hp * 0.25), maxHp: Math.round(bDef.hp * 0.25), // 25% of world hp for interior
+    speed: bDef.speed * 0.7,
+    dmg: Math.round(bDef.dmg * 0.6),
+    phase2: false, wobble: 0, invincible: 0,
+  };
   interiorState = {
     theme, biome: lm.biome, lm,
-    px: iW/2, py: iH*0.65,
+    px: iW/2, py: iH*0.72,
     enemies: iEnemies,
-    chestX: iW*0.5, chestY: iH*0.22,
+    boss: iBoss,
+    bossDefeated: false,
+    chestX: iW*0.5, chestY: iH*0.18,
     chestCollected: false,
-    exitX: iW*0.5, exitY: iH*0.82,
+    exitX: iW*0.5, exitY: iH*0.88,
     enterFrame: frame,
     bullets: [],
     shootCooldown: 0,
@@ -888,6 +899,38 @@ function updateInterior() {
       player.hp-=Math.round(5*getDiff().enemyDmg); player.invincible=30;
     }
   });
+  // Boss update
+  if (s.boss && !s.bossDefeated) {
+    const b = s.boss;
+    b.wobble += 0.05;
+    if (b.invincible > 0) b.invincible--;
+    // Phase 2 at 50% hp
+    if (!b.phase2 && b.hp <= b.maxHp*0.5) {
+      b.phase2 = true; b.speed *= 1.5;
+      showNotif('⚠️ ' + b.label + ' ENRAGED!', '#ff4444', 120);
+    }
+    const bdx = s.px-b.x, bdy = s.py-b.y, bdist = Math.sqrt(bdx*bdx+bdy*bdy)||1;
+    b.x += (bdx/bdist)*b.speed + Math.sin(b.wobble)*1.2;
+    b.y += (bdy/bdist)*b.speed + Math.cos(b.wobble)*0.8;
+    b.x = Math.max(40,Math.min(CW-40,b.x)); b.y = Math.max(110,Math.min(CH-80,b.y));
+    // Boss hits player
+    if (Math.abs(s.px-b.x)<b.w*0.6&&Math.abs(s.py-b.y)<b.h*0.6&&frame%50===0) {
+      player.hp -= Math.round(b.dmg*getDiff().enemyDmg); player.invincible=40;
+      showNotif('-'+Math.round(b.dmg*getDiff().enemyDmg)+' HP!','#ff4444',60);
+    }
+    // Bullets hit boss
+    s.bullets.forEach((bl,bi) => {
+      if (Math.abs(bl.x-b.x)<b.w*0.6&&Math.abs(bl.y-b.y)<b.h*0.6&&b.invincible===0) {
+        b.hp -= bl.dmg; b.invincible = 8; s.bullets.splice(bi,1);
+        if (b.hp <= 0) {
+          s.bossDefeated = true;
+          savedCoins += 200;
+          showNotif('🏆 ' + b.label + ' defeated! +200 MP!','#fbbf24',240);
+        }
+      }
+    });
+  }
+
   // Chest collect
   const cd = Math.sqrt((s.px-s.chestX)**2+(s.py-s.chestY)**2);
   if (!s.chestCollected && cd < 40 && mouseDown) {
@@ -986,6 +1029,42 @@ function drawInterior() {
     ctx.fillStyle='#ff4444'; ctx.fillRect(e.x-16,e.y-e.h/2-8,32,4);
     ctx.fillStyle='#22c55e'; ctx.fillRect(e.x-16,e.y-e.h/2-8,Math.round(32*e.hp/e.maxHp),4);
   });
+
+  // Boss
+  if (s.boss && !s.bossDefeated) {
+    const b = s.boss;
+    const bsx = b.x, bsy = b.y;
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath();
+    ctx.ellipse(bsx,bsy+b.h*0.5,b.w*0.5,10,0,0,Math.PI*2); ctx.fill();
+    // Phase 2 aura
+    if (b.phase2) {
+      ctx.save(); ctx.globalAlpha=0.25+Math.sin(frame*.15)*.15;
+      ctx.fillStyle='#ff4400';
+      ctx.beginPath(); ctx.arc(bsx,bsy,b.w*0.9,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+    // Boss body (biome-colored, large)
+    const bFlash = b.invincible > 0;
+    ctx.fillStyle = bFlash ? '#ffffff' : s.theme.accent;
+    ctx.fillRect(bsx-b.w/2, bsy-b.h/2, b.w, b.h);
+    ctx.fillStyle = bFlash ? '#ffaaaa' : s.theme.wallDeco;
+    ctx.fillRect(bsx-b.w/2+4, bsy-b.h/2+4, b.w-8, b.h-8);
+    // Eyes
+    ctx.fillStyle='#ff2222';
+    ctx.beginPath(); ctx.arc(bsx-b.w*0.2,bsy-b.h*0.1,5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bsx+b.w*0.2,bsy-b.h*0.1,5,0,Math.PI*2); ctx.fill();
+    // HP bar (big)
+    const bpct = Math.max(0,b.hp/b.maxHp);
+    ctx.fillStyle='#1a0a2e'; ctx.fillRect(bsx-60,bsy-b.h/2-22,120,10);
+    ctx.fillStyle=bpct>0.5?'#22c55e':'#ff4444';
+    ctx.fillRect(bsx-60,bsy-b.h/2-22,Math.round(120*bpct),10);
+    ctx.fillStyle=s.theme.accent; ctx.font='bold 11px monospace'; ctx.textAlign='center';
+    ctx.fillText(b.label+(b.phase2?' ⚠️':''), bsx, bsy-b.h/2-26);
+  } else if (s.bossDefeated) {
+    ctx.fillStyle='#22c55e'; ctx.font='bold 13px monospace'; ctx.textAlign='center';
+    ctx.fillText('🏆 BOSS DEFEATED', CW/2, CH/2-20);
+  }
 
   // Bullets
   s.bullets.forEach(b => {
