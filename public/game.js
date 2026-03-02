@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v5.8-debug';
+const VERSION = 'v5.9-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -88,7 +88,7 @@ function spawnMapNote() {
   } while (getTile(Math.floor(x/TILE), Math.floor(y/TILE)) === 1);
   mapNotes.push({ x, y, pitch, glow: 0, bobOffset: Math.random() * Math.PI * 2 });
 }
-for (let i = 0; i < 120; i++) spawnMapNote();
+for (let i = 0; i < 1200; i++) spawnMapNote();
 
 let bullets = [];
 let explosions = [];
@@ -844,7 +844,7 @@ function update() {
     ex.life--;
     if (ex.life <= 0) explosions.splice(i, 1);
   }
-  if (mapNotes.length < 100 && frame % 60 === 0) spawnMapNote();
+  if (mapNotes.length < 1000 && frame % 15 === 0) spawnMapNote();
   if (player.shootCooldown > 0) player.shootCooldown--;
   if (mouseDown && gameState === 'playing') shoot(mouseX, mouseY);
 
