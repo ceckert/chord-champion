@@ -1579,7 +1579,30 @@ function drawEnemy(e) {
   const s = worldToScreen(e.x, e.y);
   if (s.x > canvas.width+40 || s.x < -40 || s.y > canvas.height+40 || s.y < -40) return;
   const {x, y} = s;
-  if (e.isBoss) { drawBoss(e, x, y); } else { drawEnemyByType(e, x, y); }
+  if (e.isBoss) { drawBoss(e, x, y); } else {
+    ctx.save();
+    if (e.evoTier > 0) {
+      // Scale slightly larger per tier
+      const sc = 1 + e.evoTier * 0.12;
+      ctx.translate(x + e.w/2, y + e.h/2);
+      ctx.scale(sc, sc);
+      ctx.translate(-(x + e.w/2), -(y + e.h/2));
+      // Darken tint overlay after drawing
+    }
+    drawEnemyByType(e, x, y);
+    if (e.evoTier > 0) {
+      // Dark overlay to darken the sprite
+      ctx.globalAlpha = Math.min(0.5, e.evoTier * 0.2);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x - e.w*0.1, y - e.h*0.1, e.w*1.2, e.h*1.2);
+      ctx.globalAlpha = 1;
+      // Evo badge
+      ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = e.evoTier===1?'#ff4400':e.evoTier===2?'#ff0000':'#880000';
+      const badge = e.evoTier===1?'★':e.evoTier===2?'★★':'★★★+';
+      ctx.fillText(badge, Math.round(x+e.w/2), Math.round(y-12));
+    }
+    ctx.restore();
+  }
   // Health bar
   const hpColor = {runner:'#e74c3c',crawler:'#2ecc71',slimeling:'#22cc22',bogcrawler:'#1a5010',scorpling:'#d4b020',dunestalker:'#c8902a',yeti:'#88ccff',frostimp:'#66aadd',crystalgolem:'#4488cc',gemsprite:'#cc66ff',windelemental:'#aaaaee',stormhawk:'#445577',ember:'#ff6600',magmacrab:'#cc3300',sporepuff:'#aa44cc',myceliumcreep:'#6a2a7a',wraith:'#cc44ff',voidshade:'#ff00aa'}[e.type]||'#fff';
   if (e.isBoss) {
