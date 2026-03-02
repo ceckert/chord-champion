@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v5.2-debug';
+const VERSION = 'v5.3-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -224,23 +224,32 @@ function preSpawnEnemies(count) {
 
 function spawnEnemy(nearPlayer) {
   let ex, ey;
-  if (nearPlayer) {
-    // Spawn in ring 220-400px around player, close enough to see immediately
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 220 + Math.random() * 180;
-    ex = Math.min((MAP_W-2)*TILE, Math.max(TILE, player.x + Math.cos(angle)*dist));
-    ey = Math.min((MAP_H-2)*TILE, Math.max(TILE, player.y + Math.sin(angle)*dist));
-    if (getTile(Math.floor(ex/TILE), Math.floor(ey/TILE)) === 1) { ex += TILE; ey += TILE; }
-  } else {
-    // Spawn just outside visible screen area
-    const offX = Math.ceil(canvas.width/2/TILE) + 3;
-    const offY = Math.ceil(canvas.height/2/TILE) + 3;
-    const px = Math.floor(player.x/TILE), py = Math.floor(player.y/TILE);
-    const side = Math.floor(Math.random()*4);
-    if (side===0) { ex=Math.max(1,Math.min(MAP_W-2,px-offX+Math.floor(Math.random()*offX*2)))*TILE; ey=Math.max(1,py-offY)*TILE; }
-    else if (side===1) { ex=Math.min(MAP_W-2,px+offX)*TILE; ey=Math.max(1,Math.min(MAP_H-2,py-offY+Math.floor(Math.random()*offY*2)))*TILE; }
-    else if (side===2) { ex=Math.max(1,Math.min(MAP_W-2,px-offX+Math.floor(Math.random()*offX*2)))*TILE; ey=Math.min(MAP_H-2,py+offY)*TILE; }
-    else { ex=Math.max(1,px-offX)*TILE; ey=Math.max(1,Math.min(MAP_H-2,py-offY+Math.floor(Math.random()*offY*2)))*TILE; }
+  {
+    // Always spawn at the edges of the player's current camera view
+    const halfW = Math.ceil(canvas.width / 2) + TILE;
+    const halfH = Math.ceil(canvas.height / 2) + TILE;
+    const cx = player.x + player.w/2;
+    const cy = player.y + player.h/2;
+    const side = Math.floor(Math.random() * 4);
+    if (side === 0) { // top edge
+      ex = cx - halfW + Math.random() * halfW * 2;
+      ey = cy - halfH;
+    } else if (side === 1) { // right edge
+      ex = cx + halfW;
+      ey = cy - halfH + Math.random() * halfH * 2;
+    } else if (side === 2) { // bottom edge
+      ex = cx - halfW + Math.random() * halfW * 2;
+      ey = cy + halfH;
+    } else { // left edge
+      ex = cx - halfW;
+      ey = cy - halfH + Math.random() * halfH * 2;
+    }
+    ex = Math.min((MAP_W-2)*TILE, Math.max(TILE, ex));
+    ey = Math.min((MAP_H-2)*TILE, Math.max(TILE, ey));
+    if (getTile(Math.floor(ex/TILE), Math.floor(ey/TILE)) === 1) {
+      ex = Math.min((MAP_W-2)*TILE, ex + TILE*2);
+      ey = Math.min((MAP_H-2)*TILE, ey + TILE*2);
+    }
   }
   const biome = getBiomeAtPixel(player.x, player.y);
   const r = Math.random();
