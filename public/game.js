@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v2.9-debug';
+const VERSION = 'v3.0-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -90,6 +90,21 @@ function spawnMapNote() {
 for (let i = 0; i < 40; i++) spawnMapNote();
 
 let bullets = [];
+let explosions = []; // { x, y, r, maxR, life, maxLife }
+
+function triggerExplosion(x, y, radius, dmg) {
+  explosions.push({ x, y, r: 4, maxR: radius, life: 20, maxLife: 20, dmg });
+  // Damage all enemies in radius
+  for (let j = enemies.length - 1; j >= 0; j--) {
+    const e = enemies[j];
+    const ecx = e.x + e.w/2, ecy = e.y + e.h/2;
+    const dist = Math.sqrt((ecx-x)**2 + (ecy-y)**2);
+    if (dist < radius) {
+      e.hp -= dmg * (1 - dist/radius); // falloff
+      if (e.hp <= 0) enemies.splice(j, 1);
+    }
+  }
+}
 function shoot(tx, ty) {
   if (player.shootCooldown > 0) return;
   player.shootCooldown = player.shootRate;
@@ -346,13 +361,22 @@ function update() {
     const b = bullets[i];
     b.x += b.vx; b.y += b.vy; b.life--;
     if (b.life <= 0) { bullets.splice(i, 1); continue; }
-    if (getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE)) === 1) { bullets.splice(i, 1); continue; }
     let hit = false;
+    // Wall hit — check explosive
+    if (getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE)) === 1) {
+      const explodeLv = ALL_UPGRADES.find(u => u.id === 'ab_explode')?.level || 0;
+      if (explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
+      bullets.splice(i, 1); continue;
+    }
+    const dmgMult = 1 + (ALL_UPGRADES.find(u => u.id === 'dmg')?.level || 0) * 0.2;
+    const explodeLv = ALL_UPGRADES.find(u => u.id === 'ab_explode')?.level || 0;
     for (let j = enemies.length - 1; j >= 0; j--) {
       const e = enemies[j];
       if (rectOverlap(b.x-4, b.y-4, 8, 8, e.x, e.y, e.w, e.h)) {
-        e.hp -= 10;
+        const dmg = Math.round(10 * dmgMult);
+        e.hp -= dmg;
         if (e.hp <= 0) enemies.splice(j, 1);
+        if (explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
         hit = true; break;
       }
     }
@@ -401,6 +425,13 @@ function update() {
   }
 
   if (notification) { notification.timer--; if (notification.timer <= 0) notification = null; }
+  // Animate explosions
+  for (let i = explosions.length - 1; i >= 0; i--) {
+    const ex = explosions[i];
+    ex.r = ex.maxR * (1 - ex.life / ex.maxLife);
+    ex.life--;
+    if (ex.life <= 0) explosions.splice(i, 1);
+  }
   if (mapNotes.length < 25 && frame % 120 === 0) spawnMapNote();
   if (player.shootCooldown > 0) player.shootCooldown--;
   if (mouseDown && gameState === 'playing') shoot(mouseX, mouseY);
@@ -733,6 +764,18 @@ function render() {
   drawCheckpointWorld();
   for (const n of mapNotes) drawMapNote(n);
   for (const b of bullets) drawBullet(b);
+  for (const ex of explosions) {
+    const s = worldToScreen(ex.x, ex.y);
+    const alpha = ex.life / ex.maxLife;
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.7;
+    ctx.fillStyle = '#ff6b00';
+    ctx.beginPath(); ctx.arc(s.x, s.y, ex.r, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = alpha * 0.4;
+    ctx.fillStyle = '#ffdd00';
+    ctx.beginPath(); ctx.arc(s.x, s.y, ex.r * 0.6, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
   for (const e of enemies) drawEnemy(e);
   const ps = worldToScreen(player.x, player.y);
   drawPlayer(ps.x, ps.y);
