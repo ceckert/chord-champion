@@ -1427,7 +1427,11 @@ function drawPlayer(sx, sy) {
 
   // === GUN ARM (rotates from shoulder, model depends on selectedGunId) ===
   ctx.save();
-  ctx.translate(9, -1);
+  if (selectedCharacter === 'max') {
+    ctx.translate(-8, 4); ctx.scale(0.55, 0.55); // small dog - tiny gun from snout
+  } else {
+    ctx.translate(9, -1);
+  }
   ctx.rotate(angle);
   // Upper arm
   ctx.fillStyle = '#f9c74f';
