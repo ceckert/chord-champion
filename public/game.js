@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v2.1-debug';
+const VERSION = 'v2.2-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -270,6 +270,49 @@ function resolveMapCollision(obj) {
 }
 
 let frame = 0;
+
+// BFS pathfinding on tile grid
+function bfsPath(startX, startY, goalX, goalY) {
+  const sx = Math.floor(startX/TILE), sy = Math.floor(startY/TILE);
+  const gx = Math.floor(goalX/TILE), gy = Math.floor(goalY/TILE);
+  if (sx === gx && sy === gy) return null;
+  const dirs = [[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]];
+  const visited = new Map();
+  const key = (x,y) => x + y * MAP_W;
+  const queue = [[sx, sy]];
+  visited.set(key(sx, sy), null);
+  while (queue.length > 0) {
+    const [cx, cy] = queue.shift();
+    if (cx === gx && cy === gy) {
+      // Reconstruct path
+      const path = [];
+      let cur = key(cx, cy);
+      while (visited.get(cur) !== null) {
+        const [px2, py2] = visited.get(cur);
+        path.unshift({ x: px2 * TILE + TILE/2, y: py2 * TILE + TILE/2 });
+        cur = key(px2, py2);
+      }
+      path.push({ x: gx * TILE + TILE/2, y: gy * TILE + TILE/2 });
+      return path;
+    }
+    for (const [dx2, dy2] of dirs) {
+      const nx = cx + dx2, ny = cy + dy2;
+      if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue;
+      if (getTile(nx, ny) === 1) continue;
+      // For diagonals, also check both adjacent tiles to avoid corner cutting
+      if (dx2 !== 0 && dy2 !== 0) {
+        if (getTile(cx + dx2, cy) === 1 || getTile(cx, cy + dy2) === 1) continue;
+      }
+      const k = key(nx, ny);
+      if (!visited.has(k)) {
+        visited.set(k, [cx, cy]);
+        queue.push([nx, ny]);
+      }
+    }
+  }
+  return null; // no path
+}
+
 function update() {
   frame++;
   if (gameState !== 'playing') return;
@@ -331,30 +374,29 @@ function update() {
   if (player.invincible > 0) player.invincible--;
 
   for (const e of enemies) {
-    const edx = player.x - e.x, edy = player.y - e.y;
-    const elen = Math.sqrt(edx*edx + edy*edy) || 1;
-    const nx = edx/elen, ny = edy/elen;
+    // Recompute BFS path every 60 frames or if no path
+    if (!e.path || e.pathTimer <= 0) {
+      e.path = bfsPath(e.x + e.w/2, e.y + e.h/2, player.x + player.w/2, player.y + player.h/2);
+      e.pathTimer = 60;
+    }
+    e.pathTimer--;
 
-    // Try direct movement first
-    const prevX = e.x, prevY = e.y;
-    e.x += nx * e.speed;
-    if (getTile(Math.floor((e.x + e.w/2)/TILE), Math.floor((e.y + e.h/2)/TILE)) === 1 ||
-        getTile(Math.floor(e.x/TILE), Math.floor(e.y/TILE)) === 1 ||
-        getTile(Math.floor((e.x+e.w)/TILE), Math.floor(e.y/TILE)) === 1) {
-      e.x = prevX; // blocked horizontally — try sliding
-      // Try perpendicular slide
-      if (!e.slideDir) e.slideDir = (Math.random() < 0.5) ? 1 : -1;
-      e.x += ny * e.speed * e.slideDir;
-      if (getTile(Math.floor((e.x + e.w/2)/TILE), Math.floor((e.y + e.h/2)/TILE)) === 1) {
-        e.x = prevX; e.slideDir *= -1; // flip slide direction
+    // Follow path waypoints
+    if (e.path && e.path.length > 0) {
+      const wp = e.path[0];
+      const wdx = wp.x - (e.x + e.w/2), wdy = wp.y - (e.y + e.h/2);
+      const wlen = Math.sqrt(wdx*wdx + wdy*wdy) || 1;
+      if (wlen < e.speed + 2) {
+        e.path.shift(); // reached waypoint
+      } else {
+        e.x += (wdx/wlen) * e.speed;
+        e.y += (wdy/wlen) * e.speed;
       }
-    } else { e.slideDir = null; }
-
-    e.y += ny * e.speed;
-    if (getTile(Math.floor((e.x + e.w/2)/TILE), Math.floor((e.y + e.h/2)/TILE)) === 1 ||
-        getTile(Math.floor(e.x/TILE), Math.floor((e.y+e.h)/TILE)) === 1 ||
-        getTile(Math.floor((e.x+e.w)/TILE), Math.floor((e.y+e.h)/TILE)) === 1) {
-      e.y = prevY; // blocked vertically
+    } else {
+      // Fallback: beeline
+      const edx = player.x - e.x, edy = player.y - e.y;
+      const elen = Math.sqrt(edx*edx + edy*edy) || 1;
+      e.x += edx/elen * e.speed; e.y += edy/elen * e.speed;
     }
     if (player.invincible === 0 && rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)) {
       player.hp -= 10; player.invincible = 40;
