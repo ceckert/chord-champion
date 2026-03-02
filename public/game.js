@@ -914,6 +914,17 @@ function updateInterior() {
       player.hp-=Math.round(5*getDiff().enemyDmg); player.invincible=30;
     }
   });
+  // Death check inside interior
+  if (player.hp <= 0) {
+    player.hp = player.maxHp;
+    interiorState = null;
+    interiorCooldown = 120;
+    player.x = MAP_W/2*TILE - player.w/2;
+    player.y = MAP_H/2*TILE - player.h/2;
+    showNotif('💀 Escaped! Respawned at center.','#ff4444',180);
+    return;
+  }
+
   // Boss update
   if (s.boss && !s.bossDefeated) {
     const b = s.boss;
