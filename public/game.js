@@ -2673,9 +2673,9 @@ function initRivers() {
     [{b:'volcano',col:0,row:2},{b:'mushroom',col:1,row:2},{b:'shadow',col:2,row:2}]
   ];
   const rng = (seed) => { let s=seed+1; return ()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; }; };
-  const RIVER_RADIUS = 2; // tile radius around path centre
-  const BRIDGE_LEN   = 8; // tiles long bridge crossing
-  const NUM_BRIDGES  = 4; // per river
+  const RIVER_W   = 3; // tiles wide
+  const BRIDGE_W  = 5; // tiles long per bridge
+  const NUM_BRIDGES = 4;
 
   BIOME_CELLS.forEach(rowArr => rowArr.forEach(({b, col, row}) => {
     const rand = rng(col*999+row*333+b.charCodeAt(0)*7);
@@ -2685,64 +2685,64 @@ function initRivers() {
 
     for (let ri = 0; ri < numRivers; ri++) {
       const axis = (col + row + ri) % 2 === 0 ? 'h' : 'v';
-      // Generate winding path as array of {tx,ty} tile coords
-      const STEPS = 50;
-      const amplitude = 10 + rand()*14; // tiles of lateral swing
-      const frequency = 1.5 + rand()*2; // sine cycles across the river
-      const phaseShift = rand()*Math.PI*2;
-      const margin = 12;
-      // Path goes from one side of biome to the other
-      const pathTiles = [];
+      const margin = 14;
+      let coord, rangeStart, rangeEnd;
+      if (axis === 'h') {
+        coord = by0 + 20 + Math.floor(rand()*(CELL-40));
+        rangeStart = bx0 + margin;
+        rangeEnd   = bx0 + CELL - margin;
+      } else {
+        coord = bx0 + 20 + Math.floor(rand()*(CELL-40));
+        rangeStart = by0 + margin;
+        rangeEnd   = by0 + CELL - margin;
+      }
+      const span = rangeStart + (rangeEnd - rangeStart);
+
+      // Evenly space 4 bridges
+      const bridges = [];
+      for (let bi = 0; bi < NUM_BRIDGES; bi++) {
+        const t = Math.floor(rangeStart + 10 + (bi+0.5)*((rangeEnd-rangeStart-20)/NUM_BRIDGES));
+        bridges.push(t);
+      }
+      const bridgeSet = new Set();
+      bridges.forEach(bt => { for(let k=0;k<BRIDGE_W;k++) bridgeSet.add(bt+k); });
+
+      // Write tiles into map
+      for (let rw = 0; rw < RIVER_W; rw++) {
+        for (let t = rangeStart; t < rangeEnd; t++) {
+          let tx2, ty2;
+          if (axis === 'h') { tx2=t; ty2=coord+rw; } else { tx2=coord+rw; ty2=t; }
+          if (tx2<1||ty2<1||tx2>=MAP_W-1||ty2>=MAP_H-1) continue;
+          if (bridgeSet.has(t)) { map[ty2][tx2]=TILE_BRIDGE; }
+          else if (map[ty2][tx2]!==TILE_BRIDGE) { map[ty2][tx2]=TILE_WATER; }
+        }
+      }
+
+      // Build world-pixel path with TINY lateral jitter (amplitude ~1 tile)
+      // for a gentle organic edge on the bezier overlay
+      const STEPS = 60;
+      const amp = 0.8 + rand()*0.8; // max ~1.6 tile lateral wobble
+      const freq = 2 + rand()*2;
+      const phase = rand()*Math.PI*2;
+      const worldPoints = [];
       for (let si = 0; si <= STEPS; si++) {
         const t = si / STEPS;
-        let cx2, cy2;
+        let wx, wy;
+        const jitter = amp * TILE * Math.sin(t * Math.PI * freq + phase);
         if (axis === 'h') {
-          cx2 = bx0 + margin + Math.round(t*(CELL-margin*2));
-          const mid = by0 + Math.round(CELL/2 + (rand()-0.5)*CELL*0.3);
-          cy2 = Math.round(mid + amplitude*Math.sin(t*Math.PI*frequency + phaseShift));
+          wx = (rangeStart + t*(rangeEnd-rangeStart) + 0.5) * TILE;
+          wy = (coord + RIVER_W/2 + jitter/TILE) * TILE;
         } else {
-          cy2 = by0 + margin + Math.round(t*(CELL-margin*2));
-          const mid = bx0 + Math.round(CELL/2 + (rand()-0.5)*CELL*0.3);
-          cx2 = Math.round(mid + amplitude*Math.sin(t*Math.PI*frequency + phaseShift));
+          wy = (rangeStart + t*(rangeEnd-rangeStart) + 0.5) * TILE;
+          wx = (coord + RIVER_W/2 + jitter/TILE) * TILE;
         }
-        cx2 = Math.max(VOID_BORDER+2, Math.min(MAP_W-VOID_BORDER-3, cx2));
-        cy2 = Math.max(VOID_BORDER+2, Math.min(MAP_H-VOID_BORDER-3, cy2));
-        pathTiles.push({tx:cx2, ty:cy2});
+        worldPoints.push({ x: wx, y: wy });
       }
-
-      // Place bridge segments at even intervals along path
-      const bridgeSegments = []; // set of tile indices (along path) that are bridges
-      for (let bi = 0; bi < NUM_BRIDGES; bi++) {
-        const centre = Math.floor(STEPS*0.1 + (bi+0.5)*(STEPS*0.8/NUM_BRIDGES));
-        for (let bk = -Math.floor(BRIDGE_LEN/2); bk <= Math.floor(BRIDGE_LEN/2); bk++) {
-          bridgeSegments.push(Math.max(0,Math.min(STEPS,centre+bk)));
-        }
-      }
-      const bridgeSet = new Set(bridgeSegments);
-
-      // Mark tiles in map
-      pathTiles.forEach((pt, si) => {
-        const isBridge = bridgeSet.has(si);
-        const tileType = isBridge ? TILE_BRIDGE : TILE_WATER;
-        for (let dy2 = -RIVER_RADIUS; dy2 <= RIVER_RADIUS; dy2++) {
-          for (let dx2 = -RIVER_RADIUS; dx2 <= RIVER_RADIUS; dx2++) {
-            const tx2=pt.tx+dx2, ty2=pt.ty+dy2;
-            if (tx2<1||ty2<1||tx2>=MAP_W-1||ty2>=MAP_H-1) continue;
-            // Don't overwrite bridge with water
-            if (isBridge || map[ty2][tx2] !== TILE_BRIDGE) map[ty2][tx2] = tileType;
-          }
-        }
-      });
-
-      // Store world-pixel path points for smooth bezier rendering
-      const worldPoints = pathTiles.map(pt => ({
-        x: (pt.tx + 0.5)*TILE,
-        y: (pt.ty + 0.5)*TILE,
-      }));
 
       RIVER_DATA.push({
-        axis, pathTiles, worldPoints, bridgeSet,
-        biome: b, riverRadius: RIVER_RADIUS, bridgeLen: BRIDGE_LEN,
+        axis, coord, rangeStart, rangeEnd, bridgeSet, bridges,
+        biome: b, riverW: RIVER_W, bridgeW: BRIDGE_W,
+        worldPoints,
         waterColor: RIVER_WATER_COLORS[b] || '#1565c0',
         bridgeColor: RIVER_BRIDGE_COLORS[b] || '#8d6e63'
       });
