@@ -571,6 +571,10 @@ function uiPlay() {
   canvas.setAttribute('tabindex', '0');
   canvas.focus();
 }
+
+function awardBossLevel() {
+  player.ep = player.epMax; // fills EP bar to trigger level up on next frame
+}
 function openLevelUp() {
   gameState = 'paused';
   // Pick 3 random upgrades (not maxed)
@@ -924,8 +928,7 @@ function updateInterior() {
         b.hp -= bl.dmg; b.invincible = 8; s.bullets.splice(bi,1);
         if (b.hp <= 0) {
           s.bossDefeated = true;
-          savedCoins += 200;
-          showNotif('🏆 ' + b.label + ' defeated! +200 MP!','#fbbf24',240);
+          awardBossLevel(); showNotif('🏆 ' + b.label + ' defeated! +1 LEVEL!','#fbbf24',240);
         }
       }
     });
@@ -1310,7 +1313,7 @@ function update() {
 
         if (e.hp <= 0) {
           enemies.splice(j, 1);
-          if (e.isBoss) { bossActive = false; showNotif('🏆 Boss defeated! +500 MP!', '#fbbf24', 240); savedCoins += 500; }
+          if (e.isBoss) { bossActive = false; awardBossLevel(); showNotif('🏆 Boss defeated! +1 LEVEL!', '#fbbf24', 240); }
           const epGain = {crawler:10,runner:8,slimeling:14,bogcrawler:18,scorpling:12,dunestalker:14,yeti:28,frostimp:12,crystalgolem:25,gemsprite:12,windelemental:16,stormhawk:14,ember:14,magmacrab:22,sporepuff:15,myceliumcreep:14,wraith:20,voidshade:20,boss_treant:200,boss_bogqueen:180,boss_sandking:190,boss_glacier:220,boss_drake:175,boss_voidlord:200}[e.type]||10;
           player.ep += epGain;
           if (player.ep >= player.epMax) {
