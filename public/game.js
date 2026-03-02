@@ -848,11 +848,11 @@ function enterInterior(lm) {
   const iBoss = {
     ...bDef,
     x: iW*0.5, y: iH*0.30,
-    hp: Math.round(bDef.hp * 0.25), maxHp: Math.round(bDef.hp * 0.25), // 25% of world hp for interior
+    hp: Math.round(bDef.hp * 0.50), maxHp: Math.round(bDef.hp * 0.50), // 50% of world hp for interior
     speed: bDef.speed * 0.7,
     dmg: Math.round(bDef.dmg * 0.6),
     phase2: false, wobble: 0, invincible: 0,
-    specialCooldown: 120, specialAttacks: [], chargeVx: 0, chargeVy: 0, charging: 0,
+    specialCooldown: 35, specialAttacks: [], chargeVx: 0, chargeVy: 0, charging: 0,
   };
   interiorState = {
     theme, biome: lm.biome, lm,
@@ -1012,7 +1012,7 @@ function updateInterior() {
     // Bullets hit boss
     s.bullets.forEach((bl,bi) => {
       if (Math.abs(bl.x-b.x)<b.w*0.6&&Math.abs(bl.y-b.y)<b.h*0.6&&b.invincible===0) {
-        b.hp -= bl.dmg; b.invincible = 8; s.bullets.splice(bi,1);
+        b.hp -= bl.dmg; b.invincible = 14; s.bullets.splice(bi,1);
         if (b.hp <= 0) {
           s.bossDefeated = true;
           clearedStructures.add(s.lm.px+','+s.lm.py);
