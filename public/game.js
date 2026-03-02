@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v3.5-debug';
+const VERSION = 'v3.6-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -844,5 +844,5 @@ function render() {
 
 
 function loop() { update(); render(); requestAnimationFrame(loop); }
-window.addEventListener('resize', () => { canvas.height = window.innerHeight; });
+window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
 loop();
