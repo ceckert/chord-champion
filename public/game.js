@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v6.5-debug';
+const VERSION = 'v6.6-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -648,7 +648,7 @@ function update() {
         if (ab && abLv > 0) {
           if (ab.id === 'ab_fire')    { e.burning = 300; e.burnDmg = 1 + abLv; }
           if (ab.id === 'ab_bleed')   { e.bleeding = 300; }
-          if (ab.id === 'ab_freeze')  { e.frozen = Math.min(450,(e.frozen||0)+150); e.frozenSpeedMult = Math.max(0.15,1-abLv*0.17); }
+          if (ab.id === 'ab_freeze')  { e.frozen = Math.min(600,(e.frozen||0)+180); e.frozenSpeedMult = Math.max(0.1, 0.55 - abLv * 0.09); showNotif('🧊 Frozen!', '#67e8f9', 45); }
           if (ab.id === 'ab_weaken' && !e.weakened) { e.weakened=300; e.dmg=Math.round((e.dmg||10)*0.9); }
           if (ab.id === 'ab_poison')  { e.poisonStacks=Math.min(8,(e.poisonStacks||0)+1); e.poisonTimer=300; }
           if (ab.id === 'ab_leech')   { player.hp=Math.min(player.maxHp,player.hp+Math.ceil(actualDmg*0.1)); }
