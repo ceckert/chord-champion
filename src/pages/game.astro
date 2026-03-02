@@ -29,7 +29,7 @@
     .tabs { display: flex; gap: 0; width: 100%; margin-bottom: 14px; border-radius: 6px; overflow: hidden; border: 1.5px solid #4b2d8a; }
     .tab-btn { flex: 1; padding: 10px 0; background: #1a0a2e; border: none; color: #a78bfa; font-family: monospace; font-size: 14px; font-weight: bold; cursor: pointer; border-right: 1px solid #4b2d8a; }
     .tab-btn:last-child { border-right: none; }
-    .tab-btn.active { background: #7c3aed; color: #fff; }
+    .tab-btn.active { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3); }
     .tab-btn:hover:not(.active) { background: #2d1b69; }
     .tab-content { display: none; width: 100%; flex-direction: column; gap: 8px; }
     .tab-content.active { display: flex; }
@@ -61,23 +61,31 @@
     button.mbtn.back:hover { background: #374151; }
     .upg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
     .upg-col-hdr { color: #a78bfa; font-family: monospace; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 2px; }
-    .upg-card { background: #0f0a2e; border: 1.5px solid #374151; border-radius: 4px; padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; }
-    .upg-card.can { border-color: #7c3aed; }
-    .upg-card.maxed { border-color: #22c55e; }
-    .upg-name { color: #f9fafb; font-family: monospace; font-size: 12px; font-weight: bold; }
-    .upg-desc { color: #9ca3af; font-family: monospace; font-size: 11px; }
-    .upg-dots { display: flex; gap: 3px; margin-top: 2px; }
-    .upg-dot { width: 10px; height: 8px; background: #374151; border-radius: 1px; }
-    .upg-dot.on { background: #22c55e; }
+    .upg-card {
+      background: linear-gradient(135deg, #13093a 0%, #1e1050 100%);
+      border: 2px solid #2d1b69; border-radius: 12px;
+      padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;
+      transition: all 0.15s; position: relative; overflow: hidden;
+    }
+    .upg-card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(124,58,237,0.08),transparent); pointer-events:none; }
+    .upg-card.can { border-color: #7c3aed; box-shadow: 0 0 12px rgba(124,58,237,0.3), inset 0 0 20px rgba(124,58,237,0.05); }
+    .upg-card.can:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(124,58,237,0.45); }
+    .upg-card.maxed { border-color: #22c55e; box-shadow: 0 0 10px rgba(34,197,94,0.25); }
+    .upg-card.equipped { border-color: #a855f7; box-shadow: 0 0 14px rgba(168,85,247,0.4); }
+    .upg-name { color: #f9fafb; font-family: monospace; font-size: 13px; font-weight: bold; letter-spacing: 0.3px; }
+    .upg-desc { color: #8b8fa8; font-family: monospace; font-size: 11px; line-height: 1.5; }
+    .upg-dots { display: flex; gap: 4px; margin-top: 4px; }
+    .upg-dot { flex:1; height: 6px; background: #1e1b4b; border-radius: 3px; transition: background 0.2s; }
+    .upg-dot.on { background: linear-gradient(90deg, #7c3aed, #a855f7); box-shadow: 0 0 6px rgba(168,85,247,0.6); }
     button.buy-btn { margin-top: 6px; padding: 8px 14px; background: #7c3aed; border: none; border-radius: 20px; color: #fff; font-family: monospace; font-size: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 3px 0 #4c1d95, 0 4px 8px rgba(0,0,0,0.4); letter-spacing: 0.5px; transition: all 0.1s; }
     button.buy-btn:hover { background: #9333ea; transform: translateY(-1px); box-shadow: 0 4px 0 #4c1d95, 0 6px 12px rgba(0,0,0,0.4); }
     button.buy-btn:disabled { background: #374151; color: #6b7280; box-shadow: none; cursor: not-allowed; transform: none; }
-    .upg-max { color: #22c55e; font-family: monospace; font-size: 12px; font-weight: bold; text-align: center; margin-top: 5px; }
+    .upg-max { color: #22c55e; font-family: monospace; font-size: 12px; font-weight: bold; text-align: center; margin-top: 5px; background: rgba(34,197,94,0.1); border-radius: 6px; padding: 4px; border: 1px solid rgba(34,197,94,0.3); }
     .txt { color: #e2e8f0; font-family: monospace; font-size: 13px; line-height: 1.8; width: 100%; white-space: pre-wrap; }
     .tabs { display: flex; width: 100%; margin-bottom: 12px; border-radius: 6px; overflow: hidden; border: 1.5px solid #4b2d8a; }
-    .tab-btn { flex: 1; padding: 10px 0; background: #1a0a2e; border: none; color: #a78bfa; font-family: monospace; font-size: 13px; font-weight: bold; cursor: pointer; border-right: 1px solid #4b2d8a; }
+    .tab-btn { flex: 1; padding: 12px 0; background: #1a0a2e; border: none; color: #a78bfa; font-family: monospace; font-size: 13px; font-weight: bold; cursor: pointer; border-right: 1px solid #4b2d8a; transition: all 0.15s; }
     .tab-btn:last-child { border-right: none; }
-    .tab-btn.active { background: #7c3aed; color: #fff; }
+    .tab-btn.active { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3); }
     .tab-btn:hover:not(.active) { background: #2d1b69; }
     .tab-pane { display: none; width: 100%; flex-direction: column; gap: 8px; }
     .tab-pane.active { display: flex; }
@@ -98,7 +106,7 @@
   </div>
   <div id="scr-upgrades" class="panel" style="display:none; max-width:560px">
     <h2>UPGRADES</h2>
-    <div class="coins" id="coins-display">Banked: 0</div>
+    <div id="coins-display" style="background:linear-gradient(135deg,#1a0a2e,#2d1b4e);border:2px solid #7c3aed;border-radius:10px;padding:10px 20px;font-family:monospace;font-size:16px;font-weight:bold;color:#fbbf24;text-align:center;box-shadow:0 0 14px rgba(251,191,36,0.2)">🎵 0 MP</div>
     <div class="tabs">
       <button class="tab-btn active" onclick="uiTab('gun',this)">🔫 Gun</button>
       <button class="tab-btn" onclick="uiTab('ability',this)">✨ Ability</button>
