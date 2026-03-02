@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v2.6-debug';
+const VERSION = 'v2.7-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -118,6 +118,7 @@ function showNotif(text, color, duration) {
 
 const keys = {};
 let mouseX = 0, mouseY = 0;
+let mouseDown = false;
 
 
 // HTML UI — global functions called by inline onclick handlers
