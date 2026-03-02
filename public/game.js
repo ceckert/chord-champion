@@ -1719,9 +1719,10 @@ function drawMap() {
           ctx.fillStyle=base2; ctx.fillRect(Math.round(sx),Math.round(sy),TILE,TILE);
           const sd2=tx*73+ty*137; if(sd2%5===0){ctx.fillStyle=det2;ctx.fillRect(Math.round(sx+(sd2%TILE)),Math.round(sy+((sd2*3)%TILE)),2,2);}
         }
-        // ── Draw obstacle at 1.5× scale centred on tile ───────────
+        // ── Draw obstacle at biome-specific scale centred on tile ──
+        const obsScale = (!biomeW||biomeW==='forest'||biomeW==='desert'||biomeW==='mushroom') ? 2.25 : 1.5;
         ctx.save();
-        ctx.translate(cx3, cy3); ctx.scale(1.5, 1.5); ctx.translate(-cx3, -cy3);
+        ctx.translate(cx3, cy3); ctx.scale(obsScale, obsScale); ctx.translate(-cx3, -cy3);
 
         if (!biomeW || biomeW === 'forest') {
           // ── Forest: round-canopy tree OR pine OR stump ─────────
