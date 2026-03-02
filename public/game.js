@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v5.9-debug';
+const VERSION = 'v6.0-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -662,6 +662,7 @@ function update() {
             e.x+=(mgdx/mgl)*(15+abLv*6); e.y+=(mgdy/mgl)*(15+abLv*6);
           }
           if (ab.id === 'ab_psychic' && Math.random()<0.25+abLv*0.05) e.psychic=150;
+          if (ab.id === 'ab_explode') triggerExplosion(b.x, b.y, 40 + abLv * 15, 15 + abLv * 5);
           if (ab.id === 'ab_lightning') {
           let closest = null, closestDist = 180;
           for (const oe of enemies) {
@@ -692,7 +693,7 @@ function update() {
             }
           }
         }
-        if (equippedAbility === 'ab_explode' && explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
+        // explosion handled above in ab check
 
         // Piercing — don't mark as hit if pierce level active
         const pierceLv = totalLevel('ab_pierce') + totalLevel('pierce');
@@ -911,11 +912,12 @@ function applyUpgrade(u) {
   if (savedCoins < cost) { showNotif('Not enough Music Points!', '#ef4444', 120); return; }
   savedCoins -= cost;
   u.level++;
-  if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, u.level)));
-  if (u.id === 'maxhp') { player.maxHp = 100 + u.level * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
-  if (u.id === 'speed') player.speed = 3 + u.level * 0.3;
+  if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, totalLevel('fire'))));
+  if (u.id === 'maxhp') { player.maxHp = 150 + totalLevel('maxhp') * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
+  if (u.id === 'speed') player.speed = 3 + totalLevel('speed') * 0.3;
   if (u.id === 'range') { /* applied in bullet life calc */ }
-  showNotif(u.label + ' → Lv ' + u.level + '! (-' + cost + ' MP)', '#22c55e', 150);
+  if (u.id.startsWith('ab_')) { equippedAbility = u.id; showNotif(u.label + ' equipped + leveled up! (-' + cost + ' MP)', '#22c55e', 180); }
+  else showNotif(u.label + ' → Lv ' + u.level + '! (-' + cost + ' MP)', '#22c55e', 150);
   return true;
 }
 
