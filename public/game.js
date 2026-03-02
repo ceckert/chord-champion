@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v5.6-debug';
+const VERSION = 'v5.7-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -63,7 +63,7 @@ function worldToScreen(wx, wy) { return { x: wx - camera.x, y: wy - camera.y }; 
 let savedCoins = 99999; // DEBUG // banked at checkpoint — spent in upgrades
 const player = {
   x: MAP_W / 2 * TILE, y: MAP_H / 2 * TILE,
-  level: 1, ep: 0, epMax: 100,
+  level: 1, ep: 0, epMax: 100, bonusUpgrades: {},
   w: 24, h: 28, speed: 3,
   hp: 150, maxHp: 150, coins: 0,
   notes: [], invincible: 0, facing: 1,
@@ -88,7 +88,7 @@ function spawnMapNote() {
   } while (getTile(Math.floor(x/TILE), Math.floor(y/TILE)) === 1);
   mapNotes.push({ x, y, pitch, glow: 0, bobOffset: Math.random() * Math.PI * 2 });
 }
-for (let i = 0; i < 40; i++) spawnMapNote();
+for (let i = 0; i < 120; i++) spawnMapNote();
 
 let bullets = [];
 let explosions = [];
@@ -385,12 +385,15 @@ function openLevelUp() {
     const btn = document.createElement('button');
     btn.className = 'buy-btn';
     btn.style.cssText = 'width:100%;margin:6px 0;padding:12px;font-size:15px;';
-    btn.innerHTML = '<strong>' + u.label + '</strong> <span style="color:#a78bfa">[Lv ' + u.level + '→' + (u.level+1) + ']</span><br><small style="color:#aaa">' + u.desc + '</small>';
+    const bon = player.bonusUpgrades[u.id]||0; const tot=u.level+bon;
+    btn.innerHTML = '<strong>' + u.label + '</strong> <span style="color:#a78bfa">[Lv ' + tot + '→' + (tot+1) + ']</span><br><small style="color:#aaa">' + u.desc + '</small>';
     btn.onclick = () => {
-      u.level++;
-      if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, u.level)));
-      if (u.id === 'maxhp') { player.maxHp = 100 + u.level * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
-      if (u.id === 'speed') player.speed = 3 + u.level * 0.3;
+      player.bonusUpgrades[u.id] = (player.bonusUpgrades[u.id] || 0) + 1;
+      const total = u.level + (player.bonusUpgrades[u.id] || 0);
+      if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, total)));
+      if (u.id === 'maxhp') { player.maxHp = 100 + total * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
+      if (u.id === 'speed') player.speed = 3 + total * 0.3;
+      showNotif('Free: ' + u.label + ' Lv' + total + '!', '#22c55e', 150);
       el.style.display = 'none';
       gameState = 'playing';
     };
@@ -409,7 +412,7 @@ function uiQuit() {
   uiShow('scr-main');
 }
 function uiUpgrades() {
-  document.getElementById('coins-display').textContent = 'Banked: ' + savedCoins + ' coins';
+  document.getElementById('coins-display').textContent = 'Music Points: ' + savedCoins + ' MP';
   ['gun','ability','stats'].forEach(tab => {
     const pane = document.getElementById('tab-' + tab);
     pane.innerHTML = '';
@@ -435,7 +438,7 @@ function uiUpgrades() {
       } else {
         const btn = document.createElement('button');
         btn.className = 'buy-btn'; btn.disabled = !canAfford;
-        btn.textContent = cost + ' coins — BUY';
+        btn.textContent = cost + ' MP — BUY';
         btn.onclick = () => { if (applyUpgrade(u)) uiUpgrades(); };
         card.appendChild(btn);
       }
@@ -492,7 +495,7 @@ function forgeChord() {
     if (idx !== -1) { usedPitches.splice(idx, 1); return false; }
     return true;
   });
-  showNotif(rootName + ' ' + best.def.name + '! +' + best.def.coins + ' coins', '#fbbf24', 140);
+  showNotif(rootName + ' ' + best.def.name + '! +' + best.def.coins + ' MP', '#fbbf24', 140);
 }
 
 function rectOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
@@ -629,7 +632,7 @@ function update() {
       if (explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
       bullets.splice(i, 1); continue;
     }
-    const dmgMult = 1 + (ALL_UPGRADES.find(u => u.id === 'dmg')?.level || 0) * 0.2;
+    const dmgMult = 1 + totalLevel('dmg') * 0.2;
     const explodeLv = ALL_UPGRADES.find(u => u.id === 'ab_explode')?.level || 0;
     for (let j = enemies.length - 1; j >= 0; j--) {
       const e = enemies[j];
@@ -642,7 +645,7 @@ function update() {
 
         // Active ability effect (only one equipped at a time)
         const ab = equippedAbility ? ALL_UPGRADES.find(u => u.id === equippedAbility) : null;
-        const abLv = ab?.level || 0;
+        const abLv = ab ? totalLevel(ab.id) : 0;
         if (ab && abLv > 0) {
           if (ab.id === 'ab_fire')    { e.burning = 300; e.burnDmg = 1 + abLv; }
           if (ab.id === 'ab_bleed')   { e.bleeding = 300; }
@@ -677,7 +680,7 @@ function update() {
 
         if (e.hp <= 0) {
           enemies.splice(j, 1);
-          if (e.isBoss) { bossActive = false; showNotif('🏆 Boss defeated! +500 coins!', '#fbbf24', 240); savedCoins += 500; }
+          if (e.isBoss) { bossActive = false; showNotif('🏆 Boss defeated! +500 MP!', '#fbbf24', 240); savedCoins += 500; // boss reward }
           const epGain = {crawler:10,runner:8,slimeling:14,bogcrawler:18,scorpling:12,dunestalker:14,yeti:28,frostimp:12,crystalgolem:25,gemsprite:12,windelemental:16,stormhawk:14,ember:14,magmacrab:22,sporepuff:15,myceliumcreep:14,wraith:20,voidshade:20,boss_treant:200,boss_bogqueen:180,boss_sandking:190,boss_glacier:220,boss_drake:175,boss_voidlord:200}[e.type]||10;
           player.ep += epGain;
           if (player.ep >= player.epMax) {
@@ -692,7 +695,7 @@ function update() {
         if (equippedAbility === 'ab_explode' && explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
 
         // Piercing — don't mark as hit if pierce level active
-        const pierceLv = (ALL_UPGRADES.find(u => u.id === 'ab_pierce')?.level || 0) + (ALL_UPGRADES.find(u => u.id === 'pierce')?.level || 0);
+        const pierceLv = totalLevel('ab_pierce') + totalLevel('pierce');
         if (pierceLv > 0 && (b.pierced||0) < pierceLv) { b.pierced = (b.pierced||0)+1; }
         else hit = true;
         break;
@@ -828,7 +831,7 @@ function update() {
         player.coins -= lost; player.hp = player.maxHp;
         player.x = MAP_W/2*TILE; player.y = MAP_H/2*TILE;
         player.notes = []; enemies = [];
-        showNotif('You died! Lost ' + lost + ' coins', '#ff6b6b', 150);
+        showNotif('You died! Lost ' + lost + ' MP', '#ff6b6b', 150);
       }
     }
   }
@@ -841,7 +844,7 @@ function update() {
     ex.life--;
     if (ex.life <= 0) explosions.splice(i, 1);
   }
-  if (mapNotes.length < 25 && frame % 120 === 0) spawnMapNote();
+  if (mapNotes.length < 100 && frame % 60 === 0) spawnMapNote();
   if (player.shootCooldown > 0) player.shootCooldown--;
   if (mouseDown && gameState === 'playing') shoot(mouseX, mouseY);
 
@@ -854,7 +857,7 @@ function update() {
       const banked = player.coins;
       player.coins = 0;
       checkpoint.reached = true;
-      showNotif('Checkpoint! ' + banked + ' coins banked.', '#22c55e', 180);
+      showNotif('Checkpoint! ' + banked + ' MP banked.', '#22c55e', 180);
     }
   }
 }
@@ -896,18 +899,23 @@ const UPGRADES = {
 // Flat list for easy lookup
 const ALL_UPGRADES = [...UPGRADES.gun, ...UPGRADES.ability, ...UPGRADES.stats];
 function upgradeCost(u) { return Math.floor(u.baseCost * Math.pow(2, u.level)); }
+function totalLevel(id) {
+  const u = ALL_UPGRADES.find(u => u.id === id);
+  if (!u) return 0;
+  return u.level + (player.bonusUpgrades[id] || 0);
+}
 
 function applyUpgrade(u) {
   if (u.level >= u.max) return;
   const cost = upgradeCost(u);
-  if (savedCoins < cost) { showNotif('Not enough coins!', '#ef4444', 120); return; }
+  if (savedCoins < cost) { showNotif('Not enough Music Points!', '#ef4444', 120); return; }
   savedCoins -= cost;
   u.level++;
   if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, u.level)));
   if (u.id === 'maxhp') { player.maxHp = 100 + u.level * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
   if (u.id === 'speed') player.speed = 3 + u.level * 0.3;
   if (u.id === 'range') { /* applied in bullet life calc */ }
-  showNotif(u.label + ' → Lv ' + u.level + '!', '#22c55e', 150);
+  showNotif(u.label + ' → Lv ' + u.level + '! (-' + cost + ' MP)', '#22c55e', 150);
   return true;
 }
 
@@ -1529,12 +1537,12 @@ function drawHUD() {
 
   ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(canvas.width-130, 10, 120, 26);
   ctx.fillStyle='#fbbf24'; ctx.font='bold 14px monospace'; ctx.textAlign='right';
-  ctx.fillText('Coins: '+player.coins, canvas.width-14, 23);
+  ctx.fillText('MP: '+player.coins, canvas.width-14, 23);
 
   // ── Current Upgrades box (bottom-left) ──────────────────────────
-  const activeUps = ALL_UPGRADES.filter(u => u.level > 0);
+  const activeUps = ALL_UPGRADES.filter(u => u.level > 0 || (player.bonusUpgrades[u.id]||0) > 0);
   const equippedAb = equippedAbility ? ALL_UPGRADES.find(u => u.id === equippedAbility) : null;
-  const boxLines = activeUps.map(u => u.label + ' Lv' + u.level);
+  const boxLines = activeUps.map(u => { const t=u.level+(player.bonusUpgrades[u.id]||0); return u.label+' Lv'+t+(player.bonusUpgrades[u.id]?'(+'+player.bonusUpgrades[u.id]+')':''); });
   if (equippedAb) boxLines.unshift('⚡ ' + equippedAb.label + ' Lv' + equippedAb.level);
   if (boxLines.length > 0) {
     const lineH = 14, pad = 6;
