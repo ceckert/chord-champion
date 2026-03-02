@@ -60,6 +60,66 @@ const GUNS = [
     tier:{ dmg:'Low', rate:'Fast', range:'Medium' } },
 ];
 let selectedGunId = 'pistol';
+let selectedCharacter = 'jimmy';
+
+function selectChar(name) {
+  selectedCharacter = name;
+  ['jimmy','hanna'].forEach(n => {
+    const card = document.getElementById('cs-' + n);
+    const btn = document.getElementById('btn-' + n);
+    if (!card || !btn) return;
+    if (n === name) {
+      card.className = 'upg-card maxed';
+      btn.textContent = '✓ SELECTED'; btn.classList.add('purchased');
+    } else {
+      card.className = 'upg-card can';
+      btn.textContent = 'SELECT'; btn.classList.remove('purchased');
+    }
+  });
+}
+
+function startFromCharSelect() {
+  uiPlay();
+}
+
+function drawCharPreview(canvasId, charName) {
+  const cv = document.getElementById(canvasId); if (!cv) return;
+  const cx = cv.getContext('2d'); cx.clearRect(0,0,60,80);
+  cx.save(); cx.translate(30, 50);
+  drawCharBody(cx, charName, 0);
+  cx.restore();
+}
+
+function drawCharBody(cx, charName, frame) {
+  // Shadow
+  cx.fillStyle = 'rgba(0,0,0,0.18)';
+  cx.beginPath(); cx.ellipse(2,14,11,5,0,0,Math.PI*2); cx.fill();
+
+  if (charName === 'jimmy') {
+    cx.fillStyle='#3b82f6'; cx.fillRect(-9,-6,18,20);
+    cx.fillStyle='#93c5fd'; cx.fillRect(-9,-3,18,2); cx.fillRect(-9,3,18,2); cx.fillRect(-9,9,18,2);
+    cx.fillStyle='#7c3aed'; cx.fillRect(-10,13,8,5); cx.fillRect(2,13,8,5);
+    cx.fillStyle='#f9c74f'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#78350f'; cx.beginPath(); cx.arc(0,-18,7,Math.PI,0); cx.fill();
+    cx.fillRect(-4,-20,3,5); cx.fillRect(2,-22,3,6); cx.fillRect(-8,-17,3,5);
+  } else {
+    // Hanna — lavender hoodie, longer blond hair
+    cx.fillStyle='#c084fc'; cx.fillRect(-9,-6,18,20);
+    cx.fillStyle='#e879f9'; cx.fillRect(-9,-3,18,2); cx.fillRect(-9,3,18,2); cx.fillRect(-9,9,18,2);
+    cx.fillStyle='#f472b6'; cx.fillRect(-10,13,8,5); cx.fillRect(2,13,8,5);
+    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
+    // Long blond hair — sides hang down
+    cx.fillStyle='#fbbf24';
+    cx.beginPath(); cx.arc(0,-18,8,Math.PI,0); cx.fill(); // top
+    cx.fillRect(-10,-20,5,22); // left side long hair
+    cx.fillRect(6,-20,4,20);   // right side
+    cx.fillRect(-8,-22,5,5);   // fringe left
+    cx.fillRect(2,-23,4,6);    // fringe right
+  }
+  // Eyes (shared)
+  cx.fillStyle='#1a0a2e'; cx.fillRect(-4,-14,3,3); cx.fillRect(2,-14,3,3);
+}
+
 function getSelectedGun() { return GUNS.find(g=>g.id===selectedGunId) || GUNS[0]; }
 
 // Game State
@@ -1259,33 +1319,8 @@ function drawPlayer(sx, sy) {
   ctx.save();
   ctx.translate(cx, cy);
 
-  // === BODY (does NOT rotate — top-down overhead view) ===
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.beginPath(); ctx.ellipse(2, 14, 11, 5, 0, 0, Math.PI*2); ctx.fill();
-
-  // Pajama body
-  ctx.fillStyle = '#3b82f6';
-  ctx.fillRect(-9, -6, 18, 20);
-  ctx.fillStyle = '#93c5fd';
-  ctx.fillRect(-9, -3, 18, 2);
-  ctx.fillRect(-9, 3, 18, 2);
-  ctx.fillRect(-9, 9, 18, 2);
-
-  // Feet / slippers (bottom)
-  ctx.fillStyle = '#7c3aed';
-  ctx.fillRect(-10, 13, 8, 5);
-  ctx.fillRect(2, 13, 8, 5);
-
-  // Head (top-down: circle with hair)
-  ctx.fillStyle = '#f9c74f';
-  ctx.beginPath(); ctx.arc(0, -12, 9, 0, Math.PI*2); ctx.fill();
-  // Bedhead hair
-  ctx.fillStyle = '#78350f';
-  ctx.beginPath(); ctx.arc(0, -18, 7, Math.PI, 0); ctx.fill();
-  ctx.fillRect(-4, -20, 3, 5);
-  ctx.fillRect(2, -22, 3, 6);
-  ctx.fillRect(-8, -17, 3, 5);
+  // === BODY ===
+  drawCharBody(ctx, selectedCharacter, frame);
 
   // === RESTING ARM (left side, hangs down normally) ===
   ctx.fillStyle = '#f9c74f';
@@ -1329,11 +1364,6 @@ function drawPlayer(sx, sy) {
     ctx.fillStyle = '#6d28d9'; ctx.fillRect(8, -6, 2, 2);   // handle detail
   }
   ctx.restore();
-
-  // Eyes (fixed, no rotation)
-  ctx.fillStyle = '#1a0a2e';
-  ctx.fillRect(-4, -14, 3, 3);
-  ctx.fillRect(2, -14, 3, 3);
 
   ctx.restore();
 }

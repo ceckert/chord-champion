@@ -140,7 +140,7 @@
     <h2>CHORD CHAMPION</h2>
     <div id="mp-display" style="color:#fbbf24;font-family:monospace;font-size:14px;margin:-8px 0 4px">🎵 0 MP</div>
     <div class="subtitle">Collect notes. Forge chords. Fight music.</div>
-    <button class="mbtn" onclick="uiPlay()">PLAY</button>
+    <button class="mbtn" onclick="uiShow('scr-charselect')">PLAY</button>
     <button class="mbtn" onclick="uiUpgrades()">UPGRADES</button>
     <button class="mbtn" onclick="uiShow('scr-levelplan')">LEVEL PLAN</button>
     <button class="mbtn" onclick="uiShow('scr-howtoplay')">HOW TO PLAY</button>
@@ -164,6 +164,27 @@
       <button class="mbtn back" style="flex:1" onclick="uiShow('scr-main')">BACK</button>
       <button class="mbtn" style="flex:1;background:linear-gradient(135deg,#7f1d1d,#991b1b);border-color:#ef4444;font-size:12px" onclick="uiRefundAll()">↩ REFUND ALL</button>
     </div>
+  </div>
+  <div id="scr-charselect" class="panel" style="display:none; max-width:480px">
+    <h2>SELECT CHARACTER</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;margin-bottom:14px">
+      <div id="cs-jimmy" class="upg-card can" style="cursor:pointer;align-items:center;text-align:center" onclick="selectChar('jimmy')">
+        <canvas id="preview-jimmy" width="60" height="80" style="image-rendering:pixelated;margin:0 auto"></canvas>
+        <div class="upg-name" style="margin-top:6px">Jimmy</div>
+        <div class="upg-desc">The classic. Pajamas and chaos.</div>
+        <div style="font-family:monospace;font-size:11px;color:#a78bfa;margin-top:4px">Balanced stats</div>
+        <button id="btn-jimmy" class="buy-btn purchased" style="margin-top:8px">✓ SELECTED</button>
+      </div>
+      <div id="cs-hanna" class="upg-card can" style="cursor:pointer;align-items:center;text-align:center" onclick="selectChar('hanna')">
+        <canvas id="preview-hanna" width="60" height="80" style="image-rendering:pixelated;margin:0 auto"></canvas>
+        <div class="upg-name" style="margin-top:6px">Hanna</div>
+        <div class="upg-desc">Blond hair, big energy.</div>
+        <div style="font-family:monospace;font-size:11px;color:#a78bfa;margin-top:4px">Balanced stats</div>
+        <button id="btn-hanna" class="buy-btn" style="margin-top:8px">SELECT</button>
+      </div>
+    </div>
+    <button class="mbtn" onclick="startFromCharSelect()">▶ PLAY</button>
+    <button class="mbtn back" onclick="uiShow('scr-main')">BACK</button>
   </div>
   <div id="scr-levelplan" class="panel" style="display:none">
     <h2>LEVEL PLAN</h2>
@@ -228,6 +249,6 @@ Stay in a biome 30s to trigger a boss fight. Survive!</div>
   </div>
 </div>
 
-<script is:inline src="/game.js?v=1772433654"></script>
+<script is:inline src="/game.js?v=1772433774"></script>
 </body>
 </html>
