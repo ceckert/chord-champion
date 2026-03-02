@@ -4,8 +4,8 @@ const PIXEL_RATIO = 2;
 const CW = window.innerWidth, CH = window.innerHeight;
 canvas.style.width  = CW + 'px';
 canvas.style.height = CH + 'px';
-CW  = CW * PIXEL_RATIO;
-CH = CH * PIXEL_RATIO;
+canvas.width  = CW * PIXEL_RATIO;
+canvas.height = CH * PIXEL_RATIO;
 ctx.scale(PIXEL_RATIO, PIXEL_RATIO);
 
 const VERSION = 'v10.2';
