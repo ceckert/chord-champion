@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v5.3-debug';
+const VERSION = 'v5.4-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -65,7 +65,7 @@ const player = {
   x: MAP_W / 2 * TILE, y: MAP_H / 2 * TILE,
   level: 1, ep: 0, epMax: 100,
   w: 24, h: 28, speed: 3,
-  hp: 100, maxHp: 100, coins: 0,
+  hp: 150, maxHp: 150, coins: 0,
   notes: [], invincible: 0, facing: 1,
   shootCooldown: 0, shootRate: 40, // frames between shots (higher = slower)
 };
@@ -251,7 +251,7 @@ function spawnEnemy(nearPlayer) {
       ey = Math.min((MAP_H-2)*TILE, ey + TILE*2);
     }
   }
-  const biome = getBiomeAtPixel(player.x, player.y);
+  const biome = getBiomeAtPixel(ex, ey); // use SPAWN location's biome for correct enemy type
   const r = Math.random();
   // ── Difficulty multipliers by biome (further = harder) ──────────
   const BIOME_MULT = { forest:1.0, swamp:1.35, desert:1.5, tundra:1.7, mushroom:1.45, crystal:1.8, storm:2.1, volcano:2.0, shadow:2.4, void:2.9 };
@@ -260,8 +260,8 @@ function spawnEnemy(nearPlayer) {
 
   // ── Forest (center): Crawler | Runner ──────────────────────────
   if (biome === 'forest') {
-    if (r<0.55){type='crawler';   w=28;h=20;hp=Math.round(50*m); speed=0.8+r*0.4;dmg=Math.round(15*m);}
-    else       {type='runner';    w=18;h=38;hp=Math.round(25*m); speed=2.2+r*0.8;dmg=Math.round(6*m);}
+    if (r<0.55){type='crawler';   w=28;h=20;hp=Math.round(28*m); speed=0.8+r*0.4;dmg=Math.round(10*m);}
+    else       {type='runner';    w=18;h=38;hp=Math.round(15*m); speed=2.2+r*0.8;dmg=Math.round(4*m);}
 
   // ── Swamp (mid-right): Slimeling | Bogcrawler ───────────────────
   } else if (biome === 'swamp') {
@@ -362,7 +362,7 @@ function uiPlay() {
   document.getElementById('ui-overlay').style.display = 'none';
   gameState = 'playing';
   // Pre-spawn starting enemies so world feels alive immediately
-  setTimeout(() => preSpawnEnemies(5), 100);
+  setTimeout(() => preSpawnEnemies(3), 300);
   canvas.setAttribute('tabindex', '0');
   canvas.focus();
 }
@@ -567,11 +567,11 @@ function update() {
     }
     // Pre-spawn a few enemies in the new biome so it feels inhabited
     if (curBiome !== 'forest' || enemies.length < 3) {
-      setTimeout(() => preSpawnEnemies(4), 200);
+      setTimeout(() => preSpawnEnemies(2), 300);
     }
-  } else if (!bossActive && curBiome !== 'forest' && curBiome !== 'void') {
+  } else if (!bossActive && curBiome !== 'forest') {
     biomeTimer++;
-    if (biomeTimer >= 3600) { // 60s at 60fps
+    if (biomeTimer >= 1800) { // 30s at 60fps
       biomeTimer = 0;
       bossWarningTimer = 90;
     }
@@ -702,8 +702,8 @@ function update() {
   }
 
   enemySpawnTimer++;
-  enemySpawnCap = Math.min(30, 8 + Math.floor(frame / 3600)); // ramp cap over time
-  if (enemySpawnTimer >= 180 && enemies.filter(e=>!e.isBoss).length < enemySpawnCap) { spawnEnemy(); enemySpawnTimer = 0; }
+  enemySpawnCap = Math.min(20, 5 + Math.floor(frame / 7200)); // ramp slowly
+  if (enemySpawnTimer >= 300 && enemies.filter(e=>!e.isBoss).length < enemySpawnCap) { spawnEnemy(); enemySpawnTimer = 0; }
   if (player.invincible > 0) player.invincible--;
 
   for (const e of enemies) {
