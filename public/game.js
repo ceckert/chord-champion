@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v6.7-debug';
+const VERSION = 'v10.2';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
