@@ -67,7 +67,7 @@ const player = {
   w: 24, h: 28, speed: 3,
   hp: 150, maxHp: 150, coins: 0,
   notes: [], invincible: 0, facing: 1,
-  shootCooldown: 0, shootRate: 40, // frames between shots (higher = slower)
+  shootCooldown: 0, shootRate: 40,
 };
 
 // Checkpoint
@@ -115,11 +115,22 @@ function triggerExplosion(x, y, radius, dmg) {
 }
 function shoot(tx, ty) {
   if (player.shootCooldown > 0) return;
-  player.shootCooldown = player.shootRate;
+  const gun = getSelectedGun();
+  const fireRate = Math.max(5, Math.floor(gun.rate * Math.pow(0.9, totalLevel('fire'))));
+  player.shootCooldown = fireRate;
   const dx = tx - (player.x - camera.x);
   const dy = ty - (player.y - camera.y);
   const len = Math.sqrt(dx*dx + dy*dy) || 1;
-  bullets.push({ x: player.x, y: player.y, vx: dx/len * 10, vy: dy/len * 10, life: 60 });
+  for (let p = 0; p < gun.pellets; p++) {
+    const spread = (Math.random() - 0.5) * gun.spread * 2;
+    const nx = dx/len, ny = dy/len;
+    const sx = nx * Math.cos(spread) - ny * Math.sin(spread);
+    const sy = nx * Math.sin(spread) + ny * Math.cos(spread);
+    bullets.push({ x: player.x+player.w/2, y: player.y+player.h/2,
+      vx: sx * gun.speed, vy: sy * gun.speed,
+      life: 60 + totalLevel('range')*15,
+      dmg: gun.dmg, color: gun.color, size: gun.bulletSize });
+  }
 }
 
 let enemies = [];
@@ -510,6 +521,28 @@ function uiUpgrades() {
   // patch back button to return to game if came from pause
   const backBtn = document.querySelector('#scr-upgrades .back');
   if (backBtn) backBtn.onclick = () => { if (_fromPause) { _fromPause=false; uiResume(); } else uiShow('scr-main'); };
+  // Build gun selection tab
+  const gunPane = document.getElementById('tab-gun-select');
+  if (gunPane) {
+    gunPane.innerHTML = '';
+    GUNS.forEach(gun => {
+      const card = document.createElement('div');
+      const selected = selectedGunId === gun.id;
+      card.className = 'upg-card' + (selected ? ' maxed' : ' can');
+      card.style.cursor = 'pointer';
+      card.innerHTML = `<div class="upg-name">${gun.label}</div>
+        <div class="upg-desc">${gun.desc}</div>
+        <div style="font-family:monospace;font-size:11px;color:#94a3b8;margin-top:4px">
+          DMG: ${gun.dmg} &nbsp; RATE: ${gun.pellets>1?'Slow':''+Math.round(60/gun.rate*10)/10+'/s'} &nbsp; PELLETS: ${gun.pellets} &nbsp; SPEED: ${gun.speed}
+        </div>`;
+      const btn = document.createElement('button');
+      btn.className = 'buy-btn' + (selected ? ' purchased' : '');
+      btn.textContent = selected ? '✓ EQUIPPED' : 'SELECT';
+      btn.onclick = () => { selectedGunId = gun.id; uiUpgrades(); };
+      card.appendChild(btn);
+      gunPane.appendChild(card);
+    });
+  }
   uiShow('scr-upgrades');
 }
 
@@ -691,7 +724,7 @@ function update() {
       const e = enemies[j];
       if (rectOverlap(b.x-4, b.y-4, 8, 8, e.x, e.y, e.w, e.h)) {
         if (e.invincible) { hit = true; break; } // Void Lord phase
-        let actualDmg = Math.round(10 * dmgMult);
+        let actualDmg = Math.round((b.dmg || 10) * dmgMult);
         // Bleed: 1.5x damage taken
         if (e.bleeding > 0) actualDmg = Math.round(actualDmg * (e.bleedMult || 1.5));
         e.hp -= actualDmg;
@@ -1649,7 +1682,7 @@ function drawBullet(b) {
   const s = worldToScreen(b.x, b.y);
   ctx.save();
   ctx.shadowColor='#fbbf24'; ctx.shadowBlur=8;
-  ctx.fillStyle='#fbbf24';
+  ctx.fillStyle = b.color || '#fbbf24';
   ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI*2); ctx.fill();
   ctx.restore();
 }
