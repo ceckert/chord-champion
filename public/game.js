@@ -174,34 +174,35 @@ function drawCharBody(cx, charName, frame) {
     cx.fillStyle='#292524'; cx.beginPath(); cx.arc(0,-18,8,Math.PI,0); cx.fill();
     cx.fillRect(-8,-20,16,4);
   } else {
-    // Max — goldendoodle: cream/fluffy, curly poofy fur
-    // Body — fluffy/round, cream colored
-    cx.fillStyle='#fde68a'; cx.fillRect(-11,-4,22,18);
-    // Fluffy bumps on body (curly fur texture)
+    // Max — small goldendoodle on all fours, low to ground
+    cx.save();
+    cx.translate(0, 8); cx.scale(0.72, 0.72); // smaller and lower
+    // Body (horizontal, low)
+    cx.fillStyle='#fde68a'; cx.fillRect(-14,2,28,10);
+    // Fluffy bumps
     cx.fillStyle='#fef3c7';
-    for (let bx=-10; bx<=8; bx+=5) {
-      for (let by=-3; by<=12; by+=5) {
-        cx.beginPath(); cx.arc(bx,by,3,0,Math.PI*2); cx.fill();
-      }
-    }
-    // Stubby legs
-    cx.fillStyle='#fde68a'; cx.fillRect(-12,13,6,7); cx.fillRect(6,13,6,7);
-    // Curly tail (big poof)
-    cx.fillStyle='#fef3c7'; cx.beginPath(); cx.arc(12,-2,5,0,Math.PI*2); cx.fill();
-    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(12,-2,3,0,Math.PI*2); cx.fill();
-    // Big fluffy round head
-    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(0,-14,11,0,Math.PI*2); cx.fill();
-    // Poofy fur on head
+    for (let bx=-12; bx<=10; bx+=6) { cx.beginPath(); cx.arc(bx,5,3.5,0,Math.PI*2); cx.fill(); }
+    // 4 short legs
+    cx.fillStyle='#fde68a';
+    cx.fillRect(-12,11,5,7); cx.fillRect(-4,11,5,7); // front legs
+    cx.fillRect(4,11,5,7);  cx.fillRect(10,11,5,7);  // back legs
+    // Curly tail up
+    cx.fillStyle='#fef3c7'; cx.beginPath(); cx.arc(14,-2,5,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(14,-2,3,0,Math.PI*2); cx.fill();
+    // Small round head
+    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(-13,-3,9,0,Math.PI*2); cx.fill();
+    // Poofy head fur
     cx.fillStyle='#fef3c7';
-    [-8,-4,0,4,8].forEach(bx => { cx.beginPath(); cx.arc(bx,-21,4,0,Math.PI*2); cx.fill(); });
-    // Floppy fluffy ears
-    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(-12,-13,6,0,Math.PI*2); cx.fill();
-    cx.beginPath(); cx.arc(12,-13,6,0,Math.PI*2); cx.fill();
+    [-18,-13,-8].forEach(bx => { cx.beginPath(); cx.arc(bx,-9,4,0,Math.PI*2); cx.fill(); });
+    // Floppy ears
+    cx.fillStyle='#f59e0b'; cx.beginPath(); cx.arc(-18,2,5,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(-8,2,5,0,Math.PI*2); cx.fill();
     // Snout
-    cx.fillStyle='#fef9c3'; cx.fillRect(-5,-12,10,8);
-    cx.fillStyle='#1c1917'; cx.beginPath(); cx.ellipse(0,-8,4,3,0,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#fef9c3'; cx.fillRect(-19,-4,8,6);
+    cx.fillStyle='#1c1917'; cx.beginPath(); cx.ellipse(-16,-2,3,2,0,0,Math.PI*2); cx.fill();
     // Tongue
-    cx.fillStyle='#f87171'; cx.beginPath(); cx.ellipse(0,-4,3,4,0,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#f87171'; cx.beginPath(); cx.ellipse(-16,3,2,3,0,0,Math.PI*2); cx.fill();
+    cx.restore();
   }
   // Eyes (shared)
   cx.fillStyle='#1a0a2e'; cx.fillRect(-4,-14,3,3); cx.fillRect(2,-14,3,3);
