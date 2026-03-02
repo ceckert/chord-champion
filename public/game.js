@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v5.0-debug';
+const VERSION = 'v5.1-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -219,7 +219,7 @@ function getBiomeAtPixel(px, py) {
 }
 
 function preSpawnEnemies(count) {
-  for (let i = 0; i < count; i++) spawnEnemy();
+  for (let i = 0; i < count; i++) spawnEnemy(true);
 }
 
 function spawnEnemy() {
