@@ -168,20 +168,30 @@
   </div>
   <div id="scr-charselect" class="panel" style="display:none; max-width:480px">
     <h2>SELECT CHARACTER</h2>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;margin-bottom:14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-bottom:14px">
       <div id="cs-jimmy" class="upg-card can" style="cursor:pointer;align-items:center;text-align:center" onclick="selectChar('jimmy')">
         <canvas id="preview-jimmy" width="60" height="80" style="image-rendering:pixelated;margin:0 auto"></canvas>
         <div class="upg-name" style="margin-top:6px">Jimmy</div>
-        <div class="upg-desc">The classic. Pajamas and chaos.</div>
-        <div style="font-family:monospace;font-size:11px;color:#a78bfa;margin-top:4px">Balanced stats</div>
+        <div class="upg-desc">Classic pajama chaos.</div>
         <button id="btn-jimmy" class="buy-btn purchased" style="margin-top:8px">✓ SELECTED</button>
       </div>
       <div id="cs-hanna" class="upg-card can" style="cursor:pointer;align-items:center;text-align:center" onclick="selectChar('hanna')">
         <canvas id="preview-hanna" width="60" height="80" style="image-rendering:pixelated;margin:0 auto"></canvas>
         <div class="upg-name" style="margin-top:6px">Hanna</div>
         <div class="upg-desc">Blond hair, big energy.</div>
-        <div style="font-family:monospace;font-size:11px;color:#a78bfa;margin-top:4px">Balanced stats</div>
         <button id="btn-hanna" class="buy-btn" style="margin-top:8px">SELECT</button>
+      </div>
+      <div id="cs-bob" class="upg-card can" style="cursor:pointer;align-items:center;text-align:center" onclick="selectChar('bob')">
+        <canvas id="preview-bob" width="60" height="80" style="image-rendering:pixelated;margin:0 auto"></canvas>
+        <div class="upg-name" style="margin-top:6px">Bob</div>
+        <div class="upg-desc">Chubby kid. Red shirt, blue shorts.</div>
+        <button id="btn-bob" class="buy-btn" style="margin-top:8px">SELECT</button>
+      </div>
+      <div id="cs-max" class="upg-card can" style="cursor:pointer;align-items:center;text-align:center" onclick="selectChar('max')">
+        <canvas id="preview-max" width="60" height="80" style="image-rendering:pixelated;margin:0 auto"></canvas>
+        <div class="upg-name" style="margin-top:6px">Max</div>
+        <div class="upg-desc">Good boy. Very good boy.</div>
+        <button id="btn-max" class="buy-btn" style="margin-top:8px">SELECT</button>
       </div>
     </div>
     <button class="mbtn" onclick="startFromCharSelect()">▶ PLAY</button>
@@ -250,6 +260,6 @@ Stay in a biome 30s to trigger a boss fight. Survive!</div>
   </div>
 </div>
 
-<script is:inline src="/game.js?v=1772433899"></script>
+<script is:inline src="/game.js?v=1772434035"></script>
 </body>
 </html>

@@ -64,7 +64,7 @@ let selectedCharacter = 'jimmy';
 
 function selectChar(name) {
   selectedCharacter = name;
-  ['jimmy','hanna'].forEach(n => {
+  ['jimmy','hanna','bob','max'].forEach(n => {
     const card = document.getElementById('cs-' + n);
     const btn = document.getElementById('btn-' + n);
     if (!card || !btn) return;
@@ -102,19 +102,51 @@ function drawCharBody(cx, charName, frame) {
     cx.fillStyle='#f9c74f'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
     cx.fillStyle='#78350f'; cx.beginPath(); cx.arc(0,-18,7,Math.PI,0); cx.fill();
     cx.fillRect(-4,-20,3,5); cx.fillRect(2,-22,3,6); cx.fillRect(-8,-17,3,5);
-  } else {
+  } else if (charName === 'hanna') {
     // Hanna — lavender hoodie, longer blond hair
     cx.fillStyle='#c084fc'; cx.fillRect(-9,-6,18,20);
     cx.fillStyle='#e879f9'; cx.fillRect(-9,-3,18,2); cx.fillRect(-9,3,18,2); cx.fillRect(-9,9,18,2);
     cx.fillStyle='#f472b6'; cx.fillRect(-10,13,8,5); cx.fillRect(2,13,8,5);
     cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
-    // Long blond hair — sides hang down
     cx.fillStyle='#fbbf24';
-    cx.beginPath(); cx.arc(0,-18,8,Math.PI,0); cx.fill(); // top
-    cx.fillRect(-10,-20,5,22); // left side long hair
-    cx.fillRect(6,-20,4,20);   // right side
-    cx.fillRect(-8,-22,5,5);   // fringe left
-    cx.fillRect(2,-23,4,6);    // fringe right
+    cx.beginPath(); cx.arc(0,-18,8,Math.PI,0); cx.fill();
+    cx.fillRect(-10,-20,5,22); cx.fillRect(6,-20,4,20);
+    cx.fillRect(-8,-22,5,5); cx.fillRect(2,-23,4,6);
+  } else if (charName === 'bob') {
+    // Bob — chubby kid, red shirt, blue shorts
+    // Wider/rounder body
+    cx.fillStyle='#dc2626'; cx.fillRect(-12,-6,24,22); // wider red shirt
+    cx.fillStyle='#ef4444'; cx.fillRect(-12,-3,24,2); cx.fillRect(-12,5,24,2); // stripes
+    cx.fillStyle='#1d4ed8'; cx.fillRect(-11,14,10,7); cx.fillRect(2,14,10,7); // blue shorts
+    // Chubby head (bigger)
+    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,-11,11,0,Math.PI*2); cx.fill();
+    // Rounder cheeks
+    cx.fillStyle='#fca5a5'; cx.beginPath(); cx.arc(-7,-10,4,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(7,-10,4,0,Math.PI*2); cx.fill();
+    // Short dark hair
+    cx.fillStyle='#292524'; cx.beginPath(); cx.arc(0,-18,8,Math.PI,0); cx.fill();
+    cx.fillRect(-8,-20,16,4);
+  } else {
+    // Max — golden retriever dog
+    // Body
+    cx.fillStyle='#d97706'; cx.fillRect(-10,-4,20,18); // tan body
+    cx.fillStyle='#b45309'; cx.fillRect(-10,-4,20,4);  // darker back
+    // Legs (4 stubby)
+    cx.fillStyle='#d97706'; cx.fillRect(-12,13,6,6); cx.fillRect(6,13,6,6); // back legs
+    cx.fillRect(-10,-2,5,4); cx.fillRect(5,-2,5,4);    // front legs (sides)
+    // Tail (top right)
+    cx.fillStyle='#f59e0b';
+    cx.save(); cx.translate(10,-2); cx.rotate(-0.6);
+    cx.fillRect(0,-2,4,10); cx.restore();
+    // Head
+    cx.fillStyle='#f59e0b'; cx.beginPath(); cx.arc(0,-13,10,0,Math.PI*2); cx.fill();
+    // Snout
+    cx.fillStyle='#fbbf24'; cx.fillRect(-5,-12,10,8);
+    cx.fillStyle='#1c1917'; cx.beginPath(); cx.ellipse(0,-8,4,3,0,0,Math.PI*2); cx.fill(); // nose
+    // Floppy ears
+    cx.fillStyle='#b45309'; cx.fillRect(-13,-17,6,12); cx.fillRect(7,-17,6,12);
+    // Tongue
+    cx.fillStyle='#f87171'; cx.beginPath(); cx.ellipse(0,-4,3,4,0,0,Math.PI*2); cx.fill();
   }
   // Eyes (shared)
   cx.fillStyle='#1a0a2e'; cx.fillRect(-4,-14,3,3); cx.fillRect(2,-14,3,3);
