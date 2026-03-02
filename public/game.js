@@ -370,7 +370,7 @@ function uiPlay() {
 function openLevelUp() {
   gameState = 'paused';
   // Pick 3 random upgrades (not maxed)
-  const pool = ALL_UPGRADES.filter(u => u.level < u.max);
+  const pool = ALL_UPGRADES.filter(u => (u.level + (player.bonusUpgrades[u.id]||0)) < u.max);
   const picks = [];
   const used = new Set();
   while (picks.length < Math.min(3, pool.length)) {
@@ -391,10 +391,17 @@ function openLevelUp() {
     btn.onclick = () => {
       player.bonusUpgrades[u.id] = (player.bonusUpgrades[u.id] || 0) + 1;
       const total = u.level + (player.bonusUpgrades[u.id] || 0);
+      // Apply stat effects immediately
       if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, total)));
-      if (u.id === 'maxhp') { player.maxHp = 100 + total * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
+      if (u.id === 'maxhp') { player.maxHp = 150 + total * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
       if (u.id === 'speed') player.speed = 3 + total * 0.3;
-      showNotif('Free: ' + u.label + ' Lv' + total + '!', '#22c55e', 150);
+      // Auto-equip ability if picked
+      if (u.id.startsWith('ab_')) {
+        equippedAbility = u.id;
+        showNotif('🆓 ' + u.label + ' equipped free! (Lv' + total + ')', '#a855f7', 180);
+      } else {
+        showNotif('🆓 ' + u.label + ' Lv' + total + '!', '#22c55e', 150);
+      }
       el.style.display = 'none';
       gameState = 'playing';
     };
