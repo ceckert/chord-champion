@@ -48,11 +48,16 @@ const CHORD_DEFS = [
 ];
 
 // ── Gun Definitions ─────────────────────────────────────────────
+// Gun balance: each has a clear identity
+// Pistol   — highest single-shot dmg, slow, pinpoint. Best with damage upgrades
+// Rifle     — fastest bullet, long range (life:90), pierce-friendly, medium dmg
+// Shotgun   — massive burst up close (5×10=50 dmg/shot), useless at range
+// MachineGun— lowest dmg/shot but highest sustained DPS, shreds with bleed/poison
 const GUNS = [
-  { id:'pistol',     label:'🔫 Pistol',      desc:'High damage, slow rate',    dmg:18, rate:55, speed:13, spread:0,    pellets:1, color:'#fbbf24', bulletSize:5 },
-  { id:'rifle',      label:'🎯 Rifle',        desc:'Balanced damage & speed',   dmg:12, rate:35, speed:12, spread:0.04, pellets:1, color:'#60a5fa', bulletSize:4 },
-  { id:'shotgun',    label:'💥 Shotgun',      desc:'Spray 5 pellets, slow rate',dmg:8,  rate:70, speed:11, spread:0.28, pellets:5, color:'#f97316', bulletSize:5 },
-  { id:'machinegun', label:'⚡ Machine Gun',   desc:'Very fast, lower damage',   dmg:6,  rate:12, speed:14, spread:0.1,  pellets:1, color:'#a78bfa', bulletSize:3 },
+  { id:'pistol',     label:'🔫 Pistol',      desc:'Highest dmg/shot • Slow • Pinpoint accurate',   dmg:22, rate:58, speed:12, spread:0,    pellets:1, color:'#fbbf24', bulletSize:5, life:60 },
+  { id:'rifle',      label:'🎯 Rifle',        desc:'Fast bullet • Long range • Pierce-friendly',    dmg:13, rate:30, speed:18, spread:0.02, pellets:1, color:'#60a5fa', bulletSize:4, life:90 },
+  { id:'shotgun',    label:'💥 Shotgun',      desc:'5 pellets • Devastating up close • Slow',       dmg:10, rate:75, speed:10, spread:0.32, pellets:5, color:'#f97316', bulletSize:5, life:40 },
+  { id:'machinegun', label:'⚡ Machine Gun',   desc:'Highest DPS • Stacks DoTs • Low per-shot dmg', dmg:5,  rate:10, speed:15, spread:0.12, pellets:1, color:'#a78bfa', bulletSize:3, life:55 },
 ];
 let selectedGunId = 'pistol';
 function getSelectedGun() { return GUNS.find(g=>g.id===selectedGunId) || GUNS[0]; }
