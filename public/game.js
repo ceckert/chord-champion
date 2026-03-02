@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v6.0-debug';
+const VERSION = 'v6.1-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -661,7 +661,7 @@ function update() {
             const mgdx=player.x-e.x,mgdy=player.y-e.y,mgl=Math.sqrt(mgdx*mgdx+mgdy*mgdy)||1;
             e.x+=(mgdx/mgl)*(15+abLv*6); e.y+=(mgdy/mgl)*(15+abLv*6);
           }
-          if (ab.id === 'ab_psychic' && Math.random()<0.25+abLv*0.05) e.psychic=150;
+          if (ab.id === 'ab_psychic') { e.psychic = 300 + abLv * 60; e.psychicDmg = 5 + abLv * 3; showNotif('🧠 Psychic!', '#a855f7', 60); }
           if (ab.id === 'ab_explode') triggerExplosion(b.x, b.y, 40 + abLv * 15, 15 + abLv * 5);
           if (ab.id === 'ab_lightning') {
           let closest = null, closestDist = 180;
@@ -807,7 +807,7 @@ function update() {
         const oe = enemies[pi];
         if (oe === e) continue;
         if (rectOverlap(e.x,e.y,e.w,e.h,oe.x,oe.y,oe.w,oe.h)) {
-          oe.hp -= 8;
+          oe.hp -= (e.psychicDmg || 12);
           if (oe.hp <= 0) enemies.splice(pi, 1);
           break;
         }
