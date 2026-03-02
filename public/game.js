@@ -449,7 +449,7 @@ function spawnEnemy(nearPlayer) {
     }
     ex = Math.min((MAP_W-2)*TILE, Math.max(TILE, ex));
     ey = Math.min((MAP_H-2)*TILE, Math.max(TILE, ey));
-    if (getTile(Math.floor(ex/TILE), Math.floor(ey/TILE)) === 1) {
+    if (getTile(Math.floor(ex/TILE), Math.floor(ey/TILE)) >= 1) {
       ex = Math.min((MAP_W-2)*TILE, ex + TILE*2);
       ey = Math.min((MAP_H-2)*TILE, ey + TILE*2);
     }
@@ -567,6 +567,7 @@ function uiPlay() {
   gameState = 'playing';
   interiorCooldown = 180; // prevent spawning inside a structure
   // Pre-spawn starting enemies so world feels alive immediately
+  initRivers();
   initLandmarks();
   setTimeout(() => preSpawnEnemies(3), 300);
   canvas.setAttribute('tabindex', '0');
@@ -1230,7 +1231,7 @@ function update() {
     if (b.life <= 0) { bullets.splice(i, 1); continue; }
     let hit = false;
     // Wall hit — check explosive
-    if (getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE)) === 1) {
+    if (getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE)) >= 1) {
       if (equippedAbilities.includes('ab_explode')) { const lv=totalLevel('ab_explode'); triggerExplosion(b.x, b.y, 40+lv*10, 5); }
       bullets.splice(i, 1); continue;
     }
@@ -1621,7 +1622,48 @@ function drawMap() {
   for (let ty = sty; ty < ety; ty++) {
     for (let tx = stx; tx < etx; tx++) {
       const sx = tx*TILE - camera.x, sy = ty*TILE - camera.y;
-      if (map[ty][tx] === 1) {
+      if (map[ty][tx] === TILE_WATER) {
+        // ── Water tile ───────────────────────────────────────────────────
+        const biomeW2 = getBiome(tx, ty);
+        const wc = RIVER_WATER_COLORS[biomeW2] || '#1565c0';
+        // Check if a bridge is on this tile
+        let isBridgeTile = false;
+        for (const rv of RIVER_DATA) {
+          if (rv.axis==='h' && ty>=rv.coord && ty<rv.coord+rv.riverW) {
+            isBridgeTile = rv.bridges.some(bt => tx>=bt && tx<bt+rv.bridgeW);
+          } else if (rv.axis==='v' && tx>=rv.coord && tx<rv.coord+rv.riverW) {
+            isBridgeTile = rv.bridges.some(bt => ty>=bt && ty<bt+rv.bridgeW);
+          }
+          if (isBridgeTile) break;
+        }
+        if (isBridgeTile) {
+          // Draw bridge plank (biome wood color)
+          const bc = RIVER_BRIDGE_COLORS[biomeW2] || '#8d6e63';
+          ctx.fillStyle = bc;
+          ctx.fillRect(Math.round(sx), Math.round(sy), TILE, TILE);
+          // Plank grain lines
+          ctx.fillStyle = 'rgba(0,0,0,0.18)';
+          const isH = RIVER_DATA.find(rv=>rv.axis==='h'&&ty>=rv.coord&&ty<rv.coord+rv.riverW&&rv.biome===biomeW2);
+          if (isH) {
+            ctx.fillRect(Math.round(sx), Math.round(sy+TILE*0.3), TILE, 2);
+            ctx.fillRect(Math.round(sx), Math.round(sy+TILE*0.65), TILE, 2);
+          } else {
+            ctx.fillRect(Math.round(sx+TILE*0.3), Math.round(sy), 2, TILE);
+            ctx.fillRect(Math.round(sx+TILE*0.65), Math.round(sy), 2, TILE);
+          }
+        } else {
+          // Draw water
+          const shimmer = Math.sin(frame*0.06 + tx*0.4 + ty*0.3)*0.12;
+          ctx.fillStyle = wc;
+          ctx.fillRect(Math.round(sx), Math.round(sy), TILE, TILE);
+          ctx.save(); ctx.globalAlpha = 0.18 + shimmer;
+          ctx.fillStyle = '#ffffff';
+          // Ripple highlight
+          if ((tx+ty+Math.floor(frame/12))%3===0) ctx.fillRect(Math.round(sx+3),Math.round(sy+TILE*0.3),TILE-6,2);
+          if ((tx+ty+Math.floor(frame/8))%5===0)  ctx.fillRect(Math.round(sx+5),Math.round(sy+TILE*0.6),TILE-10,2);
+          ctx.restore();
+        }
+      } else if (map[ty][tx] === 1) {
         const biomeW = getBiome(tx, ty);
         const seed2 = tx*31+ty*17;
         // ── Forest / default: tree ────────────────────────────────
@@ -2417,6 +2459,98 @@ const BIOME_GRID_POS = [
 
 // Pre-generate 15 instances per biome at startup
 let LANDMARK_INSTANCES = [];
+
+// ── River System ────────────────────────────────────────────────────────────
+const RIVER_WATER_COLORS = {
+  forest:'#1565c0', tundra:'#b3e5fc', mushroom:'#6a0072', desert:'#bf6900',
+  swamp:'#1b4a10',  crystal:'#00838f', storm:'#1c2a34',   volcano:'#bf360c',
+  shadow:'#1a0030', void:'#0a0018'
+};
+const RIVER_BRIDGE_COLORS = {
+  forest:'#8d6e63', tundra:'#b0bec5', mushroom:'#9c27b0', desert:'#ffd54f',
+  swamp:'#4caf50',  crystal:'#26c6da', storm:'#607d8b',   volcano:'#e64a19',
+  shadow:'#7b1fa2', void:'#333333'
+};
+const TILE_WATER = 2;
+let RIVER_DATA = []; // { axis, coord, rangeStart, rangeEnd, bridges[], biome, waterColor, bridgeColor }
+
+function initRivers() {
+  RIVER_DATA = [];
+  const CELL = Math.floor((MAP_W - VOID_BORDER*2) / 3);
+  const BIOME_CELLS = [
+    [{b:'tundra',col:0,row:0},{b:'crystal',col:1,row:0},{b:'storm',col:2,row:0}],
+    [{b:'desert',col:0,row:1},{b:'forest',col:1,row:1},{b:'swamp',col:2,row:1}],
+    [{b:'volcano',col:0,row:2},{b:'mushroom',col:1,row:2},{b:'shadow',col:2,row:2}]
+  ];
+  const rng = (seed) => { let s=seed+1; return ()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; }; };
+
+  BIOME_CELLS.forEach(rowArr => rowArr.forEach(({b, col, row}) => {
+    const rand = rng(col*999+row*333+b.charCodeAt(0)*7);
+    const bx0 = VOID_BORDER + col*CELL; // tile coord start of biome cell
+    const by0 = VOID_BORDER + row*CELL;
+    const RIVER_W = 3; // tiles wide
+    const BRIDGE_W = 5; // tiles wide bridge gap
+    const BRIDGE_MARGIN = 12;
+
+    // Generate 1-2 rivers per biome (alternating h/v so they don't always align)
+    const numRivers = 1 + Math.floor(rand()*2);
+    for (let ri = 0; ri < numRivers; ri++) {
+      const axis = (col + row + ri) % 2 === 0 ? 'h' : 'v';
+      let coord, rangeStart, rangeEnd;
+      if (axis === 'h') {
+        // Horizontal river: fixed ty row, avoid edges
+        coord = by0 + 20 + Math.floor(rand()*(CELL-40));
+        rangeStart = bx0 + 4;
+        rangeEnd   = bx0 + CELL - 4;
+      } else {
+        // Vertical river: fixed tx col
+        coord = bx0 + 20 + Math.floor(rand()*(CELL-40));
+        rangeStart = by0 + 4;
+        rangeEnd   = by0 + CELL - 4;
+      }
+      const span = rangeEnd - rangeStart;
+
+      // 2 bridges per river
+      const numBridges = 2;
+      const bridges = [];
+      for (let bi = 0; bi < numBridges; bi++) {
+        const t = Math.floor(rangeStart + BRIDGE_MARGIN + rand()*(span - BRIDGE_MARGIN*2));
+        bridges.push(t);
+      }
+
+      // Write water tiles into map (tile value 2), then carve bridge gaps
+      for (let rw = 0; rw < RIVER_W; rw++) {
+        for (let t = rangeStart; t < rangeEnd; t++) {
+          let tx, ty;
+          if (axis === 'h') { tx = t; ty = coord + rw; }
+          else              { tx = coord + rw; ty = t; }
+          if (tx < 0||ty < 0||tx >= MAP_W||ty >= MAP_H) continue;
+          // Check if this position is a bridge gap
+          const onBridge = bridges.some(bt => t >= bt && t < bt + BRIDGE_W);
+          map[ty][tx] = onBridge ? 0 : TILE_WATER;
+        }
+      }
+
+      // Clear walls inside bridge zones
+      for (let bi = 0; bi < numBridges; bi++) {
+        for (let bw = 0; bw < RIVER_W; bw++) {
+          for (let bt2 = bridges[bi]; bt2 < bridges[bi]+BRIDGE_W; bt2++) {
+            let tx2, ty2;
+            if (axis === 'h') { tx2=bt2; ty2=coord+bw; } else { tx2=coord+bw; ty2=bt2; }
+            if (tx2>=0&&ty2>=0&&tx2<MAP_W&&ty2<MAP_H) map[ty2][tx2]=0;
+          }
+        }
+      }
+
+      RIVER_DATA.push({
+        axis, coord, rangeStart, rangeEnd, bridges,
+        biome: b, riverW: RIVER_W, bridgeW: BRIDGE_W,
+        waterColor: RIVER_WATER_COLORS[b] || '#1565c0',
+        bridgeColor: RIVER_BRIDGE_COLORS[b] || '#8d6e63'
+      });
+    }
+  }));
+}
 function initLandmarks() {
   LANDMARK_INSTANCES = [];
   const rng = (seed) => { let s=seed; return ()=>{ s=(s*16807+0)%2147483647; return (s-1)/2147483646; }; };
