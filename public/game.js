@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v4.2-debug';
+const VERSION = 'v4.3-debug';
 const TILE = 32;
 const MAP_W = 160, MAP_H = 160;
 
@@ -63,6 +63,7 @@ function worldToScreen(wx, wy) { return { x: wx - camera.x, y: wy - camera.y }; 
 let savedCoins = 99999; // DEBUG // banked at checkpoint — spent in upgrades
 const player = {
   x: MAP_W / 2 * TILE, y: MAP_H / 2 * TILE,
+  level: 1, ep: 0, epMax: 100,
   w: 24, h: 28, speed: 3,
   hp: 100, maxHp: 100, coins: 0,
   notes: [], invincible: 0, facing: 1,
@@ -226,6 +227,39 @@ function uiPlay() {
   canvas.setAttribute('tabindex', '0');
   canvas.focus();
 }
+function openLevelUp() {
+  gameState = 'paused';
+  // Pick 3 random upgrades (not maxed)
+  const pool = ALL_UPGRADES.filter(u => u.level < u.max);
+  const picks = [];
+  const used = new Set();
+  while (picks.length < Math.min(3, pool.length)) {
+    const idx = Math.floor(Math.random() * pool.length);
+    if (!used.has(idx)) { used.add(idx); picks.push(pool[idx]); }
+  }
+  const el = document.getElementById('levelup-overlay');
+  const title = document.getElementById('levelup-title');
+  const opts = document.getElementById('levelup-options');
+  title.textContent = '⭐ Level ' + player.level + '!';
+  opts.innerHTML = '';
+  picks.forEach(u => {
+    const btn = document.createElement('button');
+    btn.className = 'buy-btn';
+    btn.style.cssText = 'width:100%;margin:6px 0;padding:12px;font-size:15px;';
+    btn.innerHTML = '<strong>' + u.label + '</strong> <span style="color:#a78bfa">[Lv ' + u.level + '→' + (u.level+1) + ']</span><br><small style="color:#aaa">' + u.desc + '</small>';
+    btn.onclick = () => {
+      u.level++;
+      if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, u.level)));
+      if (u.id === 'maxhp') { player.maxHp = 100 + u.level * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
+      if (u.id === 'speed') player.speed = 3 + u.level * 0.3;
+      el.style.display = 'none';
+      gameState = 'playing';
+    };
+    opts.appendChild(btn);
+  });
+  el.style.display = 'flex';
+}
+
 function uiResume() {
   document.getElementById('pause-overlay').style.display = 'none';
   gameState = 'playing';
@@ -471,7 +505,19 @@ function update() {
           } // end lightning
         } // end ab check
 
-        if (e.hp <= 0) enemies.splice(j, 1);
+        if (e.hp <= 0) {
+          enemies.splice(j, 1);
+          const epGain = {crawler:10,runner:8,slimeling:14,scorpling:10,yeti:25,ember:12,wraith:18}[e.type]||10;
+          player.ep += epGain;
+          if (player.ep >= player.epMax) {
+            player.ep = 0;
+            if (player.level < 99) {
+              player.level++;
+              player.epMax = Math.floor(100 * Math.pow(1.18, player.level - 1));
+              openLevelUp();
+            }
+          }
+        }
         if (equippedAbility === 'ab_explode' && explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
 
         // Piercing — don't mark as hit if pierce level active
@@ -922,6 +968,11 @@ function drawHUD() {
   ctx.fillStyle='#fff'; ctx.font='bold 12px monospace'; ctx.textAlign='left';
   ctx.textBaseline='middle';
   ctx.fillText('HP: '+player.hp+'/'+player.maxHp, 16, 21);
+  // EP bar
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(10, 36, 164, 16);
+  ctx.fillStyle='#a855f7'; ctx.fillRect(12, 38, Math.round(160*player.ep/player.epMax), 12);
+  ctx.fillStyle='#ddd'; ctx.font='bold 10px monospace'; ctx.textBaseline='middle';
+  ctx.fillText('Lv'+player.level+' EP: '+player.ep+'/'+player.epMax, 16, 44);
 
   ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(canvas.width-130, 10, 120, 26);
   ctx.fillStyle='#fbbf24'; ctx.font='bold 14px monospace'; ctx.textAlign='right';
