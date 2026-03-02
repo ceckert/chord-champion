@@ -100,20 +100,7 @@ function runCharShowcase() {
     cx.rotate(charPreviewAngle);
     cx.fillStyle = '#f9c74f'; cx.fillRect(0, -3, 8, 5);
     const gid = selectedGunId || 'pistol';
-    if (gid === 'pistol') {
-      cx.fillStyle='#374151'; cx.fillRect(7,-3,9,6);
-      cx.fillStyle='#6b7280'; cx.fillRect(14,-2,4,4);
-      cx.fillStyle='#fbbf24'; cx.fillRect(15,-3,2,2);
-    } else if (gid === 'rifle') {
-      cx.fillStyle='#292524'; cx.fillRect(7,-2,18,5);
-      cx.fillStyle='#60a5fa'; cx.fillRect(13,-5,6,3);
-    } else if (gid === 'shotgun') {
-      cx.fillStyle='#78350f'; cx.fillRect(7,-4,14,9);
-      cx.fillStyle='#f97316'; cx.fillRect(21,-4,3,9);
-    } else {
-      cx.fillStyle='#1c1917'; cx.fillRect(7,-4,20,8);
-      cx.fillStyle='#44403c'; cx.fillRect(9,4,6,5);
-    }
+    drawGunModel(cx, gid);
     cx.restore();
     cx.restore();
     // Handle A/D rotation
@@ -161,79 +148,180 @@ function drawCharPreview(canvasId, charName) {
 }
 
 function drawCharBody(cx, charName, frame) {
+  const bob = Math.sin((frame||0)*0.14)*0.8; // subtle walk bob
   // Shadow
-  cx.fillStyle = 'rgba(0,0,0,0.18)';
-  cx.beginPath(); cx.ellipse(2,14,11,5,0,0,Math.PI*2); cx.fill();
+  cx.fillStyle='rgba(0,0,0,0.18)';
+  cx.beginPath(); cx.ellipse(2,14+bob,11,4,0,0,Math.PI*2); cx.fill();
 
-  if (charName === 'jimmy') {
-    cx.fillStyle='#3b82f6'; cx.fillRect(-9,-6,18,20);
-    cx.fillStyle='#93c5fd'; cx.fillRect(-9,-3,18,2); cx.fillRect(-9,3,18,2); cx.fillRect(-9,9,18,2);
-    cx.fillStyle='#7c3aed'; cx.fillRect(-10,13,8,5); cx.fillRect(2,13,8,5);
+  if (charName==='jimmy') {
+    // ── Jimmy — blue pajamas, brown spiky hair ──────────────────────────────
+    // Legs with shoes
+    cx.fillStyle='#7c3aed'; cx.fillRect(-10,13,8,6+bob); cx.fillRect(2,13,8,6-bob);
+    cx.fillStyle='#1e1b4b'; cx.fillRect(-10,18,8,3); cx.fillRect(2,18,8,3); // shoes
+    cx.fillStyle='#312e81'; cx.fillRect(-10,18,8,1); cx.fillRect(2,18,8,1); // shoe highlight
+    // Body — blue pajama shirt
+    cx.fillStyle='#1d4ed8'; cx.fillRect(-9,-6,18,20);
+    cx.fillStyle='#3b82f6'; cx.fillRect(-9,-6,18,2); // collar shadow area
+    // Stripe details
+    cx.fillStyle='#93c5fd'; cx.fillRect(-9,-3,18,1); cx.fillRect(-9,3,18,1); cx.fillRect(-9,9,18,1);
+    // Button strip + collar
+    cx.fillStyle='#bfdbfe'; cx.fillRect(-2,-6,4,8); // button strip
+    cx.fillStyle='#eff6ff'; cx.fillRect(-2,-6,4,1); cx.fillRect(-1,-5,1,2); cx.fillRect(-1,0,1,2); cx.fillRect(-1,4,1,2);
+    cx.fillStyle='#93c5fd'; cx.fillRect(-8,-6,3,3); cx.fillRect(5,-6,3,3); // collar
+    // Arms (slightly animated)
+    cx.fillStyle='#2563eb'; cx.fillRect(-14,-4,6,12+bob); cx.fillRect(9,-4,6,12-bob);
+    cx.fillStyle='#f9c74f'; cx.fillRect(-14,7+bob,6,4); cx.fillRect(9,7-bob,6,4); // hands
+    // Head
     cx.fillStyle='#f9c74f'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
-    cx.fillStyle='#78350f'; cx.beginPath(); cx.arc(0,-18,7,Math.PI,0); cx.fill();
-    cx.fillRect(-4,-20,3,5); cx.fillRect(2,-22,3,6); cx.fillRect(-8,-17,3,5);
-  } else if (charName === 'hanna') {
-    // Hanna — lavender hoodie, longer blond hair
-    cx.fillStyle='#c084fc'; cx.fillRect(-9,-6,18,20);
-    cx.fillStyle='#e879f9'; cx.fillRect(-9,-3,18,2); cx.fillRect(-9,3,18,2); cx.fillRect(-9,9,18,2);
-    cx.fillStyle='#f472b6'; cx.fillRect(-10,13,8,5); cx.fillRect(2,13,8,5);
-    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
-    cx.fillStyle='#fbbf24';
+    cx.fillStyle='#f59e0b'; cx.fillRect(-8,-18,16,4); // forehead shadow
+    // Hair — brown spikes
+    cx.fillStyle='#78350f';
     cx.beginPath(); cx.arc(0,-18,8,Math.PI,0); cx.fill();
-    cx.fillRect(-10,-20,5,22); cx.fillRect(6,-20,4,20);
-    cx.fillRect(-8,-22,5,5); cx.fillRect(2,-23,4,6);
-  } else if (charName === 'bob') {
-    // Bob — chubby kid, red shirt, blue shorts
-    // Wider/rounder body
-    cx.fillStyle='#dc2626'; cx.fillRect(-12,-6,24,22); // wider red shirt
-    cx.fillStyle='#ef4444'; cx.fillRect(-12,-3,24,2); cx.fillRect(-12,5,24,2); // stripes
-    cx.fillStyle='#1d4ed8'; cx.fillRect(-11,14,10,7); cx.fillRect(2,14,10,7); // blue shorts
-    // Chubby head (bigger)
-    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,-11,11,0,Math.PI*2); cx.fill();
-    // Short dark hair
-    cx.fillStyle='#292524'; cx.beginPath(); cx.arc(0,-18,8,Math.PI,0); cx.fill();
-    cx.fillRect(-8,-20,16,4);
-  } else {
-    // Max — small goldendoodle on all fours, low to ground
-    cx.save();
-    cx.translate(0, 8); cx.scale(0.72, 0.72); // smaller and lower
-    // Body (horizontal, low)
-    cx.fillStyle='#fde68a'; cx.fillRect(-14,2,28,10);
-    // Fluffy bumps
-    cx.fillStyle='#fef3c7';
-    for (let bx=-12; bx<=10; bx+=6) { cx.beginPath(); cx.arc(bx,5,3.5,0,Math.PI*2); cx.fill(); }
-    // 4 short legs
-    cx.fillStyle='#fde68a';
-    cx.fillRect(-12,11,5,7); cx.fillRect(-4,11,5,7); // front legs
-    cx.fillRect(4,11,5,7);  cx.fillRect(10,11,5,7);  // back legs
-    // Curly tail up
-    cx.fillStyle='#fef3c7'; cx.beginPath(); cx.arc(14,-2,5,0,Math.PI*2); cx.fill();
-    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(14,-2,3,0,Math.PI*2); cx.fill();
-    // Small round head
-    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(-13,-3,9,0,Math.PI*2); cx.fill();
-    // Poofy head fur
-    cx.fillStyle='#fef3c7';
-    [-18,-13,-8].forEach(bx => { cx.beginPath(); cx.arc(bx,-9,4,0,Math.PI*2); cx.fill(); });
-    // Floppy ears
-    cx.fillStyle='#f59e0b'; cx.beginPath(); cx.arc(-18,2,5,0,Math.PI*2); cx.fill();
-    cx.beginPath(); cx.arc(-8,2,5,0,Math.PI*2); cx.fill();
-    // Snout
-    cx.fillStyle='#fef9c3'; cx.fillRect(-19,-4,8,6);
-    cx.fillStyle='#1c1917'; cx.beginPath(); cx.ellipse(-16,-2,3,2,0,0,Math.PI*2); cx.fill();
-    // Tongue
-    cx.fillStyle='#f87171'; cx.beginPath(); cx.ellipse(-16,3,2,3,0,0,Math.PI*2); cx.fill();
-    cx.restore();
-  }
-  // Eyes (shared)
-  cx.fillStyle='#1a0a2e'; cx.fillRect(-4,-14,3,3); cx.fillRect(2,-14,3,3);
-  // Mouth
-  cx.strokeStyle='#92400e'; cx.lineWidth=1; cx.beginPath();
-  if (charName==='max') {
-    // dog has snout already
+    cx.fillRect(-4,-22,3,6); cx.fillRect(1,-24,3,7); cx.fillRect(-8,-19,3,5); cx.fillRect(5,-21,3,6);
+    // Eyes with pupils
+    cx.fillStyle='#1a0a2e'; cx.fillRect(-5,-14,4,4); cx.fillRect(2,-14,4,4);
+    cx.fillStyle='#fff'; cx.fillRect(-4,-13,2,2); cx.fillRect(3,-13,2,2);
+    cx.fillStyle='#1a0a2e'; cx.fillRect(-4,-13,1,1); cx.fillRect(3,-13,1,1);
+    // Blush
+    cx.fillStyle='rgba(255,150,100,0.35)'; cx.beginPath(); cx.arc(-6,-11,3,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(6,-11,3,0,Math.PI*2); cx.fill();
+    // Smile
+    cx.strokeStyle='#92400e'; cx.lineWidth=1.2;
+    cx.beginPath(); cx.arc(0,-10,2.5,0.4,Math.PI-0.4); cx.stroke();
+
+  } else if (charName==='hanna') {
+    // ── Hanna — lavender hoodie, long blond hair, pink cheeks ───────────────
+    // Legs
+    cx.fillStyle='#f472b6'; cx.fillRect(-10,13,8,6+bob); cx.fillRect(2,13,8,6-bob);
+    cx.fillStyle='#be185d'; cx.fillRect(-10,18,8,3); cx.fillRect(2,18,8,3); // dark boots
+    cx.fillStyle='#f9a8d4'; cx.fillRect(-10,18,8,1); cx.fillRect(2,18,8,1); // boot highlight
+    // Body — hoodie
+    cx.fillStyle='#a855f7'; cx.fillRect(-9,-6,18,20);
+    cx.fillStyle='#c084fc'; cx.fillRect(-9,-6,18,3); // hood edge
+    cx.fillStyle='#d8b4fe'; cx.fillRect(-9,-3,18,1); cx.fillRect(-9,6,18,1); // lines
+    // Pocket
+    cx.fillStyle='#9333ea'; cx.fillRect(-6,6,12,7); cx.strokeStyle='#7e22ce'; cx.lineWidth=0.8; cx.strokeRect(-6,6,12,7);
+    // Hood drawstrings
+    cx.strokeStyle='#e9d5ff'; cx.lineWidth=1;
+    cx.beginPath(); cx.moveTo(-2,3); cx.lineTo(-1,9); cx.stroke();
+    cx.beginPath(); cx.moveTo(2,3); cx.lineTo(1,9); cx.stroke();
+    // Arms
+    cx.fillStyle='#9333ea'; cx.fillRect(-14,-4,6,12+bob); cx.fillRect(9,-4,6,12-bob);
+    cx.fillStyle='#fde68a'; cx.fillRect(-14,7+bob,6,4); cx.fillRect(9,7-bob,6,4); // hands
+    // Head
+    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
+    // Long blond hair
+    cx.fillStyle='#fbbf24';
+    cx.beginPath(); cx.arc(0,-18,9,Math.PI,0); cx.fill();
+    cx.fillRect(-12,-20,6,28); cx.fillRect(7,-20,5,26); // side locks
+    cx.fillRect(-9,-23,6,6); cx.fillRect(2,-24,5,7); // top spikes
+    // Hair shine
+    cx.fillStyle='#fef3c7'; cx.fillRect(-4,-22,3,4); cx.fillRect(1,-23,2,5);
+    // Star clip
+    cx.fillStyle='#f472b6'; cx.fillRect(8,-20,4,4);
+    cx.fillStyle='#fff'; cx.fillRect(9,-19,2,2);
+    // Eyes
+    cx.fillStyle='#1a0a2e'; cx.fillRect(-5,-14,4,4); cx.fillRect(2,-14,4,4);
+    cx.fillStyle='#fff'; cx.fillRect(-4,-13,2,2); cx.fillRect(3,-13,2,2);
+    cx.fillStyle='#6d28d9'; cx.fillRect(-4,-13,1,1); cx.fillRect(3,-13,1,1); // purple pupils
+    // Lashes
+    cx.strokeStyle='#1a0a2e'; cx.lineWidth=1;
+    cx.beginPath(); cx.moveTo(-5,-14); cx.lineTo(-6,-16); cx.stroke();
+    cx.beginPath(); cx.moveTo(-2,-14); cx.lineTo(-1,-16); cx.stroke();
+    cx.beginPath(); cx.moveTo(2,-14); cx.lineTo(1,-16); cx.stroke();
+    cx.beginPath(); cx.moveTo(5,-14); cx.lineTo(6,-16); cx.stroke();
+    // Blush
+    cx.fillStyle='rgba(236,72,153,0.3)'; cx.beginPath(); cx.arc(-6,-11,3,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(6,-11,3,0,Math.PI*2); cx.fill();
+    cx.strokeStyle='#92400e'; cx.lineWidth=1.2;
+    cx.beginPath(); cx.arc(0,-10,2.5,0.4,Math.PI-0.4); cx.stroke();
+
   } else if (charName==='bob') {
-    cx.arc(0,-9,2.5,0.4,Math.PI-0.4); cx.stroke();
+    // ── Bob — chubby, red tee, blue shorts, rosy cheeks ─────────────────────
+    // Chubby legs + big shoes
+    cx.fillStyle='#1d4ed8'; cx.fillRect(-12,12,11,8+bob); cx.fillRect(2,12,11,8-bob);
+    cx.fillStyle='#1e3a8a'; cx.fillRect(-12,19,11,4); cx.fillRect(2,19,11,4);
+    cx.fillStyle='#60a5fa'; cx.fillRect(-12,19,11,1); cx.fillRect(2,19,11,1);
+    // Wide body
+    cx.fillStyle='#dc2626'; cx.fillRect(-12,-6,24,20);
+    cx.fillStyle='#ef4444'; cx.fillRect(-12,-6,24,3); // collar area
+    cx.fillStyle='#fca5a5'; cx.fillRect(-12,-2,24,1); cx.fillRect(-12,6,24,1); // stripes
+    // T-shirt collar
+    cx.fillStyle='#b91c1c'; cx.fillRect(-5,-6,10,4); cx.fillStyle='#fee2e2'; cx.fillRect(-4,-5,8,2);
+    // Belt
+    cx.fillStyle='#78350f'; cx.fillRect(-12,12,24,3);
+    cx.fillStyle='#fbbf24'; cx.fillRect(-2,12,4,3); // buckle
+    cx.fillStyle='#92400e'; cx.fillRect(-1,13,2,1);
+    // Chubby arms
+    cx.fillStyle='#b91c1c'; cx.fillRect(-17,-3,7,13+bob); cx.fillRect(11,-3,7,13-bob);
+    cx.fillStyle='#f9c74f'; cx.fillRect(-17,9+bob,7,5); cx.fillRect(11,9-bob,7,5);
+    // Big head
+    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,-10,11,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#f59e0b'; cx.fillRect(-9,-17,18,4);
+    // Short hair with part
+    cx.fillStyle='#292524';
+    cx.beginPath(); cx.arc(0,-18,9,Math.PI,0); cx.fill();
+    cx.fillRect(-9,-20,18,5);
+    cx.fillStyle='#44403c'; cx.fillRect(-1,-21,2,5); // hair part
+    // Eyes
+    cx.fillStyle='#1a0a2e'; cx.fillRect(-6,-13,5,5); cx.fillRect(2,-13,5,5);
+    cx.fillStyle='#fff'; cx.fillRect(-5,-12,2,2); cx.fillRect(3,-12,2,2);
+    cx.fillStyle='#92400e'; cx.fillRect(-5,-12,1,1); cx.fillRect(3,-12,1,1); // brown pupils
+    // Big rosy cheeks
+    cx.fillStyle='rgba(255,100,80,0.4)'; cx.beginPath(); cx.arc(-7,-8,4,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(7,-8,4,0,Math.PI*2); cx.fill();
+    // Big grin
+    cx.strokeStyle='#92400e'; cx.lineWidth=1.5;
+    cx.beginPath(); cx.arc(0,-7,3.5,0.3,Math.PI-0.3); cx.stroke();
+
   } else {
-    cx.arc(0,-10,2,0.5,Math.PI-0.5); cx.stroke();
+    // ── Max — fluffy goldendoodle on all fours ───────────────────────────────
+    cx.save(); cx.translate(0,8); cx.scale(0.72,0.72);
+    // Body
+    cx.fillStyle='#fde68a'; cx.fillRect(-14,2,28,10);
+    // Fluffy top bumps
+    cx.fillStyle='#fef3c7';
+    for (let bx=-12; bx<=10; bx+=6) { cx.beginPath(); cx.arc(bx,4,4,0,Math.PI*2); cx.fill(); }
+    cx.fillStyle='#fde68a'; cx.fillRect(-12,6,24,6); // body base
+    // Belly lighter patch
+    cx.fillStyle='#fffbeb'; cx.beginPath(); cx.ellipse(0,9,8,4,0,0,Math.PI*2); cx.fill();
+    // 4 legs with paw pads
+    cx.fillStyle='#fde68a';
+    [[-12,11],[- 4,11],[4,11],[10,11]].forEach(([lx,ly])=>{
+      cx.fillRect(lx,ly,5,7);
+      cx.fillStyle='#f59e0b'; cx.beginPath(); cx.arc(lx+2,ly+7,2.5,0,Math.PI*2); cx.fill(); // paw
+      cx.fillStyle='#fde68a';
+    });
+    // Wagging tail
+    const tailWag = Math.sin((frame||0)*0.22)*0.3;
+    cx.save(); cx.translate(14,0); cx.rotate(-0.4+tailWag);
+    cx.fillStyle='#fef3c7'; cx.beginPath(); cx.arc(0,-4,6,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,-4,4,0,Math.PI*2); cx.fill();
+    cx.restore();
+    // Collar
+    cx.fillStyle='#ef4444'; cx.fillRect(-16,-2,6,3); cx.fillRect(-13,-3,4,5);
+    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(-11,2,2,0,Math.PI*2); cx.fill(); // tag
+    // Head
+    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(-13,-3,9,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#fef3c7';
+    [-19,-13,-7].forEach(bx=>{ cx.beginPath(); cx.arc(bx,-9,4.5,0,Math.PI*2); cx.fill(); }); // poof
+    // Ears
+    cx.fillStyle='#f59e0b'; cx.beginPath(); cx.arc(-19,2,6,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(-8,2,5,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(-19,1,3,0,Math.PI*2); cx.fill();
+    // Snout
+    cx.fillStyle='#fff8e1'; cx.fillRect(-20,-5,10,7);
+    cx.fillStyle='#1c1917'; cx.beginPath(); cx.ellipse(-16,-2,3.5,2.5,0,0,Math.PI*2); cx.fill(); // nose
+    cx.fillStyle='#fff'; cx.beginPath(); cx.arc(-15,-2.5,1,0,Math.PI*2); cx.fill(); // nose glint
+    // Tongue
+    cx.fillStyle='#fca5a5'; cx.beginPath(); cx.ellipse(-16,3.5,2.5,3.5,0,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#f87171'; cx.fillRect(-17,3,2,4);
+    // Eyes
+    cx.fillStyle='#1a0a2e'; cx.fillRect(-18,-7,4,4); cx.fillRect(-10,-7,4,4);
+    cx.fillStyle='#fff'; cx.fillRect(-17,-6,2,2); cx.fillRect(-9,-6,2,2);
+    cx.fillStyle='#78350f'; cx.fillRect(-17,-6,1,1); cx.fillRect(-9,-6,1,1);
+    cx.restore();
+    return; // skip shared eyes for max
   }
 }
 
@@ -1218,10 +1306,7 @@ function drawInterior() {
   ctx.save(); ctx.translate(9,-1); ctx.rotate(ang);
   ctx.fillStyle='#f9c74f'; ctx.fillRect(0,-3,8,5);
   const gid=selectedGunId||'pistol';
-  if(gid==='pistol'){ctx.fillStyle='#374151';ctx.fillRect(7,-3,9,6);ctx.fillStyle='#fbbf24';ctx.fillRect(15,-3,2,2);}
-  else if(gid==='rifle'){ctx.fillStyle='#292524';ctx.fillRect(7,-2,18,5);ctx.fillStyle='#60a5fa';ctx.fillRect(13,-5,6,3);}
-  else if(gid==='shotgun'){ctx.fillStyle='#78350f';ctx.fillRect(7,-4,14,9);ctx.fillStyle='#f97316';ctx.fillRect(21,-4,3,9);}
-  else{ctx.fillStyle='#1c1917';ctx.fillRect(7,-4,20,8);ctx.fillStyle='#44403c';ctx.fillRect(9,4,6,5);}
+  drawGunModel(ctx, gid);
   ctx.restore(); ctx.restore();
 
   // Vignette
@@ -3587,6 +3672,84 @@ function initWorldChests() {
         WORLD_CHESTS.push({ biome, tx, ty, x: tx*TILE+TILE/2, y: ty*TILE+TILE/2, collected: false });
       }
     }
+  }
+}
+
+// ── Gun models — shared between world + interior player ──────────────────────
+function drawGunModel(cx, gid) {
+  if (gid==='pistol') {
+    cx.fillStyle='#374151'; cx.fillRect(7,-4,12,7);      // slide
+    cx.fillStyle='#1f2937'; cx.fillRect(9,3,6,5);        // grip
+    cx.fillStyle='#6b7280'; cx.fillRect(7,-3,3,9);       // grip front
+    cx.fillStyle='#4b5563'; cx.fillRect(17,-4,5,5);      // barrel extension
+    cx.fillStyle='#9ca3af'; cx.fillRect(20,-3,3,3);      // muzzle
+    // Slide serrations
+    cx.fillStyle='#1f2937'; [9,11,13].forEach(x=>{ cx.fillRect(x,-4,1,3); });
+    // Trigger guard
+    cx.strokeStyle='#374151'; cx.lineWidth=1.5;
+    cx.beginPath(); cx.arc(10,3,4,0,Math.PI); cx.stroke();
+    // Sight
+    cx.fillStyle='#fbbf24'; cx.fillRect(17,-6,2,3);
+    cx.fillStyle='#f9c74f'; cx.fillRect(8,-5,2,2);
+  } else if (gid==='rifle') {
+    cx.fillStyle='#292524'; cx.fillRect(7,-3,22,6);      // body
+    cx.fillStyle='#44403c'; cx.fillRect(7,-3,5,6);       // stock
+    cx.fillStyle='#1c1917'; cx.fillRect(7,-1,5,2);       // stock groove
+    cx.fillStyle='#3c3836'; cx.fillRect(26,-3,5,4);      // muzzle
+    // Grip
+    cx.fillStyle='#44403c'; cx.fillRect(10,3,6,6);
+    cx.fillStyle='#1c1917'; cx.fillRect(11,4,4,4);
+    // Scope body
+    cx.fillStyle='#1d4ed8'; cx.fillRect(14,-7,8,4);
+    // Scope lens
+    cx.fillStyle='#bfdbfe'; cx.beginPath(); cx.arc(21,-5,2,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#fff'; cx.beginPath(); cx.arc(21.5,-5.5,0.7,0,Math.PI*2); cx.fill();
+    // Barrel rails
+    cx.fillStyle='#6b7280'; cx.fillRect(22,-2,9,2);
+    cx.fillStyle='#374151'; cx.fillRect(23,-2,1,2); cx.fillRect(26,-2,1,2); cx.fillRect(29,-2,1,2);
+    // Foregrip
+    cx.fillStyle='#292524'; cx.fillRect(18,3,5,5);
+    cx.fillStyle='#1c1917'; cx.fillRect(19,4,3,3);
+  } else if (gid==='shotgun') {
+    // Wood stock
+    cx.fillStyle='#78350f'; cx.fillRect(7,-4,10,10);
+    cx.fillStyle='#92400e'; cx.fillRect(7,-4,10,3);
+    cx.strokeStyle='#451a03'; cx.lineWidth=1;
+    [0,3,6].forEach(y=>{ cx.beginPath(); cx.moveTo(7,y-2); cx.lineTo(17,y-2); cx.stroke(); });
+    // Barrel (fat)
+    cx.fillStyle='#374151'; cx.fillRect(17,-4,14,10);
+    cx.fillStyle='#4b5563'; cx.fillRect(17,-4,14,4);    // top half lighter
+    // Pump forearm
+    cx.fillStyle='#6b7280'; cx.fillRect(20,2,8,5);
+    cx.fillStyle='#9ca3af'; cx.fillRect(21,2,6,2);
+    // Muzzle with both barrels hinted
+    cx.fillStyle='#1f2937'; cx.fillRect(29,-4,3,5); cx.fillRect(29,2,3,5);
+    cx.fillStyle='#111827'; cx.fillRect(30,-3,1,3); cx.fillRect(30,3,1,3);
+    // Guard
+    cx.strokeStyle='#6b7280'; cx.lineWidth=1.5;
+    cx.beginPath(); cx.arc(11,3,4,0,Math.PI); cx.stroke();
+  } else { // machinegun
+    cx.fillStyle='#1c1917'; cx.fillRect(7,-5,22,10);    // body
+    cx.fillStyle='#292524'; cx.fillRect(7,-5,6,10);     // stock block
+    // Vent holes on barrel
+    cx.fillStyle='#111827'; [18,21,24].forEach(x=>{ cx.fillRect(x,-3,2,6); });
+    cx.fillStyle='#1c1917'; [18,21,24].forEach(x=>{ cx.fillRect(x,-2,2,4); });
+    // Barrel
+    cx.fillStyle='#44403c'; cx.fillRect(29,-3,4,6);
+    cx.fillStyle='#6b7280'; cx.fillRect(29,-2,4,1);
+    // Ammo drum (side)
+    cx.fillStyle='#292524'; cx.beginPath(); cx.arc(15,5,5,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#44403c'; cx.beginPath(); cx.arc(15,5,3,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#6b7280'; cx.beginPath(); cx.arc(15,5,1.5,0,Math.PI*2); cx.fill();
+    // Foregrip
+    cx.fillStyle='#1c1917'; cx.fillRect(21,4,6,6);
+    cx.fillStyle='#374151'; cx.fillRect(22,5,4,3);
+    // Top rail
+    cx.fillStyle='#374151'; cx.fillRect(13,-6,16,2);
+    [14,18,22,26].forEach(x=>{ cx.fillStyle='#4b5563'; cx.fillRect(x,-6,1,2); });
+    // Grip
+    cx.fillStyle='#292524'; cx.fillRect(8,4,5,6);
+    cx.fillStyle='#1c1917'; cx.fillRect(9,5,3,4);
   }
 }
 function loop() { update(); render(); requestAnimationFrame(loop); }
