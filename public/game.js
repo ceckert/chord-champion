@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v3.1-debug';
+const VERSION = 'v3.2-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -416,10 +416,19 @@ function update() {
       e.x += edx/elen * e.speed; e.y += edy/elen * e.speed;
     }
     // Burn DOT
+    if (e.burnFlash > 0) {
+      e.burnFlash--;
+      const s2 = worldToScreen(e.x, e.y);
+      ctx.save(); ctx.globalAlpha = 0.55;
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(Math.round(s2.x), Math.round(s2.y), e.w, e.h);
+      ctx.restore();
+    }
     if (e.burning > 0) {
       e.burning--;
       if (e.burning % 20 === 0) { // tick every 20 frames
         e.hp -= e.burnDmg;
+        e.burnFlash = 8; // red flash frames
         if (e.hp <= 0) { enemies.splice(enemies.indexOf(e), 1); continue; }
       }
     }
@@ -789,6 +798,14 @@ function render() {
   }
   for (const e of enemies) {
     drawEnemy(e);
+    if (e.burnFlash > 0) {
+      e.burnFlash--;
+      const s2 = worldToScreen(e.x, e.y);
+      ctx.save(); ctx.globalAlpha = 0.55;
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(Math.round(s2.x), Math.round(s2.y), e.w, e.h);
+      ctx.restore();
+    }
     if (e.burning > 0) {
       const s = worldToScreen(e.x + e.w/2, e.y + e.h/2);
       const flicker = 0.5 + 0.5 * Math.sin(frame * 0.4 + e.x);
