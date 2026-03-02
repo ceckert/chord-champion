@@ -1618,7 +1618,7 @@ function drawHUD() {
 
   // ── Current Upgrades box (bottom-left) ──────────────────────────
   const activeUps = ALL_UPGRADES.filter(u => u.level > 0 || (player.bonusUpgrades[u.id]||0) > 0);
-  const equippedAb = equippedAbility ? ALL_UPGRADES.find(u => u.id === equippedAbility) : null;
+  const equippedAb = equippedAbilities.length ? ALL_UPGRADES.find(u => u.id === equippedAbilities[0]) : null;
   const boxLines = activeUps.map(u => { const t=u.level+(player.bonusUpgrades[u.id]||0); return u.label+' Lv'+t+(player.bonusUpgrades[u.id]?'(+'+player.bonusUpgrades[u.id]+')':''); });
   if (equippedAb) boxLines.unshift('⚡ ' + equippedAb.label + ' Lv' + equippedAb.level);
   if (boxLines.length > 0) {
