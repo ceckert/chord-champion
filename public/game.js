@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v6.2-debug';
+const VERSION = 'v6.3-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -362,6 +362,7 @@ function uiPlay() {
   document.getElementById('ui-overlay').style.display = 'none';
   gameState = 'playing';
   // Pre-spawn starting enemies so world feels alive immediately
+  initLandmarks();
   setTimeout(() => preSpawnEnemies(3), 300);
   canvas.setAttribute('tabindex', '0');
   canvas.focus();
@@ -1759,238 +1760,188 @@ function render() {
 
 
 
-// ── Landmarks — one large structure per biome ────────────────────
-const CELL = Math.floor((MAP_W - VOID_BORDER*2) / 3); // ~158 tiles per biome cell
-function biomeCenter(col, row) {
-  return {
-    px: (VOID_BORDER + col * CELL + Math.floor(CELL/2)) * TILE,
-    py: (VOID_BORDER + row * CELL + Math.floor(CELL/2)) * TILE
-  };
+// ── Landmarks — 15 per biome, varied instances ──────────────────
+const CELL = Math.floor((MAP_W - VOID_BORDER*2) / 3);
+const BIOME_LANDMARK_FNS = {
+  forest: drawTreehouse, tundra: drawIceCave, mushroom: drawMushroomCastle,
+  desert: drawPyramid, swamp: drawSwampRuins, crystal: drawCrystalPalace,
+  storm: drawLightningTower, volcano: drawVolcanoForge, shadow: drawShadowTemple
+};
+const BIOME_GRID_POS = [
+  [{b:'tundra',col:0,row:0},{b:'crystal',col:1,row:0},{b:'storm',col:2,row:0}],
+  [{b:'desert',col:0,row:1},{b:'forest',col:1,row:1},{b:'swamp',col:2,row:1}],
+  [{b:'volcano',col:0,row:2},{b:'mushroom',col:1,row:2},{b:'shadow',col:2,row:2}]
+];
+
+// Pre-generate 15 instances per biome at startup
+let LANDMARK_INSTANCES = [];
+function initLandmarks() {
+  LANDMARK_INSTANCES = [];
+  const rng = (seed) => { let s=seed; return ()=>{ s=(s*16807+0)%2147483647; return (s-1)/2147483646; }; };
+  BIOME_GRID_POS.forEach(row => row.forEach(({b, col, row:r}) => {
+    const fn = BIOME_LANDMARK_FNS[b]; if (!fn) return;
+    const rand = rng(col*1000+r*100+b.charCodeAt(0));
+    const bx0 = (VOID_BORDER + col*CELL) * TILE;
+    const by0 = (VOID_BORDER + r*CELL) * TILE;
+    const bw = CELL * TILE, bh = CELL * TILE;
+    const margin = 120;
+    for (let i = 0; i < 15; i++) {
+      const px = bx0 + margin + rand() * (bw - margin*2);
+      const py = by0 + margin + rand() * (bh - margin*2);
+      const scale = 0.65 + rand() * 0.65; // 0.65–1.3x
+      const colorShift = (rand() - 0.5) * 30; // slight hue/brightness variation
+      LANDMARK_INSTANCES.push({ px, py, fn, scale, colorShift, biome: b });
+    }
+  }));
 }
 
 function drawLandmarks() {
-  const landmarks = [
-    { col:1, row:1, draw: drawTreehouse },   // Forest (center)
-    { col:0, row:0, draw: drawIceCave },     // Tundra
-    { col:1, row:2, draw: drawMushroomCastle },// Mushroom
-    { col:0, row:1, draw: drawPyramid },     // Desert
-    { col:2, row:1, draw: drawSwampRuins },  // Swamp
-    { col:1, row:0, draw: drawCrystalPalace },// Crystal
-    { col:2, row:0, draw: drawLightningTower },// Storm
-    { col:0, row:2, draw: drawVolcanoForge },// Volcano
-    { col:2, row:2, draw: drawShadowTemple },// Shadow
-  ];
-  for (const lm of landmarks) {
-    const c = biomeCenter(lm.col, lm.row);
-    const s = worldToScreen(c.px, c.py);
-    if (s.x < -400 || s.x > canvas.width+400 || s.y < -400 || s.y > canvas.height+400) continue;
+  ctx.save();
+  for (const lm of LANDMARK_INSTANCES) {
+    const s = worldToScreen(lm.px, lm.py);
+    if (s.x < -300 || s.x > canvas.width+300 || s.y < -300 || s.y > canvas.height+300) continue;
     ctx.save();
-    lm.draw(s.x, s.y);
+    ctx.translate(s.x, s.y);
+    ctx.scale(lm.scale, lm.scale);
+    ctx.globalAlpha = 0.85 + lm.scale * 0.1;
+    lm.fn(0, 0, lm.colorShift);
     ctx.restore();
   }
+  ctx.restore();
 }
 
 // 🌿 Forest — Treehouse
-function drawTreehouse(cx, cy) {
-  // Trunk
-  ctx.fillStyle='#5c3317'; ctx.fillRect(cx-10,cy,20,80);
-  // Rope ladder
-  for(let i=0;i<5;i++){ctx.strokeStyle='#a0522d';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx-8,cy+i*15);ctx.lineTo(cx+8,cy+i*15);ctx.stroke();}
-  // Platform
-  ctx.fillStyle='#8B4513'; ctx.fillRect(cx-50,cy-10,100,12);
-  // House body
-  ctx.fillStyle='#cd853f'; ctx.fillRect(cx-40,cy-55,80,48);
-  // Door
+function drawTreehouse(cx, cy, cs=0) {
+  ctx.fillStyle=shiftColor('#5c3317',cs); ctx.fillRect(cx-10,cy,20,80);
+  for(let i=0;i<5;i++){ctx.strokeStyle=shiftColor('#a0522d',cs);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx-8,cy+i*15);ctx.lineTo(cx+8,cy+i*15);ctx.stroke();}
+  ctx.fillStyle=shiftColor('#8B4513',cs); ctx.fillRect(cx-50,cy-10,100,12);
+  ctx.fillStyle=shiftColor('#cd853f',cs); ctx.fillRect(cx-40,cy-55,80,48);
   ctx.fillStyle='#3b1f0a'; ctx.fillRect(cx-10,cy-30,20,23);
-  // Window
   ctx.fillStyle='#87ceeb'; ctx.fillRect(cx+12,cy-50,16,14);
-  ctx.fillStyle='#5c3317'; ctx.fillRect(cx+20,cy-50,2,14); ctx.fillRect(cx+12,cy-44,16,2);
-  // Roof
-  ctx.fillStyle='#2d5a27'; ctx.beginPath();ctx.moveTo(cx-50,cy-55);ctx.lineTo(cx,cy-100);ctx.lineTo(cx+50,cy-55);ctx.closePath();ctx.fill();
-  // Leaves around
-  ctx.fillStyle='#3a7a30';
+  ctx.fillStyle=shiftColor('#5c3317',cs); ctx.fillRect(cx+20,cy-50,2,14); ctx.fillRect(cx+12,cy-44,16,2);
+  ctx.fillStyle=shiftColor('#2d5a27',cs); ctx.beginPath();ctx.moveTo(cx-50,cy-55);ctx.lineTo(cx,cy-100);ctx.lineTo(cx+50,cy-55);ctx.closePath();ctx.fill();
+  ctx.fillStyle=shiftColor('#3a7a30',cs);
   ctx.beginPath();ctx.arc(cx-55,cy-40,28,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.arc(cx+55,cy-40,25,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.arc(cx,cy-105,22,0,Math.PI*2);ctx.fill();
-  // Label
-  ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
-  ctx.fillText('🌿 Treehouse',cx,cy+90);
 }
 
 // ❄️ Tundra — Ice Cave
-function drawIceCave(cx, cy) {
-  // Rocky cliff base
-  ctx.fillStyle='#b0c8d8'; ctx.fillRect(cx-90,cy-60,180,80);
-  // Cave opening (dark arch)
+function drawIceCave(cx, cy, cs=0) {
+  ctx.fillStyle=shiftColor('#b0c8d8',cs); ctx.fillRect(cx-90,cy-60,180,80);
   ctx.fillStyle='#1a1a2e';
   ctx.beginPath();ctx.arc(cx,cy-15,42,Math.PI,0);ctx.lineTo(cx+42,cy+20);ctx.lineTo(cx-42,cy+20);ctx.closePath();ctx.fill();
-  // Ice arch icicles
-  ctx.fillStyle='#a8d8ea';
+  ctx.fillStyle=shiftColor('#a8d8ea',cs);
   for(let i=-3;i<=3;i++){const ix=cx+i*13,ilen=15+Math.abs(i)*5;ctx.beginPath();ctx.moveTo(ix-5,cy-55);ctx.lineTo(ix,cy-55+ilen);ctx.lineTo(ix+5,cy-55);ctx.closePath();ctx.fill();}
-  // Snow on top
-  ctx.fillStyle='#eef5f9'; ctx.beginPath();ctx.arc(cx,cy-65,50,Math.PI,0);ctx.fill();
-  // Glowing eyes inside cave
+  ctx.fillStyle=shiftColor('#eef5f9',cs); ctx.beginPath();ctx.arc(cx,cy-65,50,Math.PI,0);ctx.fill();
   ctx.fillStyle='#4fc3f7'; ctx.beginPath();ctx.arc(cx-12,cy-5,4,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.arc(cx+12,cy-5,4,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
-  ctx.fillText('❄️ Ice Cave',cx,cy+30);
 }
 
 // 🍄 Mushroom — Castle
-function drawMushroomCastle(cx, cy) {
-  // Main tower
-  ctx.fillStyle='#c084fc'; ctx.fillRect(cx-30,cy-80,60,100);
-  // Side towers
-  ctx.fillStyle='#a855f7'; ctx.fillRect(cx-70,cy-55,30,75); ctx.fillRect(cx+40,cy-55,30,75);
-  // Crenellations main
-  ctx.fillStyle='#c084fc';
+function drawMushroomCastle(cx, cy, cs=0) {
+  ctx.fillStyle=shiftColor('#c084fc',cs); ctx.fillRect(cx-30,cy-80,60,100);
+  ctx.fillStyle=shiftColor('#a855f7',cs); ctx.fillRect(cx-70,cy-55,30,75); ctx.fillRect(cx+40,cy-55,30,75);
+  ctx.fillStyle=shiftColor('#c084fc',cs);
   for(let i=-2;i<=2;i++){ctx.fillRect(cx+i*12-5,cy-90,8,14);}
-  // Crenellations sides
-  for(let i=0;i<3;i++){ctx.fillStyle='#a855f7';ctx.fillRect(cx-70+i*12,cy-65,8,12);ctx.fillRect(cx+40+i*12,cy-65,8,12);}
-  // Gate arch
+  for(let i=0;i<3;i++){ctx.fillStyle=shiftColor('#a855f7',cs);ctx.fillRect(cx-70+i*12,cy-65,8,12);ctx.fillRect(cx+40+i*12,cy-65,8,12);}
   ctx.fillStyle='#1a0a2e'; ctx.beginPath();ctx.arc(cx,cy+5,16,Math.PI,0);ctx.fillRect(cx-16,cy+5,32,15);ctx.fill();
-  // Windows
   ctx.fillStyle='#fbbf24';
   ctx.beginPath();ctx.arc(cx-12,cy-45,6,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.arc(cx+12,cy-45,6,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.arc(cx,cy-65,6,0,Math.PI*2);ctx.fill();
-  // Flags
-  ctx.strokeStyle='#7c3aed';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy-80);ctx.lineTo(cx,cy-105);ctx.stroke();
+  ctx.strokeStyle=shiftColor('#7c3aed',cs);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy-80);ctx.lineTo(cx,cy-105);ctx.stroke();
   ctx.fillStyle='#f43f5e';ctx.fillRect(cx,cy-105,20,12);
-  ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
-  ctx.fillText('🍄 Mushroom Castle',cx,cy+30);
 }
 
 // 🏜️ Desert — Pyramid
-function drawPyramid(cx, cy) {
-  // Shadow
+function drawPyramid(cx, cy, cs=0) {
   ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath();ctx.moveTo(cx-90,cy+20);ctx.lineTo(cx+110,cy+20);ctx.lineTo(cx+90,cy+10);ctx.closePath();ctx.fill();
-  // Main pyramid
-  ctx.fillStyle='#d4a853'; ctx.beginPath();ctx.moveTo(cx,cy-110);ctx.lineTo(cx+90,cy+20);ctx.lineTo(cx-90,cy+20);ctx.closePath();ctx.fill();
-  // Shaded side
-  ctx.fillStyle='#b8893a'; ctx.beginPath();ctx.moveTo(cx,cy-110);ctx.lineTo(cx+90,cy+20);ctx.lineTo(cx,cy+20);ctx.closePath();ctx.fill();
-  // Stone lines
-  ctx.strokeStyle='#c4973f';ctx.lineWidth=1;
+  ctx.fillStyle=shiftColor('#d4a853',cs); ctx.beginPath();ctx.moveTo(cx,cy-110);ctx.lineTo(cx+90,cy+20);ctx.lineTo(cx-90,cy+20);ctx.closePath();ctx.fill();
+  ctx.fillStyle=shiftColor('#b8893a',cs); ctx.beginPath();ctx.moveTo(cx,cy-110);ctx.lineTo(cx+90,cy+20);ctx.lineTo(cx,cy+20);ctx.closePath();ctx.fill();
+  ctx.strokeStyle=shiftColor('#c4973f',cs);ctx.lineWidth=1;
   for(let i=1;i<5;i++){const t=i/5,w=90*t;ctx.beginPath();ctx.moveTo(cx-w,cy-110+130*t);ctx.lineTo(cx+w,cy-110+130*t);ctx.stroke();}
-  // Entrance
   ctx.fillStyle='#1a0a2e'; ctx.beginPath();ctx.moveTo(cx,cy-10);ctx.lineTo(cx+15,cy+20);ctx.lineTo(cx-15,cy+20);ctx.closePath();ctx.fill();
-  // Capstone glow
-  ctx.fillStyle='#ffd700';ctx.shadowColor='#ffd700';ctx.shadowBlur=12;
+  ctx.fillStyle='#ffd700';ctx.shadowColor='#ffd700';ctx.shadowBlur=10;
   ctx.beginPath();ctx.arc(cx,cy-110,6,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-  ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
-  ctx.fillText('🏜️ Pyramid',cx,cy+32);
 }
 
 // 🌊 Swamp — Sunken Ruins
-function drawSwampRuins(cx, cy) {
-  // Water puddles
+function drawSwampRuins(cx, cy, cs=0) {
   ctx.fillStyle='rgba(30,100,60,0.5)';ctx.beginPath();ctx.ellipse(cx,cy+18,75,18,0,0,Math.PI*2);ctx.fill();
-  // Broken columns
-  const cols = [cx-60,cx-30,cx+10,cx+50];
-  cols.forEach((x,i) => {
-    const h = [55,35,65,40][i];
-    ctx.fillStyle='#7c7a6a'; ctx.fillRect(x-8,cy-h,16,h+20);
-    // Broken top
-    ctx.fillStyle='#6b6959'; ctx.fillRect(x-10,cy-h-8,20,10);
-    // Cracks
+  const cols=[cx-60,cx-30,cx+10,cx+50];
+  cols.forEach((x,i)=>{
+    const h=[55,35,65,40][i];
+    ctx.fillStyle=shiftColor('#7c7a6a',cs); ctx.fillRect(x-8,cy-h,16,h+20);
+    ctx.fillStyle=shiftColor('#6b6959',cs); ctx.fillRect(x-10,cy-h-8,20,10);
     ctx.strokeStyle='#555';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-3,cy-h+10);ctx.lineTo(x+2,cy-h+25);ctx.stroke();
   });
-  // Arch (still standing, partially)
-  ctx.fillStyle='#7c7a6a'; ctx.fillRect(cx-45,cy-70,14,75); ctx.fillRect(cx+31,cy-70,14,75);
-  ctx.beginPath();ctx.arc(cx,cy-70,45,Math.PI,0);ctx.lineWidth=12;ctx.strokeStyle='#7c7a6a';ctx.stroke();
-  // Moss
-  ctx.fillStyle='#2d6a4f';ctx.font='16px serif';ctx.fillText('~',cx-35,cy-50);ctx.fillText('~',cx+20,cy-60);
-  ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
-  ctx.fillText('🌊 Sunken Ruins',cx,cy+40);
+  ctx.fillStyle=shiftColor('#7c7a6a',cs); ctx.fillRect(cx-45,cy-70,14,75); ctx.fillRect(cx+31,cy-70,14,75);
+  ctx.beginPath();ctx.arc(cx,cy-70,45,Math.PI,0);ctx.lineWidth=12;ctx.strokeStyle=shiftColor('#7c7a6a',cs);ctx.stroke();
+  ctx.fillStyle='#2d6a4f';ctx.font='16px serif';ctx.textAlign='center';ctx.fillText('~',cx-35,cy-50);ctx.fillText('~',cx+20,cy-60);
 }
 
 // 💎 Crystal — Crystal Palace
-function drawCrystalPalace(cx, cy) {
-  // Base platform
-  ctx.fillStyle='#67e8f9'; ctx.fillRect(cx-80,cy+10,160,15);
-  // Central spire
-  ctx.fillStyle='rgba(103,232,249,0.7)'; ctx.beginPath();ctx.moveTo(cx,cy-120);ctx.lineTo(cx+18,cy+10);ctx.lineTo(cx-18,cy+10);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#a5f3fc';ctx.lineWidth=2;ctx.stroke();
-  // Side spires
+function drawCrystalPalace(cx, cy, cs=0) {
+  ctx.fillStyle=shiftColor('#67e8f9',cs); ctx.fillRect(cx-80,cy+10,160,15);
+  ctx.fillStyle=shiftColor('rgba(103,232,249,0.7)',cs); ctx.beginPath();ctx.moveTo(cx,cy-120);ctx.lineTo(cx+18,cy+10);ctx.lineTo(cx-18,cy+10);ctx.closePath();ctx.fill();
+  ctx.strokeStyle=shiftColor('#a5f3fc',cs);ctx.lineWidth=2;ctx.stroke();
   [[cx-50,70],[cx+50,70],[cx-30,90],[cx+30,90]].forEach(([x,h])=>{
-    ctx.fillStyle='rgba(103,232,249,0.6)'; ctx.beginPath();ctx.moveTo(x,cy-h);ctx.lineTo(x+12,cy+10);ctx.lineTo(x-12,cy+10);ctx.closePath();ctx.fill();
-    ctx.strokeStyle='#a5f3fc';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle=shiftColor('rgba(103,232,249,0.6)',cs); ctx.beginPath();ctx.moveTo(x,cy-h);ctx.lineTo(x+12,cy+10);ctx.lineTo(x-12,cy+10);ctx.closePath();ctx.fill();
+    ctx.strokeStyle=shiftColor('#a5f3fc',cs);ctx.lineWidth=1;ctx.stroke();
   });
-  // Gem facets glinting
   ctx.fillStyle='#fff';ctx.shadowColor='#67e8f9';ctx.shadowBlur=10;
   [[cx,cy-100],[cx-50,cy-55],[cx+50,cy-55]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();});
   ctx.shadowBlur=0;
-  ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
-  ctx.fillText('💎 Crystal Palace',cx,cy+32);
 }
 
 // 🌪️ Storm — Lightning Tower
-function drawLightningTower(cx, cy) {
-  // Base
-  ctx.fillStyle='#374151'; ctx.fillRect(cx-25,cy,50,25);
-  // Tower body
-  ctx.fillStyle='#1f2937'; ctx.fillRect(cx-18,cy-90,36,92);
-  // Windows glowing
+function drawLightningTower(cx, cy, cs=0) {
+  ctx.fillStyle=shiftColor('#374151',cs); ctx.fillRect(cx-25,cy,50,25);
+  ctx.fillStyle=shiftColor('#1f2937',cs); ctx.fillRect(cx-18,cy-90,36,92);
   ctx.fillStyle='#fbbf24';ctx.shadowColor='#fbbf24';ctx.shadowBlur=8;
   for(let i=0;i<3;i++){ctx.fillRect(cx-8,cy-25-i*28,16,14);}
   ctx.shadowBlur=0;
-  // Tower top
-  ctx.fillStyle='#111827'; ctx.fillRect(cx-22,cy-100,44,14);
-  // Lightning rod
+  ctx.fillStyle=shiftColor('#111827',cs); ctx.fillRect(cx-22,cy-100,44,14);
   ctx.strokeStyle='#9ca3af';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx,cy-100);ctx.lineTo(cx,cy-140);ctx.stroke();
   ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(cx,cy-140,5,0,Math.PI*2);ctx.fill();
-  // Lightning bolt decoration
   ctx.fillStyle='#fbbf24';ctx.shadowColor='#fbbf24';ctx.shadowBlur=6;
-  ctx.font='bold 24px serif';ctx.textAlign='center';ctx.fillText('⚡',cx,cy-60);
-  ctx.shadowBlur=0;
-  ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
-  ctx.fillText('🌪️ Lightning Tower',cx,cy+32);
+  ctx.font='bold 24px serif';ctx.textAlign='center';ctx.fillText('⚡',cx,cy-60);ctx.shadowBlur=0;
 }
 
 // 🌋 Volcano — Forge
-function drawVolcanoForge(cx, cy) {
-  // Stone building
-  ctx.fillStyle='#57534e'; ctx.fillRect(cx-55,cy-50,110,70);
-  // Roof (angled)
-  ctx.fillStyle='#44403c'; ctx.beginPath();ctx.moveTo(cx-65,cy-50);ctx.lineTo(cx,cy-85);ctx.lineTo(cx+65,cy-50);ctx.closePath();ctx.fill();
-  // Chimney
-  ctx.fillStyle='#3c3430'; ctx.fillRect(cx+25,cy-95,20,50);
-  // Lava glow from chimney
+function drawVolcanoForge(cx, cy, cs=0) {
+  ctx.fillStyle=shiftColor('#57534e',cs); ctx.fillRect(cx-55,cy-50,110,70);
+  ctx.fillStyle=shiftColor('#44403c',cs); ctx.beginPath();ctx.moveTo(cx-65,cy-50);ctx.lineTo(cx,cy-85);ctx.lineTo(cx+65,cy-50);ctx.closePath();ctx.fill();
+  ctx.fillStyle=shiftColor('#3c3430',cs); ctx.fillRect(cx+25,cy-95,20,50);
   ctx.fillStyle='#ef4444';ctx.shadowColor='#ef4444';ctx.shadowBlur=20;
   ctx.beginPath();ctx.arc(cx+35,cy-97,10,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-  // Door
   ctx.fillStyle='#1c1917'; ctx.beginPath();ctx.arc(cx,cy+5,18,Math.PI,0);ctx.fillRect(cx-18,cy+5,36,15);ctx.fill();
-  // Lava glow from door
   ctx.fillStyle='rgba(239,68,68,0.4)';ctx.beginPath();ctx.arc(cx,cy+20,25,0,Math.PI*2);ctx.fill();
-  // Anvil silhouette in window
-  ctx.fillStyle='#78716c'; ctx.fillRect(cx-30,cy-35,18,12); ctx.fillRect(cx+12,cy-35,18,12);
-  ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
-  ctx.fillText('🌋 Lava Forge',cx,cy+32);
 }
 
 // 🌑 Shadow — Dark Temple
-function drawShadowTemple(cx, cy) {
-  // Steps
-  ctx.fillStyle='#1e1b2e';ctx.fillRect(cx-70,cy+15,140,8);ctx.fillRect(cx-60,cy+7,120,10);
-  // Main structure
-  ctx.fillStyle='#0f0d1a'; ctx.fillRect(cx-50,cy-70,100,85);
-  // Columns
-  ['#2d1b4e','#1e1535','#2d1b4e','#1e1535'].forEach((col,i)=>{
+function drawShadowTemple(cx, cy, cs=0) {
+  ctx.fillStyle=shiftColor('#1e1b2e',cs);ctx.fillRect(cx-70,cy+15,140,8);ctx.fillRect(cx-60,cy+7,120,10);
+  ctx.fillStyle=shiftColor('#0f0d1a',cs); ctx.fillRect(cx-50,cy-70,100,85);
+  [shiftColor('#2d1b4e',cs),shiftColor('#1e1535',cs),shiftColor('#2d1b4e',cs),shiftColor('#1e1535',cs)].forEach((col,i)=>{
     ctx.fillStyle=col; ctx.fillRect(cx-50+i*32,cy-80,14,90);
   });
-  // Pediment top
-  ctx.fillStyle='#1e1b2e'; ctx.beginPath();ctx.moveTo(cx-60,cy-80);ctx.lineTo(cx,cy-115);ctx.lineTo(cx+60,cy-80);ctx.closePath();ctx.fill();
-  // Glowing runes
+  ctx.fillStyle=shiftColor('#1e1b2e',cs); ctx.beginPath();ctx.moveTo(cx-60,cy-80);ctx.lineTo(cx,cy-115);ctx.lineTo(cx+60,cy-80);ctx.closePath();ctx.fill();
   ctx.fillStyle='#a855f7';ctx.shadowColor='#a855f7';ctx.shadowBlur=10;
   ctx.font='14px serif'; ctx.textAlign='center';
   ctx.fillText('ᛟ',cx-20,cy-40);ctx.fillText('ᚹ',cx+15,cy-55);ctx.fillText('ᚷ',cx,cy-25);
-  // Eye glow above door
   ctx.fillStyle='#c084fc';ctx.beginPath();ctx.arc(cx,cy-90,8,0,Math.PI*2);ctx.fill();
   ctx.shadowBlur=0;
-  // Dark gate
   ctx.fillStyle='#050308'; ctx.fillRect(cx-15,cy-5,30,30);
-  ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.textBaseline='bottom';
-  ctx.fillText('🌑 Dark Temple',cx,cy+32);
+}
+
+// Color shift utility (nudges brightness slightly per instance)
+function shiftColor(hex, shift) {
+  if (hex.startsWith('rgba') || hex.startsWith('rgb')) return hex; // skip rgba
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  const clamp=(v)=>Math.max(0,Math.min(255,Math.round(v+shift)));
+  return `rgb(${clamp(r)},${clamp(g)},${clamp(b)})`;
 }
 
 function loop() { update(); render(); requestAnimationFrame(loop); }
