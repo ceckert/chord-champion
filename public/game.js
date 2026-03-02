@@ -412,6 +412,12 @@ function uiQuit() {
   gameState = 'menu';
   uiShow('scr-main');
 }
+let _fromPause = false;
+function uiUpgradesFromPause() {
+  _fromPause = true;
+  document.getElementById('pause-overlay').style.display = 'none';
+  uiUpgrades();
+}
 function uiUpgrades() {
   document.getElementById('coins-display').textContent = 'Music Points: ' + savedCoins + ' MP';
   ['gun','ability','stats'].forEach(tab => {
@@ -456,6 +462,9 @@ function uiUpgrades() {
       pane.appendChild(card);
     });
   });
+  // patch back button to return to game if came from pause
+  const backBtn = document.querySelector('#scr-upgrades .back');
+  if (backBtn) backBtn.onclick = () => { if (_fromPause) { _fromPause=false; uiResume(); } else uiShow('scr-main'); };
   uiShow('scr-upgrades');
 }
 
