@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v3.3-debug';
+const VERSION = 'v3.4-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -404,8 +404,9 @@ function update() {
     if (!e.path || e.pathTimer <= 0) {
       // Tick frost
     if (e.frozen > 0) e.frozen--;
-    const effectiveSpeed = e.frozen > 0 ? e.speed * e.frozenSpeedMult : e.speed;
-    e.path = bfsPath(e.x + e.w/2, e.y + e.h/2, player.x + player.w/2, player.y + player.h/2);
+    const effectiveSpeed = e.frozen > 0 ? e.speed * (e.frozenSpeedMult || 0.5) : e.speed;
+    if (!e.path || e.pathTimer <= 0) {
+      e.path = bfsPath(e.x + e.w/2, e.y + e.h/2, player.x + player.w/2, player.y + player.h/2);
       e.pathTimer = 60;
     }
     e.pathTimer--;
