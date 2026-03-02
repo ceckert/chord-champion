@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v3.7-debug';
+const VERSION = 'v3.8-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -90,7 +90,8 @@ function spawnMapNote() {
 for (let i = 0; i < 40; i++) spawnMapNote();
 
 let bullets = [];
-let explosions = []; // { x, y, r, maxR, life, maxLife }
+let explosions = [];
+let lightningArcs = []; // { x1,y1,x2,y2,life } // { x, y, r, maxR, life, maxLife }
 
 function triggerExplosion(x, y, radius, dmg) {
   explosions.push({ x, y, r: 4, maxR: radius, life: 20, maxLife: 20, dmg });
@@ -378,23 +379,73 @@ function update() {
     for (let j = enemies.length - 1; j >= 0; j--) {
       const e = enemies[j];
       if (rectOverlap(b.x-4, b.y-4, 8, 8, e.x, e.y, e.w, e.h)) {
-        const dmg = Math.round(10 * dmgMult);
-        e.hp -= dmg;
+        let actualDmg = Math.round(10 * dmgMult);
+        // Bleed: 1.5x damage taken
+        if (e.bleeding > 0) actualDmg = Math.round(actualDmg * 1.5);
+        e.hp -= actualDmg;
+
         // Fire DOT
         const fireLv = ALL_UPGRADES.find(u => u.id === 'ab_fire')?.level || 0;
-        if (fireLv > 0) { e.burning = 180 + fireLv * 60; e.burnDmg = 1 + fireLv; }
-        // Frost — slow enemy
+        if (fireLv > 0) { e.burning = 300; e.burnDmg = 1 + fireLv; }
+        // Bleed
+        const bleedLv = ALL_UPGRADES.find(u => u.id === 'ab_bleed')?.level || 0;
+        if (bleedLv > 0) e.bleeding = 300;
+        // Freeze
         const frostLv = ALL_UPGRADES.find(u => u.id === 'ab_freeze')?.level || 0;
-        if (frostLv > 0) { e.frozen = 60 + frostLv * 40; e.frozenSpeedMult = Math.max(0.15, 1 - frostLv * 0.17); }
-        // Life Steal — heal player
+        if (frostLv > 0) { e.frozen = Math.min(450, (e.frozen||0) + 150); e.frozenSpeedMult = Math.max(0.15, 1 - frostLv * 0.17); }
+        // Weaken
+        const weakenLv = ALL_UPGRADES.find(u => u.id === 'ab_weaken')?.level || 0;
+        if (weakenLv > 0 && !e.weakened) { e.weakened = 300; e.dmg = Math.round((e.dmg || 10) * 0.9); }
+        // Poison (stacking)
+        const poisonLv = ALL_UPGRADES.find(u => u.id === 'ab_poison')?.level || 0;
+        if (poisonLv > 0) { e.poisonStacks = Math.min(8, (e.poisonStacks||0) + 1); e.poisonTimer = 300; }
+        // Life Steal
         const leechLv = ALL_UPGRADES.find(u => u.id === 'ab_leech')?.level || 0;
-        if (leechLv > 0) {
-          const heal = Math.ceil(dmg * (0.08 + leechLv * 0.05));
-          player.hp = Math.min(player.maxHp, player.hp + heal);
+        if (leechLv > 0) player.hp = Math.min(player.maxHp, player.hp + Math.ceil(actualDmg * 0.1));
+        // Knockback
+        const kbLv = ALL_UPGRADES.find(u => u.id === 'ab_knockback')?.level || 0;
+        if (kbLv > 0) {
+          const kbdx = e.x - player.x, kbdy = e.y - player.y;
+          const kblen = Math.sqrt(kbdx*kbdx+kbdy*kbdy)||1;
+          e.x += (kbdx/kblen) * (20 + kbLv*8);
+          e.y += (kbdy/kblen) * (20 + kbLv*8);
         }
+        // Magnetic (pull toward player)
+        const magLv = ALL_UPGRADES.find(u => u.id === 'ab_magnetic')?.level || 0;
+        if (magLv > 0) {
+          const mgdx = player.x - e.x, mgdy = player.y - e.y;
+          const mglen = Math.sqrt(mgdx*mgdx+mgdy*mgdy)||1;
+          e.x += (mgdx/mglen) * (15 + magLv*6);
+          e.y += (mgdy/mglen) * (15 + magLv*6);
+        }
+        // Psychic
+        const psychicLv = ALL_UPGRADES.find(u => u.id === 'ab_psychic')?.level || 0;
+        if (psychicLv > 0 && Math.random() < 0.25 + psychicLv*0.05) e.psychic = 150;
+        // Lightning chain
+        const lightLv = ALL_UPGRADES.find(u => u.id === 'ab_lightning')?.level || 0;
+        if (lightLv > 0) {
+          let closest = null, closestDist = 180;
+          for (const oe of enemies) {
+            if (oe === e) continue;
+            const d = Math.sqrt((oe.x-e.x)**2+(oe.y-e.y)**2);
+            if (d < closestDist) { closestDist=d; closest=oe; }
+          }
+          if (closest) {
+            closest.hp -= Math.round(actualDmg * 0.5);
+            closest.burnFlash = 8;
+            lightningArcs.push({ x1:e.x+e.w/2, y1:e.y+e.h/2, x2:closest.x+closest.w/2, y2:closest.y+closest.h/2, life:12 });
+            if (closest.hp <= 0) enemies.splice(enemies.indexOf(closest), 1);
+          }
+        }
+
         if (e.hp <= 0) enemies.splice(j, 1);
         if (explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
-        hit = true; break;
+
+        // Piercing — don't mark as hit if pierce level active
+        const pierceLv = (ALL_UPGRADES.find(u => u.id === 'ab_pierce')?.level || 0) + (ALL_UPGRADES.find(u => u.id === 'pierce')?.level || 0);
+        if (pierceLv > 0 && (b.pierced||0) < pierceLv) { b.pierced = (b.pierced||0)+1; }
+        else hit = true;
+        break;
       }
     }
     if (hit) bullets.splice(i, 1);
@@ -432,14 +483,39 @@ function update() {
     // Burn DOT tick
     if (e.burning > 0) {
       e.burning--;
-      if (e.burning % 20 === 0) {
+      if (e.burning % 15 === 0) {
         e.hp -= e.burnDmg;
         e.burnFlash = 8;
         if (e.hp <= 0) { enemies.splice(enemies.indexOf(e), 1); continue; }
       }
     }
+    // Poison DOT (stacking)
+    if (e.poisonTimer > 0) {
+      e.poisonTimer--;
+      if (e.poisonTimer % 15 === 0 && e.poisonStacks > 0) {
+        e.hp -= e.poisonStacks;
+        e.burnFlash = 5;
+        if (e.hp <= 0) { enemies.splice(enemies.indexOf(e), 1); continue; }
+      }
+    } else { e.poisonStacks = 0; }
+    // Bleed timer
+    if (e.bleeding > 0) e.bleeding--;
+    // Weaken timer
+    if (e.weakened > 0) { e.weakened--; if (e.weakened <= 0) e.dmg = e.baseDmg || e.dmg; }
+    // Psychic — attack nearby enemies
+    if (e.psychic > 0) {
+      e.psychic--;
+      if (e.psychic % 30 === 0) {
+        for (const oe of enemies) {
+          if (oe === e) continue;
+          const d = Math.sqrt((oe.x-e.x)**2+(oe.y-e.y)**2);
+          if (d < 80) { oe.hp -= 5; break; }
+        }
+      }
+    }
 
-    // Player collision
+    // Player collision (psychic enemies don't attack player)
+    if (e.psychic > 0) continue;
     if (player.invincible === 0 && rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)) {
       player.hp -= (e.dmg || 10); player.invincible = 40;
       if (player.hp <= 0) {
@@ -491,11 +567,18 @@ const UPGRADES = {
     { id:'pierce', label:'Piercing',       desc:'Bullets pierce +1 enemy per level',baseCost:150, level:0, max:5  },
   ],
   ability: [
-    { id:'ab_fire',    label:'Fire Rounds',    desc:'Bullets ignite enemies (DOT)',         baseCost:200, level:0, max:5 },
-    { id:'ab_freeze',  label:'Frost Rounds',   desc:'Slow enemies on hit',                  baseCost:200, level:0, max:5 },
-    { id:'ab_explode', label:'Explosive',      desc:'Bullets explode on impact',            baseCost:300, level:0, max:5 },
-    { id:'ab_leech',   label:'Life Steal',     desc:'10% of dmg dealt restored as HP',      baseCost:250, level:0, max:5 },
-    { id:'ab_magnet',  label:'Note Magnet',    desc:'Auto-collect notes within range',      baseCost:175, level:0, max:5 },
+    { id:'ab_fire',      label:'🔥 Fire',        desc:'DOT every 0.25s for 5s',               baseCost:200, level:0, max:5 },
+    { id:'ab_bleed',     label:'🩸 Bleed',        desc:'Target takes 1.5x dmg for 5s',         baseCost:220, level:0, max:5 },
+    { id:'ab_pierce',    label:'🎯 Piercing',     desc:'Bullet passes through 1 extra enemy',  baseCost:250, level:0, max:5 },
+    { id:'ab_freeze',    label:'🧊 Freeze',       desc:'Slows enemy, stacks, 2.5s per hit',    baseCost:200, level:0, max:5 },
+    { id:'ab_explode',   label:'💥 Explosive',    desc:'AOE damage on hit',                    baseCost:300, level:0, max:5 },
+    { id:'ab_knockback', label:'💨 Knockback',    desc:'Pushes enemy away on hit',             baseCost:180, level:0, max:5 },
+    { id:'ab_psychic',   label:'🧠 Psychic',      desc:'Enemy fights for you 2.5s',            baseCost:400, level:0, max:5 },
+    { id:'ab_lightning', label:'⚡ Lightning',    desc:'Chains to 1 nearby enemy at 50% dmg',  baseCost:280, level:0, max:5 },
+    { id:'ab_weaken',    label:'💀 Weaken',       desc:'-10% enemy dmg output (no stack)',     baseCost:200, level:0, max:5 },
+    { id:'ab_poison',    label:'☠️ Poison',       desc:'Stacking DOT every 0.25s for 5s',     baseCost:230, level:0, max:5 },
+    { id:'ab_leech',     label:'💚 Lifesteal',    desc:'Heals 10% of damage dealt',            baseCost:250, level:0, max:5 },
+    { id:'ab_magnetic',  label:'🧲 Magnetic',     desc:'Pulls enemy toward player on hit',     baseCost:200, level:0, max:5 },
   ],
   stats: [
     { id:'maxhp',  label:'Max HP',          desc:'+20 max HP per level',             baseCost:60,  level:0, max:10 },
@@ -823,6 +906,17 @@ function render() {
   drawCheckpointWorld();
   for (const n of mapNotes) drawMapNote(n);
   for (const b of bullets) drawBullet(b);
+  // Lightning arcs
+  for (let i = lightningArcs.length-1; i >= 0; i--) {
+    const a = lightningArcs[i];
+    const s1 = worldToScreen(a.x1, a.y1), s2 = worldToScreen(a.x2, a.y2);
+    ctx.save(); ctx.globalAlpha = a.life/12;
+    ctx.strokeStyle='#aaeeff'; ctx.lineWidth=2; ctx.shadowColor='#55ccff'; ctx.shadowBlur=8;
+    ctx.beginPath(); ctx.moveTo(s1.x,s1.y); ctx.lineTo(s2.x,s2.y); ctx.stroke();
+    ctx.restore();
+    a.life--;
+    if (a.life<=0) lightningArcs.splice(i,1);
+  }
   for (const ex of explosions) {
     const s = worldToScreen(ex.x, ex.y);
     const alpha = ex.life / ex.maxLife;
@@ -837,6 +931,27 @@ function render() {
   }
   for (const e of enemies) {
     drawEnemy(e);
+    if (e.psychic > 0) {
+      const sp2 = worldToScreen(e.x, e.y);
+      ctx.save(); ctx.globalAlpha = 0.4 + 0.2*Math.sin(frame*0.2);
+      ctx.fillStyle = '#aa44ff';
+      ctx.fillRect(Math.round(sp2.x), Math.round(sp2.y), e.w, e.h);
+      ctx.restore();
+    }
+    if (e.poisonStacks > 0 && e.poisonTimer > 0) {
+      const sp3 = worldToScreen(e.x, e.y);
+      ctx.save(); ctx.globalAlpha = Math.min(0.6, e.poisonStacks*0.08);
+      ctx.fillStyle = '#44ff44';
+      ctx.fillRect(Math.round(sp3.x), Math.round(sp3.y), e.w, e.h);
+      ctx.restore();
+    }
+    if (e.bleeding > 0) {
+      const sp4 = worldToScreen(e.x, e.y);
+      ctx.save(); ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#ff0055';
+      ctx.fillRect(Math.round(sp4.x), Math.round(sp4.y), e.w, e.h);
+      ctx.restore();
+    }
     if (e.frozen > 0) {
       const sf = worldToScreen(e.x, e.y);
       ctx.save(); ctx.globalAlpha = Math.min(0.55, e.frozen / 60 * 0.55);
