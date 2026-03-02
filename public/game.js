@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v2.3-debug';
+const VERSION = 'v2.4-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -692,7 +692,8 @@ function drawDirectionArrowWorld() {
 }
 
 function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#1a2e1a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (gameState !== 'playing' && gameState !== 'paused') return;
   drawMap();
   drawCheckpointWorld();
