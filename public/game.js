@@ -1703,9 +1703,25 @@ function drawMap() {
         const biomeW = getBiome(tx, ty);
         const seed2 = tx*31+ty*17;
         const v = seed2%3; // variant selector
-        // cx/cy: tile center; objects drawn in 2.5D (isometric-ish: trunk side + elevated canopy)
         const cx3=Math.round(sx+TILE/2), cy3=Math.round(sy+TILE/2);
+        // ── Draw ground beneath obstacle so no dark box shows ─────
+        { let base2,det2;
+          if (biomeW==='swamp')    { base2=((tx+ty)%2===0)?'#1a3a1a':'#243a24'; det2='#0f2a0f'; }
+          else if (biomeW==='desert') { base2=((tx+ty)%2===0)?'#c8a84b':'#d4b860'; det2='#b89030'; }
+          else if (biomeW==='tundra') { base2=((tx+ty)%2===0)?'#a8c0d0':'#bcd0e0'; det2='#80a0b8'; }
+          else if (biomeW==='volcano') { base2=((tx+ty)%2===0)?'#3a1008':'#4a1a10'; det2='#6b1010'; }
+          else if (biomeW==='crystal') { base2=((tx+ty)%2===0)?'#1a2a4a':'#203050'; det2='#4488cc'; }
+          else if (biomeW==='storm')   { base2=((tx+ty)%2===0)?'#2a2a3a':'#323248'; det2='#8888cc'; }
+          else if (biomeW==='mushroom'){ base2=((tx+ty)%2===0)?'#3a1a4a':'#4a2258'; det2='#aa44cc'; }
+          else if (biomeW==='shadow')  { base2=((tx+ty)%2===0)?'#080810':'#100818'; det2='#2a0a3a'; }
+          else if (biomeW==='void')    { base2=((tx+ty)%2===0)?'#0a0818':'#12101e'; det2='#1a1028'; }
+          else { base2=((tx+ty)%2===0)?'#2d6a4f':'#27ae60'; det2='#1e5631'; }
+          ctx.fillStyle=base2; ctx.fillRect(Math.round(sx),Math.round(sy),TILE,TILE);
+          const sd2=tx*73+ty*137; if(sd2%5===0){ctx.fillStyle=det2;ctx.fillRect(Math.round(sx+(sd2%TILE)),Math.round(sy+((sd2*3)%TILE)),2,2);}
+        }
+        // ── Draw obstacle at 1.5× scale centred on tile ───────────
         ctx.save();
+        ctx.translate(cx3, cy3); ctx.scale(1.5, 1.5); ctx.translate(-cx3, -cy3);
 
         if (!biomeW || biomeW === 'forest') {
           // ── Forest: round-canopy tree OR pine OR stump ─────────
