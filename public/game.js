@@ -521,7 +521,7 @@ function forgeChord() {
     return;
   }
   const rootName = NOTE_NAMES[best.root];
-  player.coins += best.def.coins;
+  savedCoins += best.def.coins; // permanent — never lost on death
   const usedPitches = [...best.needed];
   player.notes = player.notes.filter(p => {
     const idx = usedPitches.indexOf(p);
