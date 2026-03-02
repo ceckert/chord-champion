@@ -1016,8 +1016,14 @@ function applyUpgrade(u) {
       if (equippedAbilities.length < 3) { equippedAbilities.push(u.id); }
     }
     showNotif(u.label + ' leveled up! (-' + cost + ' MP)', '#22c55e', 180);
-  }
-  else showNotif(u.label + ' → Lv ' + u.level + '! (-' + cost + ' MP)', '#22c55e', 150);
+  } else showNotif(u.label + ' → Lv ' + u.level + '! (-' + cost + ' MP)', '#22c55e', 150);
+  // Flash all buy-btn elements green
+  document.querySelectorAll('.buy-btn').forEach(b => {
+    b.classList.remove('flash-buy');
+    void b.offsetWidth; // reflow to restart
+    b.classList.add('flash-buy');
+    setTimeout(() => b.classList.remove('flash-buy'), 520);
+  });
   return true;
 }
 
