@@ -449,7 +449,7 @@ function spawnEnemy(nearPlayer) {
     }
     ex = Math.min((MAP_W-2)*TILE, Math.max(TILE, ex));
     ey = Math.min((MAP_H-2)*TILE, Math.max(TILE, ey));
-    if (getTile(Math.floor(ex/TILE), Math.floor(ey/TILE)) >= 1) {
+    if (getTile(Math.floor(ex/TILE), Math.floor(ey/TILE))===1||getTile(Math.floor(ex/TILE), Math.floor(ey/TILE))===TILE_WATER) {
       ex = Math.min((MAP_W-2)*TILE, ex + TILE*2);
       ey = Math.min((MAP_H-2)*TILE, ey + TILE*2);
     }
@@ -803,7 +803,8 @@ function resolveMapCollision(obj) {
   const m = 2;
   const l = Math.floor((obj.x+m)/TILE), r = Math.floor((obj.x+obj.w-m)/TILE);
   const t = Math.floor((obj.y+m)/TILE), b = Math.floor((obj.y+obj.h-m)/TILE);
-  return getTile(l,t)||getTile(r,t)||getTile(l,b)||getTile(r,b);
+  const solid = v => v === 1 || v === TILE_WATER;
+  return solid(getTile(l,t))||solid(getTile(r,t))||solid(getTile(l,b))||solid(getTile(r,b));
 }
 
 let frame = 0;
@@ -1244,7 +1245,7 @@ function update() {
     if (b.life <= 0) { bullets.splice(i, 1); continue; }
     let hit = false;
     // Wall hit — check explosive
-    if (getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE)) >= 1) {
+    if (getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE))===1||getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE))===TILE_WATER) {
       if (equippedAbilities.includes('ab_explode')) { const lv=totalLevel('ab_explode'); triggerExplosion(b.x, b.y, 40+lv*10, 5); }
       bullets.splice(i, 1); continue;
     }
@@ -1639,42 +1640,64 @@ function drawMap() {
         // ── Water tile ───────────────────────────────────────────────────
         const biomeW2 = getBiome(tx, ty);
         const wc = RIVER_WATER_COLORS[biomeW2] || '#1565c0';
-        // Check if a bridge is on this tile
-        let isBridgeTile = false;
-        for (const rv of RIVER_DATA) {
-          if (rv.axis==='h' && ty>=rv.coord && ty<rv.coord+rv.riverW) {
-            isBridgeTile = rv.bridges.some(bt => tx>=bt && tx<bt+rv.bridgeW);
-          } else if (rv.axis==='v' && tx>=rv.coord && tx<rv.coord+rv.riverW) {
-            isBridgeTile = rv.bridges.some(bt => ty>=bt && ty<bt+rv.bridgeW);
-          }
-          if (isBridgeTile) break;
-        }
-        if (isBridgeTile) {
-          // Draw bridge plank (biome wood color)
-          const bc = RIVER_BRIDGE_COLORS[biomeW2] || '#8d6e63';
-          ctx.fillStyle = bc;
-          ctx.fillRect(Math.round(sx), Math.round(sy), TILE, TILE);
-          // Plank grain lines
-          ctx.fillStyle = 'rgba(0,0,0,0.18)';
-          const isH = RIVER_DATA.find(rv=>rv.axis==='h'&&ty>=rv.coord&&ty<rv.coord+rv.riverW&&rv.biome===biomeW2);
-          if (isH) {
-            ctx.fillRect(Math.round(sx), Math.round(sy+TILE*0.3), TILE, 2);
-            ctx.fillRect(Math.round(sx), Math.round(sy+TILE*0.65), TILE, 2);
-          } else {
-            ctx.fillRect(Math.round(sx+TILE*0.3), Math.round(sy), 2, TILE);
-            ctx.fillRect(Math.round(sx+TILE*0.65), Math.round(sy), 2, TILE);
-          }
+        // Draw water
+        const shimmer = Math.sin(frame*0.06 + tx*0.4 + ty*0.3)*0.12;
+        ctx.fillStyle = wc;
+        ctx.fillRect(Math.round(sx), Math.round(sy), TILE, TILE);
+        ctx.save(); ctx.globalAlpha = 0.18 + shimmer;
+        ctx.fillStyle = '#ffffff';
+        if ((tx+ty+Math.floor(frame/12))%3===0) ctx.fillRect(Math.round(sx+3),Math.round(sy+TILE*0.3),TILE-6,2);
+        if ((tx+ty+Math.floor(frame/8))%5===0)  ctx.fillRect(Math.round(sx+5),Math.round(sy+TILE*0.6),TILE-10,2);
+        ctx.restore();
+      } else if (map[ty][tx] === TILE_BRIDGE) {
+        // ── Bridge tile ─────────────────────────────────────────────────
+        const biomeB = getBiome(tx, ty);
+        const bc2 = RIVER_BRIDGE_COLORS[biomeB] || '#8d6e63';
+        // Detect bridge axis from nearby water tiles
+        const hasWaterNS = getTile(tx,ty-1)===TILE_WATER||getTile(tx,ty+1)===TILE_WATER;
+        const isHBridge = hasWaterNS; // bridge planks run left-right if water above/below
+
+        // Draw water beneath (peek through gaps)
+        const wc2 = RIVER_WATER_COLORS[biomeB] || '#1565c0';
+        ctx.fillStyle = wc2; ctx.fillRect(Math.round(sx), Math.round(sy), TILE, TILE);
+
+        // Wood plank base
+        ctx.fillStyle = bc2; ctx.fillRect(Math.round(sx+1), Math.round(sy+1), TILE-2, TILE-2);
+
+        // Plank grain lines (run perpendicular to water flow)
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        if (isHBridge) {
+          // planks run horizontally, grain lines vertical
+          ctx.fillRect(Math.round(sx+TILE*0.28), Math.round(sy+2), 2, TILE-4);
+          ctx.fillRect(Math.round(sx+TILE*0.55), Math.round(sy+2), 2, TILE-4);
+          ctx.fillRect(Math.round(sx+TILE*0.78), Math.round(sy+2), 2, TILE-4);
         } else {
-          // Draw water
-          const shimmer = Math.sin(frame*0.06 + tx*0.4 + ty*0.3)*0.12;
-          ctx.fillStyle = wc;
-          ctx.fillRect(Math.round(sx), Math.round(sy), TILE, TILE);
-          ctx.save(); ctx.globalAlpha = 0.18 + shimmer;
-          ctx.fillStyle = '#ffffff';
-          // Ripple highlight
-          if ((tx+ty+Math.floor(frame/12))%3===0) ctx.fillRect(Math.round(sx+3),Math.round(sy+TILE*0.3),TILE-6,2);
-          if ((tx+ty+Math.floor(frame/8))%5===0)  ctx.fillRect(Math.round(sx+5),Math.round(sy+TILE*0.6),TILE-10,2);
-          ctx.restore();
+          // planks run vertically, grain lines horizontal
+          ctx.fillRect(Math.round(sx+2), Math.round(sy+TILE*0.28), TILE-4, 2);
+          ctx.fillRect(Math.round(sx+2), Math.round(sy+TILE*0.55), TILE-4, 2);
+          ctx.fillRect(Math.round(sx+2), Math.round(sy+TILE*0.78), TILE-4, 2);
+        }
+        // Wood highlight (top-left)
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fillRect(Math.round(sx+1), Math.round(sy+1), TILE-2, 3);
+        ctx.fillRect(Math.round(sx+1), Math.round(sy+1), 3, TILE-2);
+
+        // Railings — short posts at corners, connecting bar
+        const isEdge = isHBridge
+          ? (getTile(tx,ty-1)===TILE_WATER||getTile(tx,ty+1)===TILE_WATER)
+          : (getTile(tx-1,ty)===TILE_WATER||getTile(tx+1,ty)===TILE_WATER);
+        const rc = 'rgba(200,200,200,0.85)'; // railing color
+        if (isHBridge) {
+          // Top rail
+          const topWater = getTile(tx, ty-1)===TILE_WATER;
+          const botWater = getTile(tx, ty+1)===TILE_WATER;
+          if (topWater) { ctx.fillStyle=rc; ctx.fillRect(Math.round(sx),Math.round(sy),TILE,3); ctx.fillRect(Math.round(sx+1),Math.round(sy),2,8); ctx.fillRect(Math.round(sx+TILE-3),Math.round(sy),2,8); }
+          if (botWater) { ctx.fillStyle=rc; ctx.fillRect(Math.round(sx),Math.round(sy+TILE-3),TILE,3); ctx.fillRect(Math.round(sx+1),Math.round(sy+TILE-8),2,8); ctx.fillRect(Math.round(sx+TILE-3),Math.round(sy+TILE-8),2,8); }
+        } else {
+          const leftWater  = getTile(tx-1, ty)===TILE_WATER;
+          const rightWater = getTile(tx+1, ty)===TILE_WATER;
+          if (leftWater)  { ctx.fillStyle=rc; ctx.fillRect(Math.round(sx),Math.round(sy),3,TILE); ctx.fillRect(Math.round(sx),Math.round(sy+1),8,2); ctx.fillRect(Math.round(sx),Math.round(sy+TILE-3),8,2); }
+          if (rightWater) { ctx.fillStyle=rc; ctx.fillRect(Math.round(sx+TILE-3),Math.round(sy),3,TILE); ctx.fillRect(Math.round(sx+TILE-8),Math.round(sy+1),8,2); ctx.fillRect(Math.round(sx+TILE-8),Math.round(sy+TILE-3),8,2); }
         }
       } else if (map[ty][tx] === 1) {
         const biomeW = getBiome(tx, ty);
@@ -2485,6 +2508,7 @@ const RIVER_BRIDGE_COLORS = {
   shadow:'#7b1fa2', void:'#333333'
 };
 const TILE_WATER = 2;
+const TILE_BRIDGE = 3;
 let RIVER_DATA = []; // { axis, coord, rangeStart, rangeEnd, bridges[], biome, waterColor, bridgeColor }
 
 function initRivers() {
@@ -2523,8 +2547,8 @@ function initRivers() {
       }
       const span = rangeEnd - rangeStart;
 
-      // 2 bridges per river
-      const numBridges = 2;
+      // 4-5 bridges per river
+      const numBridges = 4 + Math.floor(rand());
       const bridges = [];
       for (let bi = 0; bi < numBridges; bi++) {
         const t = Math.floor(rangeStart + BRIDGE_MARGIN + rand()*(span - BRIDGE_MARGIN*2));
@@ -2540,7 +2564,7 @@ function initRivers() {
           if (tx < 0||ty < 0||tx >= MAP_W||ty >= MAP_H) continue;
           // Check if this position is a bridge gap
           const onBridge = bridges.some(bt => t >= bt && t < bt + BRIDGE_W);
-          map[ty][tx] = onBridge ? 0 : TILE_WATER;
+          map[ty][tx] = onBridge ? TILE_BRIDGE : TILE_WATER;
         }
       }
 
@@ -2550,7 +2574,7 @@ function initRivers() {
           for (let bt2 = bridges[bi]; bt2 < bridges[bi]+BRIDGE_W; bt2++) {
             let tx2, ty2;
             if (axis === 'h') { tx2=bt2; ty2=coord+bw; } else { tx2=coord+bw; ty2=bt2; }
-            if (tx2>=0&&ty2>=0&&tx2<MAP_W&&ty2<MAP_H) map[ty2][tx2]=0;
+            if (tx2>=0&&ty2>=0&&tx2<MAP_W&&ty2<MAP_H) map[ty2][tx2]=TILE_BRIDGE;
           }
         }
       }
