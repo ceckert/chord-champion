@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v1.9-debug';
+const VERSION = 'v2.0-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -370,6 +370,13 @@ function drawPixelRect(x, y, w, h, color) {
 }
 
 
+const UPGRADES = [
+  { id:'dmg',   label:'Bullet Damage', desc:'+20% dmg per level',     category:'weapon', baseCost:50,  level:0, max:10 },
+  { id:'fire',  label:'Fire Rate',     desc:'-10% cooldown per level', category:'weapon', baseCost:75,  level:0, max:10 },
+  { id:'maxhp', label:'Max HP',        desc:'+20 max HP per level',    category:'player', baseCost:60,  level:0, max:10 },
+  { id:'regen', label:'HP Regen',      desc:'+1 HP/5s per level',      category:'player', baseCost:200, level:0, max:10 },
+  { id:'armor', label:'Durability',    desc:'-5% dmg taken per level', category:'player', baseCost:80,  level:0, max:10 },
+];
 function upgradeCost(u) { return Math.floor(u.baseCost * Math.pow(2, u.level)); }
 
 function applyUpgrade(u) {
