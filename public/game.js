@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v5.7-debug';
+const VERSION = 'v5.8-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -680,7 +680,7 @@ function update() {
 
         if (e.hp <= 0) {
           enemies.splice(j, 1);
-          if (e.isBoss) { bossActive = false; showNotif('🏆 Boss defeated! +500 MP!', '#fbbf24', 240); savedCoins += 500; // boss reward }
+          if (e.isBoss) { bossActive = false; showNotif('🏆 Boss defeated! +500 MP!', '#fbbf24', 240); savedCoins += 500; }
           const epGain = {crawler:10,runner:8,slimeling:14,bogcrawler:18,scorpling:12,dunestalker:14,yeti:28,frostimp:12,crystalgolem:25,gemsprite:12,windelemental:16,stormhawk:14,ember:14,magmacrab:22,sporepuff:15,myceliumcreep:14,wraith:20,voidshade:20,boss_treant:200,boss_bogqueen:180,boss_sandking:190,boss_glacier:220,boss_drake:175,boss_voidlord:200}[e.type]||10;
           player.ep += epGain;
           if (player.ep >= player.epMax) {
