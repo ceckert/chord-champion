@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v2.7-debug';
+const VERSION = 'v2.8-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -134,6 +134,8 @@ function uiShow(screenId) {
 function uiPlay() {
   document.getElementById('ui-overlay').style.display = 'none';
   gameState = 'playing';
+  canvas.setAttribute('tabindex', '0');
+  canvas.focus();
 }
 function uiResume() {
   document.getElementById('pause-overlay').style.display = 'none';
