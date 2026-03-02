@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v3.2-debug';
+const VERSION = 'v3.3-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -378,6 +378,15 @@ function update() {
         // Fire DOT
         const fireLv = ALL_UPGRADES.find(u => u.id === 'ab_fire')?.level || 0;
         if (fireLv > 0) { e.burning = 180 + fireLv * 60; e.burnDmg = 1 + fireLv; }
+        // Frost — slow enemy
+        const frostLv = ALL_UPGRADES.find(u => u.id === 'ab_freeze')?.level || 0;
+        if (frostLv > 0) { e.frozen = 60 + frostLv * 40; e.frozenSpeedMult = Math.max(0.15, 1 - frostLv * 0.17); }
+        // Life Steal — heal player
+        const leechLv = ALL_UPGRADES.find(u => u.id === 'ab_leech')?.level || 0;
+        if (leechLv > 0) {
+          const heal = Math.ceil(dmg * (0.08 + leechLv * 0.05));
+          player.hp = Math.min(player.maxHp, player.hp + heal);
+        }
         if (e.hp <= 0) enemies.splice(j, 1);
         if (explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
         hit = true; break;
@@ -393,7 +402,10 @@ function update() {
   for (const e of enemies) {
     // Recompute BFS path every 60 frames or if no path
     if (!e.path || e.pathTimer <= 0) {
-      e.path = bfsPath(e.x + e.w/2, e.y + e.h/2, player.x + player.w/2, player.y + player.h/2);
+      // Tick frost
+    if (e.frozen > 0) e.frozen--;
+    const effectiveSpeed = e.frozen > 0 ? e.speed * e.frozenSpeedMult : e.speed;
+    e.path = bfsPath(e.x + e.w/2, e.y + e.h/2, player.x + player.w/2, player.y + player.h/2);
       e.pathTimer = 60;
     }
     e.pathTimer--;
@@ -406,16 +418,28 @@ function update() {
       if (wlen < e.speed + 2) {
         e.path.shift(); // reached waypoint
       } else {
-        e.x += (wdx/wlen) * e.speed;
-        e.y += (wdy/wlen) * e.speed;
+        e.x += (wdx/wlen) * effectiveSpeed;
+        e.y += (wdy/wlen) * effectiveSpeed;
       }
     } else {
       // Fallback: beeline
       const edx = player.x - e.x, edy = player.y - e.y;
       const elen = Math.sqrt(edx*edx + edy*edy) || 1;
-      e.x += edx/elen * e.speed; e.y += edy/elen * e.speed;
+      e.x += edx/elen * effectiveSpeed; e.y += edy/elen * effectiveSpeed;
     }
     // Burn DOT
+    if (e.frozen > 0) {
+      const sf = worldToScreen(e.x, e.y);
+      ctx.save(); ctx.globalAlpha = Math.min(0.55, e.frozen / 60 * 0.55);
+      ctx.fillStyle = '#7ee8fa';
+      ctx.fillRect(Math.round(sf.x), Math.round(sf.y), e.w, e.h);
+      // Ice crystal sparkles
+      ctx.globalAlpha = 0.9; ctx.fillStyle = '#fff';
+      const sp = e.x * 7 + e.y * 3;
+      ctx.fillRect(Math.round(sf.x + (sp%e.w)), Math.round(sf.y + ((sp*3)%e.h)), 2, 2);
+      ctx.fillRect(Math.round(sf.x + ((sp*5)%e.w)), Math.round(sf.y + ((sp*7)%e.h)), 2, 2);
+      ctx.restore();
+    }
     if (e.burnFlash > 0) {
       e.burnFlash--;
       const s2 = worldToScreen(e.x, e.y);
@@ -798,6 +822,18 @@ function render() {
   }
   for (const e of enemies) {
     drawEnemy(e);
+    if (e.frozen > 0) {
+      const sf = worldToScreen(e.x, e.y);
+      ctx.save(); ctx.globalAlpha = Math.min(0.55, e.frozen / 60 * 0.55);
+      ctx.fillStyle = '#7ee8fa';
+      ctx.fillRect(Math.round(sf.x), Math.round(sf.y), e.w, e.h);
+      // Ice crystal sparkles
+      ctx.globalAlpha = 0.9; ctx.fillStyle = '#fff';
+      const sp = e.x * 7 + e.y * 3;
+      ctx.fillRect(Math.round(sf.x + (sp%e.w)), Math.round(sf.y + ((sp*3)%e.h)), 2, 2);
+      ctx.fillRect(Math.round(sf.x + ((sp*5)%e.w)), Math.round(sf.y + ((sp*7)%e.h)), 2, 2);
+      ctx.restore();
+    }
     if (e.burnFlash > 0) {
       e.burnFlash--;
       const s2 = worldToScreen(e.x, e.y);
