@@ -47,6 +47,16 @@ const CHORD_DEFS = [
   { name: 'Tritone',      notes: 2, intervals: [6],      coins: 8  },
 ];
 
+// ── Gun Definitions ─────────────────────────────────────────────
+const GUNS = [
+  { id:'pistol',     label:'🔫 Pistol',      desc:'High damage, slow rate',    dmg:18, rate:55, speed:13, spread:0,    pellets:1, color:'#fbbf24', bulletSize:5 },
+  { id:'rifle',      label:'🎯 Rifle',        desc:'Balanced damage & speed',   dmg:12, rate:35, speed:12, spread:0.04, pellets:1, color:'#60a5fa', bulletSize:4 },
+  { id:'shotgun',    label:'💥 Shotgun',      desc:'Spray 5 pellets, slow rate',dmg:8,  rate:70, speed:11, spread:0.28, pellets:5, color:'#f97316', bulletSize:5 },
+  { id:'machinegun', label:'⚡ Machine Gun',   desc:'Very fast, lower damage',   dmg:6,  rate:12, speed:14, spread:0.1,  pellets:1, color:'#a78bfa', bulletSize:3 },
+];
+let selectedGunId = 'pistol';
+function getSelectedGun() { return GUNS.find(g=>g.id===selectedGunId) || GUNS[0]; }
+
 // Game State
 let gameState = 'menu'; // 'menu' | 'playing' | 'paused' | 'upgrades' | 'levelplan' | 'howtoplay'
 
