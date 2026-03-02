@@ -3,9 +3,9 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v4.7-debug';
+const VERSION = 'v4.8-debug';
 const TILE = 32;
-const MAP_W = 160, MAP_H = 160;
+const MAP_W = 500, MAP_H = 500;
 
 // Generate tile map: 0=grass, 1=wall
 const map = (() => {
@@ -72,8 +72,8 @@ const player = {
 
 // Checkpoint
 const checkpoint = {
-  x: (MAP_W - 8) * TILE,
-  y: (MAP_H - 8) * TILE,
+  x: (MAP_W - 30) * TILE,
+  y: (MAP_H - 30) * TILE,
   w: 48, h: 48,
   reached: false,
 };
@@ -204,7 +204,7 @@ const BIOME_GRID = [
   ['desert',  'forest',   'swamp'  ],
   ['volcano', 'mushroom', 'shadow' ],
 ];
-const VOID_BORDER = 6; // tiles from edge = void
+const VOID_BORDER = 12; // tiles from edge = void
 
 function getBiome(tx, ty) {
   if (tx < VOID_BORDER || ty < VOID_BORDER || tx >= MAP_W-VOID_BORDER || ty >= MAP_H-VOID_BORDER) return 'void';
@@ -488,7 +488,8 @@ function bfsPath(startX, startY, goalX, goalY) {
   const key = (x,y) => x + y * MAP_W;
   const queue = [[sx, sy]];
   visited.set(key(sx, sy), null);
-  while (queue.length > 0) {
+  let bfsSteps = 0;
+  while (queue.length > 0 && bfsSteps++ < 400) {
     const [cx, cy] = queue.shift();
     if (cx === gx && cy === gy) {
       // Reconstruct path
