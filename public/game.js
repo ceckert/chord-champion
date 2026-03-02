@@ -566,6 +566,7 @@ function uiPlay() {
   document.getElementById('ui-overlay').style.display = 'none';
   gameState = 'playing';
   interiorCooldown = 180;
+  clearedStructures.clear();
   initAudio(); playBgMusic();
   // Pre-spawn starting enemies so world feels alive immediately
   initRivers();
@@ -830,6 +831,7 @@ const INTERIOR_THEMES = {
 
 function enterInterior(lm) {
   if (interiorCooldown > 0) return;
+  if (clearedStructures.has(lm.px+','+lm.py)) return; // already cleared
   const theme = INTERIOR_THEMES[lm.biome] || INTERIOR_THEMES.forest;
   const iW = CW, iH = CH;
   // Spawn 3-4 enemies in interior
@@ -1011,6 +1013,7 @@ function updateInterior() {
         b.hp -= bl.dmg; b.invincible = 8; s.bullets.splice(bi,1);
         if (b.hp <= 0) {
           s.bossDefeated = true;
+          clearedStructures.add(s.lm.px+','+s.lm.py);
           sfxBossDie(); awardBossLevel(); showNotif('🏆 ' + b.label + ' defeated! +1 LEVEL!','#fbbf24',240);
           // Trigger level-up immediately inside interior
           if (player.ep >= player.epMax) {
@@ -2785,7 +2788,8 @@ const RIVER_BRIDGE_COLORS = {
 };
 const TILE_WATER = 2;
 const TILE_BRIDGE = 3;
-let RIVER_DATA = []; // { axis, coord, rangeStart, rangeEnd, bridges[], biome, waterColor, bridgeColor }
+let RIVER_DATA = [];
+const clearedStructures = new Set(); // 'px,py' keys of defeated-boss interiors // { axis, coord, rangeStart, rangeEnd, bridges[], biome, waterColor, bridgeColor }
 
 function initRivers() {
   RIVER_DATA = [];
