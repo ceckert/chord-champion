@@ -975,7 +975,7 @@ function updateInterior() {
       }
       // AOE SHOCKWAVE (treant, shadow titan)
       else if (type==='boss_treant'||type==='boss_shadowtitan') {
-        b.specialAttacks.push({ kind:'aoe', x:b.x, y:b.y, r:0, maxR: b.phase2?260:185, life:36, color:type==='boss_treant'?'#66bb6a':'#ce93d8' });
+        b.specialAttacks.push({ kind:'aoe', x:b.x, y:b.y, r:0, maxR: b.phase2?260:185, life:50, initLife:50, hit:false, color:type==='boss_treant'?'#66bb6a':'#ce93d8' });
         showNotif('💥 SHOCKWAVE!','#ff6666',60);
       }
       // GROUND HAZARD (volcano, mushroom)
@@ -998,10 +998,14 @@ function updateInterior() {
           player.hp -= Math.round(b.dmg*1.4*getDiff().enemyDmg); player.invincible=25; return false;
         }
       } else if (a.kind==='aoe') {
-        a.r += a.maxR/a.life;
-        if (Math.sqrt((s.px-a.x)**2+(s.py-a.y)**2) < a.r+10) {
-          if (player.invincible<=0) { player.hp -= Math.round(b.dmg*1.1*getDiff().enemyDmg); player.invincible=55; }
-        }
+        a.r = a.maxR * (1 - a.life/a.initLife); // linear expansion
+        const aoeD = Math.sqrt((s.px-a.x)**2+(s.py-a.y)**2);
+        if (Math.abs(aoeD - a.r) < 28 && !a.hit) { // ring contact band
+          a.hit = true; // damage once per ring pass
+          player.hp -= Math.round(b.dmg*1.4*getDiff().enemyDmg);
+          player.invincible = 45;
+          showNotif('-'+Math.round(b.dmg*1.4*getDiff().enemyDmg)+' HP!','#ff4444',50);
+        } else if (Math.abs(aoeD - a.r) > 40) { a.hit = false; } // allow next ring
       } else if (a.kind==='hazard') {
         if (Math.sqrt((s.px-a.x)**2+(s.py-a.y)**2) < a.r && frame%25===0) {
           player.hp -= Math.round(b.dmg*0.9*getDiff().enemyDmg);
