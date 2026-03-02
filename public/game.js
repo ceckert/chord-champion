@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v3.6-debug';
+const VERSION = 'v3.7-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -123,7 +123,12 @@ function spawnEnemy() {
   else if (side === 1) { ex = (MAP_W-2)*TILE; ey = (1+Math.floor(Math.random()*(MAP_H-2)))*TILE; }
   else if (side === 2) { ex = (1+Math.floor(Math.random()*(MAP_W-2)))*TILE; ey = (MAP_H-2)*TILE; }
   else { ex = TILE; ey = (1+Math.floor(Math.random()*(MAP_H-2)))*TILE; }
-  enemies.push({ x: ex, y: ey, w: 28, h: 28, hp: 30, maxHp: 30, speed: 1.2 + Math.random()*0.8, damageCooldown: 0 });
+  const type = Math.random() < 0.55 ? 'crawler' : 'runner';
+  if (type === 'crawler') {
+    enemies.push({ type, x: ex, y: ey, w: 28, h: 20, hp: 50, maxHp: 50, speed: 0.8 + Math.random()*0.4, dmg: 15, damageCooldown: 0 });
+  } else {
+    enemies.push({ type, x: ex, y: ey, w: 18, h: 38, hp: 25, maxHp: 25, speed: 2.2 + Math.random()*0.8, dmg: 6, damageCooldown: 0 });
+  }
 }
 
 let notification = null;
@@ -436,7 +441,7 @@ function update() {
 
     // Player collision
     if (player.invincible === 0 && rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)) {
-      player.hp -= 10; player.invincible = 40;
+      player.hp -= (e.dmg || 10); player.invincible = 40;
       if (player.hp <= 0) {
         const lost = Math.floor(player.coins * 0.3);
         player.coins -= lost; player.hp = player.maxHp;
@@ -672,16 +677,47 @@ function drawEnemy(e) {
   const s = worldToScreen(e.x, e.y);
   if (s.x > canvas.width+40 || s.x < -40 || s.y > canvas.height+40 || s.y < -40) return;
   const {x, y} = s;
-  drawPixelRect(x, y+6, e.w, e.h-6, '#c0392b');
-  drawPixelRect(x+4, y, e.w-8, 10, '#e74c3c');
-  ctx.fillStyle='#fff';
-  ctx.fillRect(Math.round(x+5), Math.round(y+2), 5, 5);
-  ctx.fillRect(Math.round(x+16), Math.round(y+2), 5, 5);
-  ctx.fillStyle='#1a0a2e';
-  ctx.fillRect(Math.round(x+7), Math.round(y+4), 3, 3);
-  ctx.fillRect(Math.round(x+18), Math.round(y+4), 3, 3);
-  drawPixelRect(x, y-6, e.w, 4, '#333');
-  drawPixelRect(x, y-6, Math.round(e.w * e.hp / e.maxHp), 4, '#e74c3c');
+  if (e.type === 'runner') {
+    // Tall red boy — slim, elongated, spiky head
+    drawPixelRect(x+3, y+14, e.w-6, e.h-14, '#a00020'); // legs/body
+    drawPixelRect(x+4, y+6, e.w-8, 12, '#cc1a35');       // torso
+    drawPixelRect(x+5, y, e.w-10, 9, '#e8203f');          // head
+    // Spiky hair
+    ctx.fillStyle='#ff4466';
+    ctx.fillRect(Math.round(x+6), Math.round(y-4), 2, 5);
+    ctx.fillRect(Math.round(x+10), Math.round(y-6), 2, 7);
+    ctx.fillRect(Math.round(x+14), Math.round(y-4), 2, 5);
+    // Eyes — beady white
+    ctx.fillStyle='#fff';
+    ctx.fillRect(Math.round(x+6), Math.round(y+2), 3, 3);
+    ctx.fillRect(Math.round(x+12), Math.round(y+2), 3, 3);
+    ctx.fillStyle='#000';
+    ctx.fillRect(Math.round(x+7), Math.round(y+3), 2, 2);
+    ctx.fillRect(Math.round(x+13), Math.round(y+3), 2, 2);
+    // Legs animate
+    const legSwing = Math.sin(frame * 0.25 + e.x) * 3;
+    drawPixelRect(x+4, y+e.h-8, 5, 8+legSwing, '#a00020');
+    drawPixelRect(x+e.w-9, y+e.h-8, 5, 8-legSwing, '#a00020');
+  } else {
+    // Little green man — squat, crawling
+    const crawl = Math.sin(frame * 0.18 + e.y) * 2;
+    drawPixelRect(x+2, y+8+crawl, e.w-4, e.h-8, '#1a6b2a'); // body
+    drawPixelRect(x+4, y+crawl, e.w-8, 12, '#25923a');        // head
+    // Big eyes
+    ctx.fillStyle='#aaff44';
+    ctx.fillRect(Math.round(x+5), Math.round(y+2+crawl), 7, 7);
+    ctx.fillRect(Math.round(x+16), Math.round(y+2+crawl), 7, 7);
+    ctx.fillStyle='#000';
+    ctx.fillRect(Math.round(x+7), Math.round(y+4+crawl), 4, 4);
+    ctx.fillRect(Math.round(x+18), Math.round(y+4+crawl), 4, 4);
+    // Little arms crawling
+    const armSwing = Math.sin(frame * 0.18 + e.y) * 4;
+    drawPixelRect(x-4, y+10+armSwing, 7, 4, '#1a6b2a');
+    drawPixelRect(x+e.w-3, y+10-armSwing, 7, 4, '#1a6b2a');
+  }
+  // Health bar
+  drawPixelRect(x, y-8, e.w, 4, '#333');
+  drawPixelRect(x, y-8, Math.round(e.w * e.hp / e.maxHp), 4, e.type==='runner'?'#e74c3c':'#2ecc71');
 }
 
 function drawBullet(b) {
