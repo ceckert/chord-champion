@@ -571,6 +571,7 @@ function uiPlay() {
   // Pre-spawn starting enemies so world feels alive immediately
   initRivers();
   initLandmarks();
+  initWorldChests();
   setTimeout(() => preSpawnEnemies(3), 300);
   canvas.setAttribute('tabindex', '0');
   canvas.focus();
@@ -1636,6 +1637,18 @@ function update() {
   if (mapNotes.length < 1000 && frame % 15 === 0) spawnMapNote();
   if (player.shootCooldown > 0) player.shootCooldown--;
   if (mouseDown && gameState === 'playing') { shoot(mouseX, mouseY); }
+  // World chest collection
+  if (mouseDown) {
+    WORLD_CHESTS.forEach(ch => {
+      if (!ch.collected) {
+        const cdx = (player.x+player.w/2)-ch.x, cdy = (player.y+player.h/2)-ch.y;
+        if (Math.sqrt(cdx*cdx+cdy*cdy) < 48) {
+          ch.collected = true; savedCoins += 50;
+          showNotif('📦 +50 MP from chest!','#fbbf24',180);
+        }
+      }
+    });
+  }
 
   // Checkpoint detection
 
@@ -2799,7 +2812,8 @@ const RIVER_BRIDGE_COLORS = {
 const TILE_WATER = 2;
 const TILE_BRIDGE = 3;
 let RIVER_DATA = [];
-const clearedStructures = new Set(); // 'px,py' keys of defeated-boss interiors // { axis, coord, rangeStart, rangeEnd, bridges[], biome, waterColor, bridgeColor }
+const clearedStructures = new Set();
+let WORLD_CHESTS = []; // one per biome, generated at initLandmarks // 'px,py' keys of defeated-boss interiors // { axis, coord, rangeStart, rangeEnd, bridges[], biome, waterColor, bridgeColor }
 
 function initRivers() {
   RIVER_DATA = [];
@@ -3459,6 +3473,36 @@ function drawInteriorBoss(ctx, b, bsx, bsy, bFlash, bCharge, frame) {
   }
 
   ctx.restore();
+}
+
+function initWorldChests() {
+  WORLD_CHESTS = [];
+  const CELL = Math.floor((MAP_W - VOID_BORDER*2) / 3);
+  for (let row=0; row<3; row++) {
+    for (let col=0; col<3; col++) {
+      const biome = BIOME_GRID[row][col];
+      // Center area of each biome cell (avoid edges/rivers)
+      const txMin = VOID_BORDER + col*CELL + Math.floor(CELL*0.25);
+      const txMax = VOID_BORDER + col*CELL + Math.floor(CELL*0.75);
+      const tyMin = VOID_BORDER + row*CELL + Math.floor(CELL*0.25);
+      const tyMax = VOID_BORDER + row*CELL + Math.floor(CELL*0.75);
+      // Try up to 40 times to find a floor tile
+      let placed = false;
+      for (let attempt=0; attempt<40; attempt++) {
+        const tx = txMin + Math.floor(Math.random()*(txMax-txMin));
+        const ty = tyMin + Math.floor(Math.random()*(tyMax-tyMin));
+        if (getTile(tx,ty) === 0) {
+          WORLD_CHESTS.push({ biome, tx, ty, x: tx*TILE+TILE/2, y: ty*TILE+TILE/2, collected: false });
+          placed = true; break;
+        }
+      }
+      if (!placed) { // fallback: use biome center
+        const tx = VOID_BORDER + col*CELL + Math.floor(CELL/2);
+        const ty = VOID_BORDER + row*CELL + Math.floor(CELL/2);
+        WORLD_CHESTS.push({ biome, tx, ty, x: tx*TILE+TILE/2, y: ty*TILE+TILE/2, collected: false });
+      }
+    }
+  }
 }
 function loop() { update(); render(); requestAnimationFrame(loop); }
 window.addEventListener('resize', () => { CW = window.innerWidth; CH = window.innerHeight; });
