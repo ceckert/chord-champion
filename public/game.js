@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v4.6-debug';
+const VERSION = 'v4.7-debug';
 const TILE = 32;
 const MAP_W = 160, MAP_H = 160;
 
@@ -155,6 +155,22 @@ const BOSSES = {
     type: 'boss_drake', w: 76, h: 60, hp: 650, maxHp: 650,
     speed: 2.2, dmg: 18, label: '🔥 Inferno Drake'
   },
+  // 💎 Crystal Boss — Crystal Titan
+  crystal: {
+    type:'boss_crystaltitan', w:72,h:88,hp:900,maxHp:900,speed:0.7,dmg:35,label:'💎 Crystal Titan'
+  },
+  // 🌪️ Storm Boss — Tempest Drake
+  storm: {
+    type:'boss_tempest', w:80,h:64,hp:750,maxHp:750,speed:2.5,dmg:22,label:'🌪️ Tempest Drake'
+  },
+  // 🍄 Mushroom Boss — Mycelium Queen
+  mushroom: {
+    type:'boss_mycelqueen', w:68,h:68,hp:820,maxHp:820,speed:0.9,dmg:28,label:'🍄 Mycelium Queen'
+  },
+  // 🌑 Shadow Boss — Shadow Titan
+  shadow: {
+    type:'boss_shadowtitan', w:64,h:80,hp:1000,maxHp:1000,speed:1.6,dmg:32,label:'🌑 Shadow Titan'
+  },
   // 💀 Void Boss — Void Lord: phase-shifting wraith
   void: {
     type: 'boss_voidlord', w: 60, h: 72, hp: 750, maxHp: 750,
@@ -178,17 +194,23 @@ function spawnBoss(biome) {
   showNotif('⚠️ ' + def.label + ' has appeared!', '#ff4400', 240);
 }
 
+// 3×3 biome grid — void wraps the outer border
+// Row 0(top): tundra | crystal | storm
+// Row 1(mid): desert | forest  | swamp
+// Row 2(bot): volcano| mushroom| shadow
+// Outside 3×3 = void
+const BIOME_GRID = [
+  ['tundra',  'crystal',  'storm'  ],
+  ['desert',  'forest',   'swamp'  ],
+  ['volcano', 'mushroom', 'shadow' ],
+];
+const VOID_BORDER = 6; // tiles from edge = void
+
 function getBiome(tx, ty) {
-  const cx = MAP_W/2, cy = MAP_H/2;
-  const dx = tx - cx, dy = ty - cy;
-  const dist = Math.sqrt(dx*dx + dy*dy);
-  if (dist < 22) return 'forest';
-  if (dist > 68) return 'void';
-  const angle = Math.atan2(dy, dx);
-  if (angle > -Math.PI/4 && angle < Math.PI/4)       return 'desert';   // east
-  if (angle > Math.PI*3/4 || angle < -Math.PI*3/4)   return 'swamp';    // west
-  if (angle > Math.PI/4 && angle < Math.PI*3/4)      return 'volcano';  // south
-  return 'tundra'; // north
+  if (tx < VOID_BORDER || ty < VOID_BORDER || tx >= MAP_W-VOID_BORDER || ty >= MAP_H-VOID_BORDER) return 'void';
+  const col = Math.min(2, Math.floor((tx - VOID_BORDER) / Math.floor((MAP_W - VOID_BORDER*2) / 3)));
+  const row = Math.min(2, Math.floor((ty - VOID_BORDER) / Math.floor((MAP_H - VOID_BORDER*2) / 3)));
+  return BIOME_GRID[row][col];
 }
 
 function getBiomeAtPixel(px, py) {
@@ -205,39 +227,59 @@ function spawnEnemy() {
   const biome = getBiomeAtPixel(player.x, player.y);
   const r = Math.random();
   // ── Difficulty multipliers by biome (further = harder) ──────────
-  const BIOME_MULT = { forest:1.0, swamp:1.35, desert:1.5, tundra:1.9, volcano:2.0, void:2.6 };
+  const BIOME_MULT = { forest:1.0, swamp:1.35, desert:1.5, tundra:1.7, mushroom:1.45, crystal:1.8, storm:2.1, volcano:2.0, shadow:2.4, void:2.9 };
   const m = BIOME_MULT[biome] || 1.0;
   let type, w, h, hp, speed, dmg;
 
-  // ── Forest: Crawler (slow, high dmg) | Runner (fast, low dmg) ──
+  // ── Forest (center): Crawler | Runner ──────────────────────────
   if (biome === 'forest') {
-    if (r < 0.55) { type='crawler'; w=28;h=20;hp=Math.round(50*m);speed=0.8+r*0.4;dmg=Math.round(15*m); }
-    else          { type='runner';  w=18;h=38;hp=Math.round(25*m);speed=2.2+r*0.8;dmg=Math.round(6*m); }
+    if (r<0.55){type='crawler';   w=28;h=20;hp=Math.round(50*m); speed=0.8+r*0.4;dmg=Math.round(15*m);}
+    else       {type='runner';    w=18;h=38;hp=Math.round(25*m); speed=2.2+r*0.8;dmg=Math.round(6*m);}
 
-  // ── Swamp: Slimeling (fat, toxic) | Bogcrawler (armored, slow) ─
+  // ── Swamp (mid-right): Slimeling | Bogcrawler ───────────────────
   } else if (biome === 'swamp') {
-    if (r < 0.55) { type='slimeling';  w=36;h=24;hp=Math.round(80*m); speed=0.6+r*0.2;dmg=Math.round(12*m); }
-    else          { type='bogcrawler'; w=32;h=28;hp=Math.round(110*m);speed=0.5+r*0.2;dmg=Math.round(18*m); }
+    if (r<0.55){type='slimeling'; w=36;h=24;hp=Math.round(80*m); speed=0.6+r*0.2;dmg=Math.round(12*m);}
+    else       {type='bogcrawler';w=32;h=28;hp=Math.round(110*m);speed=0.5+r*0.2;dmg=Math.round(18*m);}
 
-  // ── Desert: Scorpling (fast, pincer) | Dunestalker (ambusher) ──
+  // ── Desert (mid-left): Scorpling | Dunestalker ──────────────────
   } else if (biome === 'desert') {
-    if (r < 0.55) { type='scorpling';   w=24;h=20;hp=Math.round(35*m); speed=2.5+r*0.8;dmg=Math.round(9*m); }
-    else          { type='dunestalker'; w=22;h=26;hp=Math.round(45*m); speed=3.0+r*0.6;dmg=Math.round(7*m); }
+    if (r<0.55){type='scorpling';  w=24;h=20;hp=Math.round(35*m); speed=2.5+r*0.8;dmg=Math.round(9*m);}
+    else       {type='dunestalker';w=22;h=26;hp=Math.round(45*m); speed=3.0+r*0.6;dmg=Math.round(7*m);}
 
-  // ── Tundra: Yeti (tank, freeze) | Frost Imp (swarm, fast) ──────
+  // ── Tundra (top-left): Yeti | Frost Imp ─────────────────────────
   } else if (biome === 'tundra') {
-    if (r < 0.45) { type='yeti';      w=40;h=44;hp=Math.round(140*m);speed=0.7+r*0.3;dmg=Math.round(22*m); }
-    else          { type='frostimp';  w=18;h=22;hp=Math.round(40*m); speed=2.8+r*0.5;dmg=Math.round(10*m); }
+    if (r<0.45){type='yeti';    w=40;h=44;hp=Math.round(140*m);speed=0.7+r*0.3;dmg=Math.round(22*m);}
+    else       {type='frostimp';w=18;h=22;hp=Math.round(40*m); speed=2.8+r*0.5;dmg=Math.round(10*m);}
 
-  // ── Volcano: Ember (fast, fire) | Magma Crab (armored, slow) ───
+  // ── Crystal (top-center): Crystal Golem | Gem Sprite ────────────
+  } else if (biome === 'crystal') {
+    if (r<0.45){type='crystalgolem';w=38;h=42;hp=Math.round(130*m);speed=0.6+r*0.2;dmg=Math.round(20*m);}
+    else       {type='gemsprite';   w=16;h=20;hp=Math.round(28*m); speed=3.2+r*0.6;dmg=Math.round(8*m);}
+
+  // ── Storm (top-right): Wind Elemental | Storm Hawk ───────────────
+  } else if (biome === 'storm') {
+    if (r<0.5){type='windelemental';w=28;h=36;hp=Math.round(55*m); speed=2.2+r*0.6;dmg=Math.round(14*m);}
+    else      {type='stormhawk';    w=32;h=24;hp=Math.round(45*m); speed=3.5+r*0.8;dmg=Math.round(10*m);}
+
+  // ── Volcano (bot-left): Ember | Magma Crab ──────────────────────
   } else if (biome === 'volcano') {
-    if (r < 0.55) { type='ember';     w=20;h=28;hp=Math.round(40*m); speed=2.8+r*0.7;dmg=Math.round(11*m); }
-    else          { type='magmacrab'; w=36;h=28;hp=Math.round(120*m);speed=0.6+r*0.2;dmg=Math.round(20*m); }
+    if (r<0.55){type='ember';    w=20;h=28;hp=Math.round(40*m); speed=2.8+r*0.7;dmg=Math.round(11*m);}
+    else       {type='magmacrab';w=36;h=28;hp=Math.round(120*m);speed=0.6+r*0.2;dmg=Math.round(20*m);}
 
-  // ── Void: Wraith (phasing) | Void Shade (teleporting) ──────────
+  // ── Mushroom (bot-center): Spore Puff | Mycelium Creep ──────────
+  } else if (biome === 'mushroom') {
+    if (r<0.55){type='sporepuff';     w=30;h=30;hp=Math.round(70*m); speed=0.9+r*0.3;dmg=Math.round(13*m);}
+    else       {type='myceliumcreep'; w=26;h=18;hp=Math.round(55*m); speed=1.4+r*0.4;dmg=Math.round(16*m);}
+
+  // ── Shadow (bot-right): Wraith | Void Shade ─────────────────────
+  } else if (biome === 'shadow') {
+    if (r<0.5){type='wraith';   w=26;h=32;hp=Math.round(60*m); speed=1.8+r*0.8;dmg=Math.round(18*m);}
+    else      {type='voidshade';w=20;h=28;hp=Math.round(35*m); speed=3.5+r*0.5;dmg=Math.round(22*m);}
+
+  // ── Void (border ring): Wraith | Void Shade (hardest) ───────────
   } else {
-    if (r < 0.5) { type='wraith';    w=26;h=32;hp=Math.round(60*m); speed=1.8+r*0.8;dmg=Math.round(18*m); }
-    else         { type='voidshade'; w=20;h=28;hp=Math.round(35*m); speed=3.5+r*0.5;dmg=Math.round(22*m); }
+    if (r<0.5){type='wraith';   w=28;h=34;hp=Math.round(80*m); speed=2.0+r*0.8;dmg=Math.round(22*m);}
+    else      {type='voidshade';w=22;h=30;hp=Math.round(45*m); speed=4.0+r*0.5;dmg=Math.round(28*m);}
   }
   enemies.push({ type, x:ex, y:ey, w, h, hp, maxHp:hp, speed, baseDmg:dmg, dmg, damageCooldown:0 });
 }
@@ -493,7 +535,7 @@ function update() {
       bossActive = false;
       showNotif('Boss retreated...', '#888', 120);
     }
-  } else if (!bossActive && curBiome !== 'forest') {
+  } else if (!bossActive && curBiome !== 'forest' && curBiome !== 'void') {
     biomeTimer++;
     if (biomeTimer >= 3600) { // 60s at 60fps
       biomeTimer = 0;
@@ -602,7 +644,7 @@ function update() {
         if (e.hp <= 0) {
           enemies.splice(j, 1);
           if (e.isBoss) { bossActive = false; showNotif('🏆 Boss defeated! +500 coins!', '#fbbf24', 240); savedCoins += 500; }
-          const epGain = {crawler:10,runner:8,slimeling:14,bogcrawler:18,scorpling:12,dunestalker:14,yeti:28,frostimp:12,ember:14,magmacrab:22,wraith:20,voidshade:20,boss_treant:200,boss_bogqueen:180,boss_sandking:190,boss_glacier:220,boss_drake:175,boss_voidlord:200}[e.type]||10;
+          const epGain = {crawler:10,runner:8,slimeling:14,bogcrawler:18,scorpling:12,dunestalker:14,yeti:28,frostimp:12,crystalgolem:25,gemsprite:12,windelemental:16,stormhawk:14,ember:14,magmacrab:22,sporepuff:15,myceliumcreep:14,wraith:20,voidshade:20,boss_treant:200,boss_bogqueen:180,boss_sandking:190,boss_glacier:220,boss_drake:175,boss_voidlord:200}[e.type]||10;
           player.ep += epGain;
           if (player.ep >= player.epMax) {
             player.ep = 0;
@@ -901,7 +943,11 @@ function drawMap() {
         else if (biomeHere==='desert') { base=((tx+ty)%2===0)?'#c8a84b':'#d4b860'; detail='#b89030'; }
         else if (biomeHere==='tundra') { base=((tx+ty)%2===0)?'#a8c0d0':'#bcd0e0'; detail='#80a0b8'; }
         else if (biomeHere==='volcano') { base=((tx+ty)%2===0)?'#3a1008':'#4a1a10'; detail='#6b1010'; }
-        else if (biomeHere==='void') { base=((tx+ty)%2===0)?'#0a0818':'#12101e'; detail='#1a1028'; }
+        else if (biomeHere==='crystal')  { base=((tx+ty)%2===0)?'#1a2a4a':'#203050'; detail='#4488cc'; }
+        else if (biomeHere==='storm')    { base=((tx+ty)%2===0)?'#2a2a3a':'#323248'; detail='#8888cc'; }
+        else if (biomeHere==='mushroom') { base=((tx+ty)%2===0)?'#3a1a4a':'#4a2258'; detail='#aa44cc'; }
+        else if (biomeHere==='shadow')   { base=((tx+ty)%2===0)?'#080810':'#100818'; detail='#2a0a3a'; }
+        else if (biomeHere==='void')     { base=((tx+ty)%2===0)?'#0a0818':'#12101e'; detail='#1a1028'; }
         else { base=((tx+ty)%2===0)?'#2d6a4f':'#27ae60'; detail='#1e5631'; } // forest
         drawPixelRect(sx, sy, TILE, TILE, base);
         const seed = tx*73+ty*137;
@@ -1110,6 +1156,70 @@ function drawEnemyByType(e, x, y) {
     ctx.fillStyle='#3a0600'; ctx.fillRect(Math.round(x-10),Math.round(y+6),12,10); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+6),12,10);
     const mc=Math.sin(frame*0.08+e.x)*2;
     for(let ci=0;ci<3;ci++){ctx.fillStyle='#4a0800';ctx.fillRect(Math.round(x+4+ci*10),Math.round(y+e.h-4+mc),6,8);ctx.fillRect(Math.round(x+4+ci*10),Math.round(y+e.h-4-mc),6,8);}
+  } else if (e.type === 'crystalgolem') {
+    // Geometric, angular, icy blue shards
+    drawPixelRect(x+4,y+16,e.w-8,e.h-18,'#1a3a6a'); // legs
+    drawPixelRect(x+2,y+8,e.w-4,12,'#2a5090'); // torso
+    drawPixelRect(x+6,y,e.w-12,10,'#4488cc'); // head
+    // Crystal shards
+    ctx.fillStyle='#88ccff'; ctx.fillRect(Math.round(x-4),Math.round(y+4),6,14); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+4),6,14);
+    ctx.fillRect(Math.round(x+8),Math.round(y-6),5,8); ctx.fillRect(Math.round(x+e.w-13),Math.round(y-6),5,8);
+    ctx.fillStyle='#fff'; ctx.fillRect(Math.round(x+8),Math.round(y+2),5,5); ctx.fillRect(Math.round(x+e.w-13),Math.round(y+2),5,5);
+    ctx.fillStyle='#002266'; ctx.fillRect(Math.round(x+10),Math.round(y+4),3,3); ctx.fillRect(Math.round(x+e.w-11),Math.round(y+4),3,3);
+  } else if (e.type === 'gemsprite') {
+    // Tiny fast sparkling gem creature
+    const gs=Math.sin(frame*0.3+e.x)*3;
+    drawPixelRect(x+2,y+6+gs,e.w-4,e.h-8,'#aa44ff');
+    drawPixelRect(x+3,y+gs,e.w-6,8,'#cc66ff');
+    // Gem facets
+    ctx.fillStyle='#ffaaff'; ctx.fillRect(Math.round(x+4),Math.round(y+1+gs),3,3); ctx.fillRect(Math.round(x+e.w-7),Math.round(y+1+gs),3,3);
+    ctx.fillStyle='#220044'; ctx.fillRect(Math.round(x+5),Math.round(y+2+gs),2,2); ctx.fillRect(Math.round(x+e.w-6),Math.round(y+2+gs),2,2);
+    // Sparkle
+    if(frame%10<5){ctx.fillStyle='#ffffff';ctx.fillRect(Math.round(x+e.w/2),Math.round(y-3+gs),2,2);}
+  } else if (e.type === 'windelemental') {
+    // Swirling air entity — semi-transparent, shifting
+    const we=Math.sin(frame*0.15+e.y)*4;
+    ctx.save(); ctx.globalAlpha=0.7+0.2*Math.sin(frame*0.1);
+    drawPixelRect(x+3,y+10+we,e.w-6,e.h-12,'#8888cc');
+    drawPixelRect(x+5,y+2+we,e.w-10,12,'#aaaaee');
+    ctx.globalAlpha=1; ctx.fillStyle='#ddddff';
+    ctx.fillRect(Math.round(x+7),Math.round(y+4+we),5,5); ctx.fillRect(Math.round(x+e.w-12),Math.round(y+4+we),5,5);
+    ctx.fillStyle='#4444aa'; ctx.fillRect(Math.round(x+9),Math.round(y+6+we),3,3); ctx.fillRect(Math.round(x+e.w-10),Math.round(y+6+we),3,3);
+    // Wind trails
+    for(let wi=0;wi<3;wi++){ctx.globalAlpha=0.3;ctx.fillStyle='#aaaaff';ctx.fillRect(Math.round(x-6-wi*4),Math.round(y+8+we+wi*3),8,2);}
+    ctx.restore();
+  } else if (e.type === 'stormhawk') {
+    // Fast swooping bird — wide, low
+    drawPixelRect(x+8,y+8,e.w-16,e.h-10,'#334466'); // body
+    // Wings spread wide
+    const sw=Math.sin(frame*0.25+e.x)*6;
+    drawPixelRect(x,y+6+sw,10,6,'#445577'); drawPixelRect(x+e.w-10,y+6-sw,10,6,'#445577');
+    drawPixelRect(x-6,y+8+sw,8,4,'#334466'); drawPixelRect(x+e.w-2,y+8-sw,8,4,'#334466');
+    ctx.fillStyle='#ffcc00'; ctx.fillRect(Math.round(x+e.w/2-2),Math.round(y+4),4,6); // beak
+    ctx.fillStyle='#ffff66'; ctx.fillRect(Math.round(x+e.w/2-5),Math.round(y+6),3,3); ctx.fillRect(Math.round(x+e.w/2+2),Math.round(y+6),3,3);
+    ctx.fillStyle='#000'; ctx.fillRect(Math.round(x+e.w/2-4),Math.round(y+7),2,2); ctx.fillRect(Math.round(x+e.w/2+3),Math.round(y+7),2,2);
+  } else if (e.type === 'sporepuff') {
+    // Round mushroom creature, puffs spores
+    const sp=Math.sin(frame*0.12+e.y)*2;
+    drawPixelRect(x+2,y+14+sp,e.w-4,e.h-15,'#7a3a8a'); // stalk
+    drawPixelRect(x,y+4+sp,e.w,14,'#aa44cc'); // cap
+    // Spots on cap
+    ctx.fillStyle='#cc88ee'; ctx.fillRect(Math.round(x+4),Math.round(y+5+sp),5,5); ctx.fillRect(Math.round(x+e.w-9),Math.round(y+5+sp),5,5); ctx.fillRect(Math.round(x+e.w/2-2),Math.round(y+4+sp),5,5);
+    ctx.fillStyle='#ddaaff'; ctx.fillRect(Math.round(x+6),Math.round(y+7+sp),3,3); ctx.fillRect(Math.round(x+e.w-8),Math.round(y+7+sp),3,3);
+    // Eyes under cap brim
+    ctx.fillStyle='#ffaaff'; ctx.fillRect(Math.round(x+6),Math.round(y+14+sp),4,4); ctx.fillRect(Math.round(x+e.w-10),Math.round(y+14+sp),4,4);
+    ctx.fillStyle='#220033'; ctx.fillRect(Math.round(x+7),Math.round(y+15+sp),2,2); ctx.fillRect(Math.round(x+e.w-9),Math.round(y+15+sp),2,2);
+    // Spore puff animation
+    if(frame%30<5){ctx.save();ctx.globalAlpha=0.5;ctx.fillStyle='#ddaaff';ctx.beginPath();ctx.arc(Math.round(x+e.w/2),Math.round(y+4+sp),12+frame%30,0,Math.PI*2);ctx.fill();ctx.restore();}
+  } else if (e.type === 'myceliumcreep') {
+    // Flat spreading ground creature
+    const mc2=Math.sin(frame*0.1+e.x)*2;
+    drawPixelRect(x,y+6+mc2,e.w,e.h-8,'#4a1a5a'); // flat body
+    drawPixelRect(x+4,y+mc2,e.w-8,9,'#6a2a7a'); // raised head
+    ctx.fillStyle='#cc66ff'; ctx.fillRect(Math.round(x+6),Math.round(y+1+mc2),4,4); ctx.fillRect(Math.round(x+e.w-10),Math.round(y+1+mc2),4,4);
+    ctx.fillStyle='#220033'; ctx.fillRect(Math.round(x+7),Math.round(y+2+mc2),2,2); ctx.fillRect(Math.round(x+e.w-9),Math.round(y+2+mc2),2,2);
+    // Tendrils
+    for(let ti=0;ti<4;ti++){const ta=Math.sin(frame*0.15+ti)*3;ctx.fillStyle='#6a2a7a';ctx.fillRect(Math.round(x+2+ti*6),Math.round(y+e.h-2+ta),3,6);}
   } else if (e.type === 'voidshade') {
     // Void teleporter — thin, dark, fast
     const vs=0.4+0.4*Math.sin(frame*0.2+e.x);
@@ -1207,6 +1317,50 @@ function drawBoss(e, x, y) {
     if (frame%20 < 10) { ctx.fillStyle='rgba(255,100,0,0.6)'; ctx.fillRect(Math.round(x+e.w+4),Math.round(y+6),20+frame%10,8); }
   }
   // ── Void: Void Lord ──────────────────────────────────────────────
+  else if (e.type === 'boss_crystaltitan') {
+    drawPixelRect(x+6,y+20,e.w-12,e.h-22,'#1a3a6a');
+    drawPixelRect(x+2,y+8,e.w-4,16,'#2a5090');
+    drawPixelRect(x+8,y,e.w-16,12,'#4488cc');
+    ctx.fillStyle='#88ccff'; ctx.fillRect(Math.round(x-10),Math.round(y+4),12,24); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+4),12,24);
+    for(let ci=0;ci<4;ci++){ctx.fillRect(Math.round(x+10+ci*14),Math.round(y-10),6,12);}
+    ctx.fillStyle='#fff'; ctx.fillRect(Math.round(x+14),Math.round(y+2),8,8); ctx.fillRect(Math.round(x+e.w-22),Math.round(y+2),8,8);
+    ctx.fillStyle='#002266'; ctx.fillRect(Math.round(x+17),Math.round(y+5),5,5); ctx.fillRect(Math.round(x+e.w-19),Math.round(y+5),5,5);
+  }
+  else if (e.type === 'boss_tempest') {
+    const tf=Math.sin(frame*0.2)*6;
+    drawPixelRect(x+6,y+14,e.w-12,e.h-16,'#334466');
+    drawPixelRect(x+8,y+4,e.w-16,14,'#445588');
+    ctx.fillStyle='#aaaaff'; ctx.fillRect(Math.round(x-18),Math.round(y+6+tf),20,10); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+6-tf),20,10);
+    ctx.fillRect(Math.round(x-26),Math.round(y+12+tf),10,6); ctx.fillRect(Math.round(x+e.w+16),Math.round(y+12-tf),10,6);
+    ctx.fillStyle='#ffff44'; ctx.fillRect(Math.round(x+e.w/2-3),Math.round(y+5),6,8);
+    ctx.fillStyle='#ddddff'; ctx.fillRect(Math.round(x+14),Math.round(y+6),6,6); ctx.fillRect(Math.round(x+e.w-20),Math.round(y+6),6,6);
+    if(frame%8<4){ctx.fillStyle='rgba(255,255,100,0.4)';ctx.fillRect(x-30,y-10,e.w+60,e.h+20);}
+  }
+  else if (e.type === 'boss_mycelqueen') {
+    const mf=Math.sin(frame*0.08)*3;
+    drawPixelRect(x+6,y+28+mf,e.w-12,e.h-30,'#5a1a6a');
+    drawPixelRect(x+2,y+12+mf,e.w-4,20,'#7a2a8a');
+    drawPixelRect(x,y+mf,e.w,16,'#aa44cc');
+    ctx.fillStyle='#cc88ee'; for(let ms=0;ms<6;ms++){ctx.fillRect(Math.round(x+4+ms*10),Math.round(y+1+mf),6,7);}
+    ctx.fillStyle='#ffaaff'; ctx.fillRect(Math.round(x+10),Math.round(y+15+mf),8,8); ctx.fillRect(Math.round(x+e.w-18),Math.round(y+15+mf),8,8);
+    ctx.fillStyle='#220033'; ctx.fillRect(Math.round(x+12),Math.round(y+17+mf),5,5); ctx.fillRect(Math.round(x+e.w-16),Math.round(y+17+mf),5,5);
+    if(e.spawnTimer%200<5){ctx.save();ctx.globalAlpha=0.4;ctx.fillStyle='#ddaaff';ctx.beginPath();ctx.arc(Math.round(x+e.w/2),Math.round(y+e.h/2),60,0,Math.PI*2);ctx.fill();ctx.restore();}
+  }
+  else if (e.type === 'boss_shadowtitan') {
+    const sa=0.7+0.2*Math.sin(frame*0.08+e.y);
+    ctx.save(); ctx.globalAlpha=sa;
+    drawPixelRect(x+4,y+20,e.w-8,e.h-22,'#1a003a');
+    drawPixelRect(x+2,y+8,e.w-4,16,'#2a0050');
+    drawPixelRect(x+6,y,e.w-12,12,'#3a0070');
+    ctx.restore();
+    ctx.fillStyle='#ff00ff'; ctx.shadowColor='#ff00ff'; ctx.shadowBlur=20;
+    ctx.fillRect(Math.round(x+12),Math.round(y+2),10,10); ctx.fillRect(Math.round(x+e.w-22),Math.round(y+2),10,10);
+    ctx.shadowBlur=0;
+    ctx.save(); ctx.globalAlpha=sa;
+    ctx.fillStyle='#2a0050'; ctx.fillRect(Math.round(x-14),Math.round(y+12),16,28); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+12),16,28);
+    ctx.restore();
+    for(let wi=0;wi<4;wi++){const wangle=frame*0.025+wi*(Math.PI/2);ctx.save();ctx.globalAlpha=0.6;ctx.fillStyle='#6600cc';ctx.beginPath();ctx.arc(Math.round(x+e.w/2+Math.cos(wangle)*55),Math.round(y+e.h/2+Math.sin(wangle)*55),8,0,Math.PI*2);ctx.fill();ctx.restore();}
+  }
   else if (e.type === 'boss_voidlord') {
     const va = e.invincible ? 0.25 + 0.2*Math.sin(frame*0.5) : 0.8+0.15*Math.sin(frame*0.1+e.y);
     ctx.save(); ctx.globalAlpha=va;
@@ -1240,7 +1394,7 @@ function drawEnemy(e) {
   const {x, y} = s;
   if (e.isBoss) { drawBoss(e, x, y); } else { drawEnemyByType(e, x, y); }
   // Health bar
-  const hpColor = {runner:'#e74c3c',crawler:'#2ecc71',slimeling:'#22cc22',bogcrawler:'#1a5010',scorpling:'#d4b020',dunestalker:'#c8902a',yeti:'#88ccff',frostimp:'#66aadd',ember:'#ff6600',magmacrab:'#cc3300',wraith:'#cc44ff',voidshade:'#ff00aa'}[e.type]||'#fff';
+  const hpColor = {runner:'#e74c3c',crawler:'#2ecc71',slimeling:'#22cc22',bogcrawler:'#1a5010',scorpling:'#d4b020',dunestalker:'#c8902a',yeti:'#88ccff',frostimp:'#66aadd',crystalgolem:'#4488cc',gemsprite:'#cc66ff',windelemental:'#aaaaee',stormhawk:'#445577',ember:'#ff6600',magmacrab:'#cc3300',sporepuff:'#aa44cc',myceliumcreep:'#6a2a7a',wraith:'#cc44ff',voidshade:'#ff00aa'}[e.type]||'#fff';
   if (e.isBoss) {
     drawPixelRect(x, y-14, e.w, 8, '#111');
     drawPixelRect(x, y-14, Math.round(e.w * e.hp / e.maxHp), 8, e.phase===2?'#ff2200':'#cc0044');
@@ -1278,7 +1432,7 @@ function drawHUD() {
   ctx.fillText('Coins: '+player.coins, canvas.width-14, 23);
 
   const biomeNow = getBiomeAtPixel(player.x, player.y);
-  const biomeLabel = {forest:'🌿 Forest',swamp:'🌊 Swamp',desert:'🏜️ Desert',tundra:'❄️ Tundra',volcano:'🌋 Volcano',void:'💀 Void'}[biomeNow]||biomeNow;
+  const biomeLabel = {forest:'🌿 Forest',swamp:'🌊 Swamp',desert:'🏜️ Desert',tundra:'❄️ Tundra',crystal:'💎 Crystal',storm:'🌪️ Storm',volcano:'🌋 Volcano',mushroom:'🍄 Mushroom',shadow:'🌑 Shadow',void:'💀 Void'}[biomeNow]||biomeNow;
   ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(canvas.width/2-60, 10, 120, 22);
   ctx.fillStyle='#ffd700'; ctx.font='bold 12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(biomeLabel, canvas.width/2, 21);
