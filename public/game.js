@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v3.0-debug';
+const VERSION = 'v3.1-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -375,6 +375,9 @@ function update() {
       if (rectOverlap(b.x-4, b.y-4, 8, 8, e.x, e.y, e.w, e.h)) {
         const dmg = Math.round(10 * dmgMult);
         e.hp -= dmg;
+        // Fire DOT
+        const fireLv = ALL_UPGRADES.find(u => u.id === 'ab_fire')?.level || 0;
+        if (fireLv > 0) { e.burning = 180 + fireLv * 60; e.burnDmg = 1 + fireLv; }
         if (e.hp <= 0) enemies.splice(j, 1);
         if (explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
         hit = true; break;
@@ -411,6 +414,14 @@ function update() {
       const edx = player.x - e.x, edy = player.y - e.y;
       const elen = Math.sqrt(edx*edx + edy*edy) || 1;
       e.x += edx/elen * e.speed; e.y += edy/elen * e.speed;
+    }
+    // Burn DOT
+    if (e.burning > 0) {
+      e.burning--;
+      if (e.burning % 20 === 0) { // tick every 20 frames
+        e.hp -= e.burnDmg;
+        if (e.hp <= 0) { enemies.splice(enemies.indexOf(e), 1); continue; }
+      }
     }
     if (player.invincible === 0 && rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)) {
       player.hp -= 10; player.invincible = 40;
@@ -776,7 +787,20 @@ function render() {
     ctx.beginPath(); ctx.arc(s.x, s.y, ex.r * 0.6, 0, Math.PI*2); ctx.fill();
     ctx.restore();
   }
-  for (const e of enemies) drawEnemy(e);
+  for (const e of enemies) {
+    drawEnemy(e);
+    if (e.burning > 0) {
+      const s = worldToScreen(e.x + e.w/2, e.y + e.h/2);
+      const flicker = 0.5 + 0.5 * Math.sin(frame * 0.4 + e.x);
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, e.burning / 60) * (0.6 + 0.4 * flicker);
+      ctx.fillStyle = '#ff6b00';
+      ctx.beginPath(); ctx.arc(s.x, s.y - 8, 7 + flicker * 4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ffdd00';
+      ctx.beginPath(); ctx.arc(s.x, s.y - 10, 4 + flicker * 2, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
   const ps = worldToScreen(player.x, player.y);
   drawPlayer(ps.x, ps.y);
   drawDirectionArrowWorld();
