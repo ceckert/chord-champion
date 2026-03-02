@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v4.0-debug';
+const VERSION = 'v4.1-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -453,10 +453,20 @@ function update() {
     if (e.frozen > 0) e.frozen--;
     const effectiveSpeed = e.frozen > 0 ? e.speed * (e.frozenSpeedMult || 0.5) : e.speed;
 
-    // BFS pathfinding
+    // BFS pathfinding — psychic enemies target nearest other enemy
+    let targetX = player.x + player.w/2, targetY = player.y + player.h/2;
+    if (e.psychic > 0) {
+      let nearest = null, nearDist = Infinity;
+      for (const oe of enemies) {
+        if (oe === e) continue;
+        const d = Math.sqrt((oe.x-e.x)**2+(oe.y-e.y)**2);
+        if (d < nearDist) { nearDist=d; nearest=oe; }
+      }
+      if (nearest) { targetX = nearest.x + nearest.w/2; targetY = nearest.y + nearest.h/2; }
+    }
     if (!e.path || e.pathTimer <= 0) {
-      e.path = bfsPath(e.x + e.w/2, e.y + e.h/2, player.x + player.w/2, player.y + player.h/2);
-      e.pathTimer = 60;
+      e.path = bfsPath(e.x + e.w/2, e.y + e.h/2, targetX, targetY);
+      e.pathTimer = 40;
     }
     e.pathTimer--;
 
@@ -468,7 +478,7 @@ function update() {
       if (wlen < e.speed + 2) { e.path.shift(); }
       else { e.x += (wdx/wlen) * effectiveSpeed; e.y += (wdy/wlen) * effectiveSpeed; }
     } else {
-      const edx = player.x - e.x, edy = player.y - e.y;
+      const edx = targetX - e.x, edy = targetY - e.y;
       const elen = Math.sqrt(edx*edx + edy*edy) || 1;
       e.x += edx/elen * effectiveSpeed; e.y += edy/elen * effectiveSpeed;
     }
@@ -495,14 +505,16 @@ function update() {
     if (e.bleeding > 0) e.bleeding--;
     // Weaken timer
     if (e.weakened > 0) { e.weakened--; if (e.weakened <= 0) e.dmg = e.baseDmg || e.dmg; }
-    // Psychic — attack nearby enemies
+    // Psychic — tick down, attack on contact
     if (e.psychic > 0) {
       e.psychic--;
-      if (e.psychic % 30 === 0) {
-        for (const oe of enemies) {
-          if (oe === e) continue;
-          const d = Math.sqrt((oe.x-e.x)**2+(oe.y-e.y)**2);
-          if (d < 80) { oe.hp -= 5; break; }
+      for (let pi = enemies.length-1; pi >= 0; pi--) {
+        const oe = enemies[pi];
+        if (oe === e) continue;
+        if (rectOverlap(e.x,e.y,e.w,e.h,oe.x,oe.y,oe.w,oe.h)) {
+          oe.hp -= 8;
+          if (oe.hp <= 0) enemies.splice(pi, 1);
+          break;
         }
       }
     }
