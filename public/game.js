@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v4.9-debug';
+const VERSION = 'v5.0-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -97,7 +97,8 @@ let equippedAbility = null;
 let biomeTimer = 0;        // frames in current biome
 let lastBiome = 'forest';  // biome player was in last frame
 let bossActive = false;    // only one boss at a time
-let bossWarningTimer = 0;  // flashing warning before spawn // id of the one active ability // { x1,y1,x2,y2,life } // { x, y, r, maxR, life, maxLife }
+let bossWarningTimer = 0;
+let enemySpawnCap = 8;  // max non-boss enemies, increases over time  // flashing warning before spawn // id of the one active ability // { x1,y1,x2,y2,life } // { x, y, r, maxR, life, maxLife }
 
 function triggerExplosion(x, y, radius, dmg) {
   explosions.push({ x, y, r: 4, maxR: radius, life: 20, maxLife: 20, dmg });
@@ -217,6 +218,10 @@ function getBiomeAtPixel(px, py) {
   return getBiome(Math.floor(px/TILE), Math.floor(py/TILE));
 }
 
+function preSpawnEnemies(count) {
+  for (let i = 0; i < count; i++) spawnEnemy();
+}
+
 function spawnEnemy() {
   let ex, ey;
   const side = Math.floor(Math.random() * 4);
@@ -334,6 +339,8 @@ function uiShow(screenId) {
 function uiPlay() {
   document.getElementById('ui-overlay').style.display = 'none';
   gameState = 'playing';
+  // Pre-spawn starting enemies so world feels alive immediately
+  setTimeout(() => preSpawnEnemies(5), 100);
   canvas.setAttribute('tabindex', '0');
   canvas.focus();
 }
@@ -536,6 +543,10 @@ function update() {
       bossActive = false;
       showNotif('Boss retreated...', '#888', 120);
     }
+    // Pre-spawn a few enemies in the new biome so it feels inhabited
+    if (curBiome !== 'forest' || enemies.length < 3) {
+      setTimeout(() => preSpawnEnemies(4), 200);
+    }
   } else if (!bossActive && curBiome !== 'forest' && curBiome !== 'void') {
     biomeTimer++;
     if (biomeTimer >= 3600) { // 60s at 60fps
@@ -669,7 +680,8 @@ function update() {
   }
 
   enemySpawnTimer++;
-  if (enemySpawnTimer >= 300) { spawnEnemy(); enemySpawnTimer = 0; }
+  enemySpawnCap = Math.min(30, 8 + Math.floor(frame / 3600)); // ramp cap over time
+  if (enemySpawnTimer >= 180 && enemies.filter(e=>!e.isBoss).length < enemySpawnCap) { spawnEnemy(); enemySpawnTimer = 0; }
   if (player.invincible > 0) player.invincible--;
 
   for (const e of enemies) {
