@@ -437,7 +437,7 @@ canvas.addEventListener('contextmenu', e => { e.preventDefault(); if (gameState 
 // HTML UI — global functions called by inline onclick handlers
 function uiShow(screenId) {
   if (screenId === 'scr-main') { const el=document.getElementById('mp-display'); if(el) el.textContent='🎵 '+savedCoins+' MP'; }
-  ['scr-main','scr-upgrades','scr-levelplan','scr-howtoplay'].forEach(id => {
+  ['scr-main','scr-upgrades','scr-levelplan','scr-howtoplay','scr-charselect'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
