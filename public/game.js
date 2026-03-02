@@ -370,12 +370,13 @@ function uiPlay() {
 function openLevelUp() {
   gameState = 'paused';
   // Pick 3 random upgrades (not maxed)
-  const ownedAbilities = ALL_UPGRADES.filter(u => u.id.startsWith('ab_') && (u.level+(player.bonusUpgrades[u.id]||0))>0).length;
+  function ownedCount(list) { return list.filter(u => (u.level+(player.bonusUpgrades[u.id]||0)) > 0).length; }
   function pickFrom(list) {
+    const maxOwned = ownedCount(list) >= 3;
     const valid = list.filter(u => {
       const tot = u.level+(player.bonusUpgrades[u.id]||0);
       if (tot >= u.max) return false;
-      if (u.id.startsWith('ab_') && ownedAbilities >= 3 && tot === 0) return false;
+      if (maxOwned && tot === 0) return false; // already have 3 types — only upgrade existing
       return true;
     });
     if (!valid.length) return null;
