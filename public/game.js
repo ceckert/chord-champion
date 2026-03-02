@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v3.4-debug';
+const VERSION = 'v3.5-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -400,63 +400,41 @@ function update() {
   if (player.invincible > 0) player.invincible--;
 
   for (const e of enemies) {
-    // Recompute BFS path every 60 frames or if no path
-    if (!e.path || e.pathTimer <= 0) {
-      // Tick frost
+    // Tick status effects
     if (e.frozen > 0) e.frozen--;
     const effectiveSpeed = e.frozen > 0 ? e.speed * (e.frozenSpeedMult || 0.5) : e.speed;
+
+    // BFS pathfinding
     if (!e.path || e.pathTimer <= 0) {
       e.path = bfsPath(e.x + e.w/2, e.y + e.h/2, player.x + player.w/2, player.y + player.h/2);
       e.pathTimer = 60;
     }
     e.pathTimer--;
 
-    // Follow path waypoints
+    // Follow path
     if (e.path && e.path.length > 0) {
       const wp = e.path[0];
       const wdx = wp.x - (e.x + e.w/2), wdy = wp.y - (e.y + e.h/2);
       const wlen = Math.sqrt(wdx*wdx + wdy*wdy) || 1;
-      if (wlen < e.speed + 2) {
-        e.path.shift(); // reached waypoint
-      } else {
-        e.x += (wdx/wlen) * effectiveSpeed;
-        e.y += (wdy/wlen) * effectiveSpeed;
-      }
+      if (wlen < e.speed + 2) { e.path.shift(); }
+      else { e.x += (wdx/wlen) * effectiveSpeed; e.y += (wdy/wlen) * effectiveSpeed; }
     } else {
-      // Fallback: beeline
       const edx = player.x - e.x, edy = player.y - e.y;
       const elen = Math.sqrt(edx*edx + edy*edy) || 1;
       e.x += edx/elen * effectiveSpeed; e.y += edy/elen * effectiveSpeed;
     }
-    // Burn DOT
-    if (e.frozen > 0) {
-      const sf = worldToScreen(e.x, e.y);
-      ctx.save(); ctx.globalAlpha = Math.min(0.55, e.frozen / 60 * 0.55);
-      ctx.fillStyle = '#7ee8fa';
-      ctx.fillRect(Math.round(sf.x), Math.round(sf.y), e.w, e.h);
-      // Ice crystal sparkles
-      ctx.globalAlpha = 0.9; ctx.fillStyle = '#fff';
-      const sp = e.x * 7 + e.y * 3;
-      ctx.fillRect(Math.round(sf.x + (sp%e.w)), Math.round(sf.y + ((sp*3)%e.h)), 2, 2);
-      ctx.fillRect(Math.round(sf.x + ((sp*5)%e.w)), Math.round(sf.y + ((sp*7)%e.h)), 2, 2);
-      ctx.restore();
-    }
-    if (e.burnFlash > 0) {
-      e.burnFlash--;
-      const s2 = worldToScreen(e.x, e.y);
-      ctx.save(); ctx.globalAlpha = 0.55;
-      ctx.fillStyle = '#ff0000';
-      ctx.fillRect(Math.round(s2.x), Math.round(s2.y), e.w, e.h);
-      ctx.restore();
-    }
+
+    // Burn DOT tick
     if (e.burning > 0) {
       e.burning--;
-      if (e.burning % 20 === 0) { // tick every 20 frames
+      if (e.burning % 20 === 0) {
         e.hp -= e.burnDmg;
-        e.burnFlash = 8; // red flash frames
+        e.burnFlash = 8;
         if (e.hp <= 0) { enemies.splice(enemies.indexOf(e), 1); continue; }
       }
     }
+
+    // Player collision
     if (player.invincible === 0 && rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)) {
       player.hp -= 10; player.invincible = 40;
       if (player.hp <= 0) {
