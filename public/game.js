@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v6.4-debug';
+const VERSION = 'v6.5-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -629,12 +629,10 @@ function update() {
     let hit = false;
     // Wall hit — check explosive
     if (getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE)) === 1) {
-      const explodeLv = ALL_UPGRADES.find(u => u.id === 'ab_explode')?.level || 0;
-      if (explodeLv > 0) triggerExplosion(b.x, b.y, 40 + explodeLv * 15, 15 + explodeLv * 5);
+      if (equippedAbility === 'ab_explode') { const lv=totalLevel('ab_explode'); triggerExplosion(b.x, b.y, 40+lv*15, 15+lv*5); }
       bullets.splice(i, 1); continue;
     }
     const dmgMult = 1 + totalLevel('dmg') * 0.2;
-    const explodeLv = ALL_UPGRADES.find(u => u.id === 'ab_explode')?.level || 0;
     for (let j = enemies.length - 1; j >= 0; j--) {
       const e = enemies[j];
       if (rectOverlap(b.x-4, b.y-4, 8, 8, e.x, e.y, e.w, e.h)) {
@@ -846,10 +844,22 @@ function update() {
   }
 
   if (notification) { notification.timer--; if (notification.timer <= 0) notification = null; }
-  // Animate explosions
+  // Animate explosions + deal damage on spawn frame
   for (let i = explosions.length - 1; i >= 0; i--) {
     const ex = explosions[i];
     ex.r = ex.maxR * (1 - ex.life / ex.maxLife);
+    // Deal damage to enemies within radius on first frame
+    if (ex.dmg && ex.life === ex.maxLife - 1) {
+      for (let ei = enemies.length - 1; ei >= 0; ei--) {
+        const e = enemies[ei];
+        const dx = (e.x+e.w/2) - ex.x, dy = (e.y+e.h/2) - ex.y;
+        if (Math.sqrt(dx*dx+dy*dy) < ex.maxR) {
+          e.hp -= ex.dmg;
+          e.burnFlash = 12;
+          if (e.hp <= 0) { player.ep += 5; enemies.splice(ei, 1); }
+        }
+      }
+    }
     ex.life--;
     if (ex.life <= 0) explosions.splice(i, 1);
   }
