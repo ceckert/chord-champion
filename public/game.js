@@ -93,7 +93,7 @@ for (let i = 0; i < 1200; i++) spawnMapNote();
 let bullets = [];
 let explosions = [];
 let lightningArcs = [];
-let equippedAbility = null;
+let equippedAbilities = []; // max 3
 let biomeTimer = 0;        // frames in current biome
 let lastBiome = 'forest';  // biome player was in last frame
 let bossActive = false;    // only one boss at a time
@@ -370,7 +370,13 @@ function uiPlay() {
 function openLevelUp() {
   gameState = 'paused';
   // Pick 3 random upgrades (not maxed)
-  const pool = ALL_UPGRADES.filter(u => (u.level + (player.bonusUpgrades[u.id]||0)) < u.max);
+  const ownedAbilities = ALL_UPGRADES.filter(u => u.id.startsWith('ab_') && (u.level+(player.bonusUpgrades[u.id]||0))>0).length;
+  const pool = ALL_UPGRADES.filter(u => {
+    const tot = u.level+(player.bonusUpgrades[u.id]||0);
+    if (tot >= u.max) return false;
+    if (u.id.startsWith('ab_') && ownedAbilities >= 3 && tot === 0) return false; // no new abilities if 3 owned
+    return true;
+  });
   const picks = [];
   const used = new Set();
   while (picks.length < Math.min(3, pool.length)) {
@@ -397,8 +403,8 @@ function openLevelUp() {
       if (u.id === 'speed') player.speed = 3 + total * 0.3;
       // Auto-equip ability if picked
       if (u.id.startsWith('ab_')) {
-        equippedAbility = u.id;
-        showNotif('🆓 ' + u.label + ' equipped free! (Lv' + total + ')', '#a855f7', 180);
+        if (!equippedAbilities.includes(u.id) && equippedAbilities.length < 3) equippedAbilities.push(u.id);
+        showNotif('🆓 ' + u.label + ' free! (Lv' + total + ')', '#a855f7', 180);
       } else {
         showNotif('🆓 ' + u.label + ' Lv' + total + '!', '#22c55e', 150);
       }
@@ -435,7 +441,7 @@ function uiUpgrades() {
       const maxed = u.level >= u.max;
       const canAfford = savedCoins >= cost && !maxed;
       const card = document.createElement('div');
-      const isEquipped = tab === 'ability' && equippedAbility === u.id;
+      const isEquipped = tab === 'ability' && equippedAbilities.includes(u.id);
       card.className = 'upg-card' + (maxed ? ' maxed' : canAfford ? ' can' : '') + (isEquipped ? ' maxed' : '');
       card.innerHTML =
         '<div class="upg-name">' + u.label + ' <span style="color:#a78bfa">[Lv ' + u.level + '/' + u.max + ']</span></div>' +
@@ -457,13 +463,18 @@ function uiUpgrades() {
         card.appendChild(btn);
       }
       // Ability tab: equip button
-      if (tab === 'ability' && u.level > 0) {
-        const equipped = equippedAbility === u.id;
+      if (tab === 'ability' && (u.level+(player.bonusUpgrades[u.id]||0)) > 0) {
+        const equipped = equippedAbilities.includes(u.id);
         const eq = document.createElement('button');
         eq.className = 'buy-btn'; eq.style.marginTop = '4px';
-        eq.style.background = equipped ? '#22c55e' : '#7c3aed';
-        eq.textContent = equipped ? '✅ EQUIPPED' : 'EQUIP';
-        eq.onclick = () => { equippedAbility = equipped ? null : u.id; uiUpgrades(); };
+        eq.style.background = equipped ? '#22c55e' : (equippedAbilities.length >= 3 ? '#374151' : '#7c3aed');
+        eq.disabled = !equipped && equippedAbilities.length >= 3;
+        eq.textContent = equipped ? '✅ EQUIPPED' : (equippedAbilities.length >= 3 ? '🔒 FULL (3/3)' : 'EQUIP');
+        eq.onclick = () => {
+          if (equipped) { equippedAbilities = equippedAbilities.filter(id => id !== u.id); }
+          else if (equippedAbilities.length < 3) { equippedAbilities.push(u.id); }
+          uiUpgrades();
+        };
         card.appendChild(eq);
       }
       pane.appendChild(card);
@@ -645,7 +656,7 @@ function update() {
     let hit = false;
     // Wall hit — check explosive
     if (getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE)) === 1) {
-      if (equippedAbility === 'ab_explode') { const lv=totalLevel('ab_explode'); triggerExplosion(b.x, b.y, 40+lv*10, 5); }
+      if (equippedAbilities.includes('ab_explode')) { const lv=totalLevel('ab_explode'); triggerExplosion(b.x, b.y, 40+lv*10, 5); }
       bullets.splice(i, 1); continue;
     }
     const dmgMult = 1 + totalLevel('dmg') * 0.2;
@@ -659,7 +670,8 @@ function update() {
         e.hp -= actualDmg;
 
         // Active ability effect (only one equipped at a time)
-        const ab = equippedAbility ? ALL_UPGRADES.find(u => u.id === equippedAbility) : null;
+        for (const abId of equippedAbilities) {
+        const ab = ALL_UPGRADES.find(u => u.id === abId);
         const abLv = ab ? totalLevel(ab.id) : 0;
         if (ab && abLv > 0) {
           if (ab.id === 'ab_fire') {
@@ -723,8 +735,7 @@ function update() {
             }
           }
         } // end ab check
-        // Show equipped ability in HUD as confirmation
-        if (!equippedAbility) {} // no equip
+        } // end equippedAbilities loop
 
         if (e.hp <= 0) {
           enemies.splice(j, 1);
@@ -879,7 +890,7 @@ function update() {
     // Player collision (psychic enemies don't attack player)
     if (e.psychic > 0) continue;
     if (player.invincible === 0 && rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)) {
-      player.hp -= (e.dmg || 10); player.invincible = 40;
+      const acReduct = 1 - totalLevel('ac') * 0.08; player.hp -= Math.round((e.dmg || 10) * acReduct); player.invincible = 40;
       if (e.type === 'boss_glacier') { player.frozen = 90; } // freeze player briefly
       if (player.hp <= 0) {
         player.hp = player.maxHp;
@@ -971,7 +982,12 @@ function applyUpgrade(u) {
   if (u.id === 'maxhp') { player.maxHp = 150 + totalLevel('maxhp') * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
   if (u.id === 'speed') player.speed = 3 + totalLevel('speed') * 0.3;
   if (u.id === 'range') { /* applied in bullet life calc */ }
-  if (u.id.startsWith('ab_')) { equippedAbility = u.id; showNotif(u.label + ' equipped + leveled up! (-' + cost + ' MP)', '#22c55e', 180); }
+  if (u.id.startsWith('ab_')) {
+    if (!equippedAbilities.includes(u.id)) {
+      if (equippedAbilities.length < 3) { equippedAbilities.push(u.id); }
+    }
+    showNotif(u.label + ' leveled up! (-' + cost + ' MP)', '#22c55e', 180);
+  }
   else showNotif(u.label + ' → Lv ' + u.level + '! (-' + cost + ' MP)', '#22c55e', 150);
   return true;
 }
