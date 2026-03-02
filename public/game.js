@@ -1275,18 +1275,43 @@ function drawPlayer(sx, sy) {
   ctx.fillStyle = '#f9c74f';
   ctx.fillRect(-16, -4, 7, 5); // left arm stub
 
-  // === GUN ARM (rotates from shoulder) ===
+  // === GUN ARM (rotates from shoulder, model depends on selectedGunId) ===
   ctx.save();
-  ctx.translate(9, -1); // shoulder pivot point
+  ctx.translate(9, -1);
   ctx.rotate(angle);
   // Upper arm
   ctx.fillStyle = '#f9c74f';
   ctx.fillRect(0, -3, 8, 5);
-  // Gun
-  ctx.fillStyle = '#4b5563';
-  ctx.fillRect(7, -4, 12, 7);
-  ctx.fillStyle = '#6b7280';
-  ctx.fillRect(17, -2, 5, 4);
+  // Gun model by type
+  const gid = selectedGunId || 'pistol';
+  if (gid === 'pistol') {
+    // Short, chunky pistol
+    ctx.fillStyle = '#374151'; ctx.fillRect(7, -3, 9, 6);   // body
+    ctx.fillStyle = '#1f2937'; ctx.fillRect(9, 3, 5, 4);    // grip
+    ctx.fillStyle = '#6b7280'; ctx.fillRect(14, -2, 4, 4);  // barrel
+    ctx.fillStyle = '#fbbf24'; ctx.fillRect(15, -3, 2, 2);  // sight
+  } else if (gid === 'rifle') {
+    // Long slim rifle with scope
+    ctx.fillStyle = '#292524'; ctx.fillRect(7, -2, 18, 5);  // long body
+    ctx.fillStyle = '#44403c'; ctx.fillRect(9, 3, 5, 3);    // grip
+    ctx.fillStyle = '#78716c'; ctx.fillRect(23, -1, 5, 3);  // muzzle
+    ctx.fillStyle = '#60a5fa'; ctx.fillRect(13, -5, 6, 3);  // scope body
+    ctx.fillStyle = '#bfdbfe'; ctx.fillRect(14, -5, 2, 2);  // scope lens
+  } else if (gid === 'shotgun') {
+    // Wide double barrel
+    ctx.fillStyle = '#78350f'; ctx.fillRect(7, -4, 14, 9);  // wooden stock
+    ctx.fillStyle = '#292524'; ctx.fillRect(9, -4, 14, 4);  // barrel 1
+    ctx.fillStyle = '#374151'; ctx.fillRect(9, 1, 14, 4);   // barrel 2
+    ctx.fillStyle = '#f97316'; ctx.fillRect(21, -4, 3, 9);  // muzzle guard
+    ctx.fillStyle = '#fed7aa'; ctx.fillRect(8, 4, 5, 3);    // pump
+  } else if (gid === 'machinegun') {
+    // Long boxy with big mag
+    ctx.fillStyle = '#1c1917'; ctx.fillRect(7, -4, 20, 8);  // receiver
+    ctx.fillStyle = '#292524'; ctx.fillRect(25, -3, 6, 6);  // barrel extension
+    ctx.fillStyle = '#44403c'; ctx.fillRect(9, 4, 6, 5);    // magazine box
+    ctx.fillStyle = '#a78bfa'; ctx.fillRect(7, -5, 4, 2);   // carry handle
+    ctx.fillStyle = '#6d28d9'; ctx.fillRect(8, -6, 2, 2);   // handle detail
+  }
   ctx.restore();
 
   // Eyes (fixed, no rotation)
