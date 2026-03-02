@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v6.3-debug';
+const VERSION = 'v6.4-debug';
 const TILE = 32;
 const MAP_W = 500, MAP_H = 500;
 
@@ -801,16 +801,23 @@ function update() {
     if (e.bleeding > 0) e.bleeding--;
     // Weaken timer
     if (e.weakened > 0) { e.weakened--; if (e.weakened <= 0) e.dmg = e.baseDmg || e.dmg; }
-    // Psychic — tick down, attack on contact
+    // Psychic — tick down, pulse AoE damage every 30 frames to nearby enemies
     if (e.psychic > 0) {
       e.psychic--;
-      for (let pi = enemies.length-1; pi >= 0; pi--) {
-        const oe = enemies[pi];
-        if (oe === e) continue;
-        if (rectOverlap(e.x,e.y,e.w,e.h,oe.x,oe.y,oe.w,oe.h)) {
-          oe.hp -= (e.psychicDmg || 12);
-          if (oe.hp <= 0) enemies.splice(pi, 1);
-          break;
+      if (e.psychic % 30 === 0) {
+        const pRadius = 100;
+        const ex2 = e.x + e.w/2, ey2 = e.y + e.h/2;
+        for (let pi = enemies.length-1; pi >= 0; pi--) {
+          const oe = enemies[pi];
+          if (oe === e || oe.psychic > 0) continue;
+          const dx = (oe.x+oe.w/2)-ex2, dy = (oe.y+oe.h/2)-ey2;
+          if (Math.sqrt(dx*dx+dy*dy) < pRadius) {
+            oe.hp -= (e.psychicDmg || 12);
+            oe.burnFlash = 10;
+            // Visual: mini purple explosion at oe
+            explosions.push({ x: oe.x+oe.w/2, y: oe.y+oe.h/2, r: 20, life: 15, color: '#a855f7' });
+            if (oe.hp <= 0) { player.ep += 5; enemies.splice(pi, 1); }
+          }
         }
       }
     }
