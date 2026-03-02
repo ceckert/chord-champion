@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v4.3-debug';
+const VERSION = 'v4.4-debug';
 const TILE = 32;
 const MAP_W = 160, MAP_H = 160;
 
@@ -970,7 +970,7 @@ function drawHUD() {
   ctx.fillText('HP: '+player.hp+'/'+player.maxHp, 16, 21);
   // EP bar
   ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(10, 36, 164, 16);
-  ctx.fillStyle='#a855f7'; ctx.fillRect(12, 38, Math.round(160*player.ep/player.epMax), 12);
+  ctx.fillStyle='#3b82f6'; ctx.fillRect(12, 38, Math.round(160*player.ep/player.epMax), 12);
   ctx.fillStyle='#ddd'; ctx.font='bold 10px monospace'; ctx.textBaseline='middle';
   ctx.fillText('Lv'+player.level+' EP: '+player.ep+'/'+player.epMax, 16, 44);
 
