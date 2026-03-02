@@ -802,6 +802,225 @@ function resolveMapCollision(obj) {
 
 let frame = 0;
 
+// ── Interior Map System ───────────────────────────────────────────────────────
+let interiorState = null;  // null = on world map; object = inside a structure
+let interiorCooldown = 0; // prevents re-entry immediately after exit
+
+const INTERIOR_THEMES = {
+  forest:    { floor:'#5c3317', floorAlt:'#4a2a10', wall:'#3b1f0a', wallDeco:'#8B4513', accent:'#f0c060', name:'Treehouse', exit:'🪜 Ladder', intro:'You climb into the treehouse...' },
+  tundra:    { floor:'#b0d4f0', floorAlt:'#8ab8e0', wall:'#4a7090', wallDeco:'#80c0e0', accent:'#aaddff', name:'Ice Cave', exit:'🕳️ Cave Exit', intro:'The ice walls hum with cold...' },
+  mushroom:  { floor:'#3a1a5a', floorAlt:'#2a0e40', wall:'#1a0a2e', wallDeco:'#a855f7', accent:'#e879f9', name:'Mushroom Den', exit:'🍄 Spore Lift', intro:'Glowing spores drift around you...' },
+  desert:    { floor:'#c2933a', floorAlt:'#a87820', wall:'#7a4a10', wallDeco:'#d4a050', accent:'#ffd700', name:'Pyramid Chamber', exit:'🏺 Hidden Door', intro:'Ancient carvings line the walls...' },
+  swamp:     { floor:'#2a4a1a', floorAlt:'#1a3010', wall:'#0f1e0a', wallDeco:'#4a8030', accent:'#88ff44', name:'Swamp Ruins', exit:'🌿 Vine Rope', intro:'Murky water drips from the ceiling...' },
+  crystal:   { floor:'#1a1a5a', floorAlt:'#0e0e40', wall:'#0a0a2e', wallDeco:'#6060ff', accent:'#88aaff', name:'Crystal Shrine', exit:'💎 Crystal Gate', intro:'The crystals sing a soft tone...' },
+  storm:     { floor:'#2a2a3a', floorAlt:'#1a1a28', wall:'#0a0a18', wallDeco:'#7070ff', accent:'#aaaaff', name:'Storm Tower', exit:'⚡ Bolt Door', intro:'Static crackles on your skin...' },
+  volcano:   { floor:'#3a1010', floorAlt:'#2a0808', wall:'#1a0404', wallDeco:'#ff4400', accent:'#ff8800', name:'Volcano Forge', exit:'🔥 Lava Bridge', intro:'Heat radiates from the stone...' },
+  shadow:    { floor:'#1a1a1a', floorAlt:'#111111', wall:'#050505', wallDeco:'#4a0050', accent:'#cc44ff', name:'Shadow Vault', exit:'👁️ Dark Portal', intro:'Shadows writhe at the edges...' },
+};
+
+function enterInterior(lm) {
+  if (interiorCooldown > 0) return;
+  const theme = INTERIOR_THEMES[lm.biome] || INTERIOR_THEMES.forest;
+  const iW = CW, iH = CH;
+  // Spawn 3-4 enemies in interior
+  const iEnemies = [];
+  for (let i = 0; i < 3 + Math.floor(Math.random()*2); i++) {
+    iEnemies.push({
+      x: 120 + Math.random()*(iW-240), y: 120 + Math.random()*(iH-320),
+      vx: (Math.random()-.5)*1.5, vy: (Math.random()-.5)*1.5,
+      hp: 30, maxHp: 30, w: 24, h: 24,
+      wobble: Math.random()*Math.PI*2
+    });
+  }
+  interiorState = {
+    theme, biome: lm.biome, lm,
+    px: iW/2, py: iH*0.65,
+    enemies: iEnemies,
+    chestX: iW*0.5, chestY: iH*0.22,
+    chestCollected: false,
+    exitX: iW*0.5, exitY: iH*0.82,
+    enterFrame: frame,
+    bullets: [],
+    shootCooldown: 0,
+  };
+  showNotif('📦 ' + theme.intro, '#fbbf24', 180);
+}
+
+function updateInterior() {
+  const s = interiorState;
+  if (!s) return;
+  s.shootCooldown--;
+  const spd = player.speed;
+  let nx = s.px, ny = s.py;
+  if (keys['a']||keys['arrowleft'])  nx -= spd;
+  if (keys['d']||keys['arrowright']) nx += spd;
+  if (keys['w']||keys['arrowup'])    ny -= spd;
+  if (keys['s']||keys['arrowdown'])  ny += spd;
+  const margin = 30;
+  s.px = Math.max(margin, Math.min(CW-margin, nx));
+  s.py = Math.max(80+margin, Math.min(CH-margin, ny));
+
+  // Shoot
+  if (mouseDown && s.shootCooldown <= 0) {
+    const gun = getSelectedGun();
+    s.shootCooldown = gun.rate;
+    const dx = mouseX - s.px, dy = mouseY - s.py;
+    const len = Math.sqrt(dx*dx+dy*dy)||1;
+    s.bullets.push({ x:s.px, y:s.py, vx:dx/len*12, vy:dy/len*12, life:60, dmg:gun.dmg });
+  }
+  s.bullets.forEach((b,i) => {
+    b.x+=b.vx; b.y+=b.vy; b.life--;
+    if (b.life<=0||b.x<0||b.x>CW||b.y<80||b.y>CH) { s.bullets.splice(i,1); return; }
+    s.enemies.forEach((e,ei) => {
+      if (Math.abs(b.x-e.x)<e.w&&Math.abs(b.y-e.y)<e.h) {
+        e.hp -= b.dmg; s.bullets.splice(i,1);
+        if (e.hp<=0) { s.enemies.splice(ei,1); showNotif('+5 MP!','#22c55e',60); savedCoins+=5; }
+      }
+    });
+  });
+  s.enemies.forEach(e => {
+    e.wobble += 0.05;
+    const dx2=s.px-e.x, dy2=s.py-e.y, dist=Math.sqrt(dx2*dx2+dy2*dy2)||1;
+    if (dist < 200) { e.x+=dx2/dist*0.8; e.y+=dy2/dist*0.8; }
+    else { e.x+=e.vx+Math.sin(e.wobble)*0.5; e.y+=e.vy+Math.cos(e.wobble)*0.5; }
+    e.x=Math.max(60,Math.min(CW-60,e.x)); e.y=Math.max(110,Math.min(CH-60,e.y));
+    if (Math.abs(s.px-e.x)<18&&Math.abs(s.py-e.y)<18&&frame%40===0) {
+      player.hp-=Math.round(5*getDiff().enemyDmg); player.invincible=30;
+    }
+  });
+  // Chest collect
+  const cd = Math.sqrt((s.px-s.chestX)**2+(s.py-s.chestY)**2);
+  if (!s.chestCollected && cd < 40 && mouseDown) {
+    s.chestCollected = true; savedCoins += 50;
+    showNotif('📦 +50 MP from chest!','#fbbf24',180);
+  }
+  // Exit ladder
+  const ed = Math.sqrt((s.px-s.exitX)**2+(s.py-s.exitY)**2);
+  if (ed < 36) {
+    interiorState = null; interiorCooldown = 120;
+    showNotif('You leave the ' + s.theme.name + '...','#a78bfa',120);
+  }
+}
+
+function drawInterior() {
+  const s = interiorState;
+  const t = s.theme;
+  // Floor tiles
+  const FTILE = 48;
+  for (let ty=0; ty*FTILE<CH; ty++) {
+    for (let tx=0; tx*FTILE<CW; tx++) {
+      ctx.fillStyle = (tx+ty)%2===0 ? t.floor : t.floorAlt;
+      ctx.fillRect(tx*FTILE, ty*FTILE, FTILE, FTILE);
+    }
+  }
+  // Wall (top band)
+  ctx.fillStyle = t.wall;
+  ctx.fillRect(0, 0, CW, 80);
+  // Wall border stripes
+  ctx.fillStyle = t.wallDeco;
+  for (let i=0; i<20; i++) { ctx.fillRect(i*60, 0, 4, 80); }
+  // Wall accent line
+  ctx.fillStyle = t.accent; ctx.fillRect(0, 77, CW, 4);
+  // Left/right wall strips
+  ctx.fillStyle = t.wall;
+  ctx.fillRect(0,80,20,CH); ctx.fillRect(CW-20,80,20,CH);
+  ctx.fillStyle = t.accent;
+  ctx.fillRect(17,80,3,CH); ctx.fillRect(CW-20,80,3,CH);
+
+  // Torches on wall
+  [CW*0.2, CW*0.5, CW*0.8].forEach(tx2 => {
+    const flicker = 0.7 + Math.sin(frame*0.15+tx2)*0.3;
+    ctx.fillStyle='#5a3317'; ctx.fillRect(tx2-4,60,8,20);
+    ctx.fillStyle='#ff8800'; ctx.globalAlpha=flicker;
+    ctx.beginPath(); ctx.arc(tx2,58,8,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ffcc44';
+    ctx.beginPath(); ctx.arc(tx2,56,4,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+    // Light glow
+    const grad = ctx.createRadialGradient(tx2,58,0,tx2,58,80);
+    grad.addColorStop(0,'rgba(255,160,0,0.18)'); grad.addColorStop(1,'rgba(255,160,0,0)');
+    ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(tx2,58,80,0,Math.PI*2); ctx.fill();
+  });
+
+  // Chest
+  if (!s.chestCollected) {
+    const cx2=s.chestX, cy2=s.chestY;
+    const bob = Math.sin(frame*0.07)*3;
+    ctx.fillStyle='#7a4a10'; ctx.fillRect(cx2-24,cy2-16+bob,48,32);
+    ctx.fillStyle='#c0820a'; ctx.fillRect(cx2-24,cy2-20+bob,48,10);
+    ctx.fillStyle='#ffd700'; ctx.fillRect(cx2-4,cy2-14+bob,8,8);
+    // Sparkle
+    const sp = Math.sin(frame*0.1)*0.5+0.5;
+    ctx.fillStyle='rgba(255,220,50,'+sp+')';
+    [[-20,-26],[0,-30],[20,-26]].forEach(([ox,oy])=>{
+      ctx.beginPath(); ctx.arc(cx2+ox,cy2+oy+bob,3,0,Math.PI*2); ctx.fill();
+    });
+    ctx.fillStyle='#fbbf24'; ctx.font='bold 11px monospace'; ctx.textAlign='center';
+    ctx.fillText('LEFT CLICK',cx2,cy2-34+bob);
+    ctx.fillStyle='#ffd700'; ctx.fillText('+50 MP 📦',cx2,cy2-22+bob);
+  } else {
+    ctx.fillStyle='#4a4a4a'; ctx.globalAlpha=0.5;
+    ctx.fillRect(s.chestX-24,s.chestY-16,48,32);
+    ctx.globalAlpha=1;
+  }
+
+  // Exit ladder
+  const ex=s.exitX, ey=s.exitY;
+  ctx.fillStyle='#8B4513'; ctx.fillRect(ex-12,ey-36,8,48); ctx.fillRect(ex+4,ey-36,8,48);
+  for (let r=0;r<5;r++) { ctx.fillStyle='#cd853f'; ctx.fillRect(ex-12,ey-28+r*10,24,4); }
+  const near = Math.sqrt((s.px-ex)**2+(s.py-ey)**2) < 60;
+  ctx.fillStyle = near ? '#fbbf24' : '#a78bfa';
+  ctx.font='bold 11px monospace'; ctx.textAlign='center';
+  ctx.fillText(t.exit, ex, ey+24);
+  if (near) ctx.fillText('Walk here to EXIT', ex, ey+38);
+
+  // Enemies
+  s.enemies.forEach(e => {
+    ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath();
+    ctx.ellipse(e.x+2,e.y+e.h,e.w*0.4,5,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=t.accent; ctx.fillRect(e.x-e.w/2,e.y-e.h/2,e.w,e.h);
+    ctx.fillStyle=t.wall;
+    ctx.fillRect(e.x-e.w/2+4,e.y-e.h/2+6,5,5);
+    ctx.fillRect(e.x+e.w/2-9,e.y-e.h/2+6,5,5);
+    // HP bar
+    ctx.fillStyle='#ff4444'; ctx.fillRect(e.x-16,e.y-e.h/2-8,32,4);
+    ctx.fillStyle='#22c55e'; ctx.fillRect(e.x-16,e.y-e.h/2-8,Math.round(32*e.hp/e.maxHp),4);
+  });
+
+  // Bullets
+  s.bullets.forEach(b => {
+    const gun = getSelectedGun();
+    ctx.fillStyle=gun.color||'#fbbf24'; ctx.fillRect(b.x-3,b.y-3,6,6);
+  });
+
+  // Player
+  const sx = s.px, sy2 = s.py;
+  ctx.save(); ctx.translate(sx, sy2);
+  const ang = Math.atan2(mouseY-sy2, mouseX-sx);
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(2,18,11,5,0,0,Math.PI*2); ctx.fill();
+  drawCharBody(ctx, selectedCharacter, frame);
+  ctx.save(); ctx.translate(9,-1); ctx.rotate(ang);
+  ctx.fillStyle='#f9c74f'; ctx.fillRect(0,-3,8,5);
+  const gid=selectedGunId||'pistol';
+  if(gid==='pistol'){ctx.fillStyle='#374151';ctx.fillRect(7,-3,9,6);ctx.fillStyle='#fbbf24';ctx.fillRect(15,-3,2,2);}
+  else if(gid==='rifle'){ctx.fillStyle='#292524';ctx.fillRect(7,-2,18,5);ctx.fillStyle='#60a5fa';ctx.fillRect(13,-5,6,3);}
+  else if(gid==='shotgun'){ctx.fillStyle='#78350f';ctx.fillRect(7,-4,14,9);ctx.fillStyle='#f97316';ctx.fillRect(21,-4,3,9);}
+  else{ctx.fillStyle='#1c1917';ctx.fillRect(7,-4,20,8);ctx.fillStyle='#44403c';ctx.fillRect(9,4,6,5);}
+  ctx.restore(); ctx.restore();
+
+  // Vignette
+  const vig = ctx.createRadialGradient(CW/2,CH/2,CH*0.3,CW/2,CH/2,CH*0.8);
+  vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(0,0,0,0.6)');
+  ctx.fillStyle=vig; ctx.fillRect(0,0,CW,CH);
+
+  // Header bar
+  ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,CW,36);
+  ctx.fillStyle=t.accent; ctx.font='bold 14px monospace'; ctx.textAlign='center';
+  ctx.fillText('🏠 ' + t.name + (s.enemies.length===0?' — All enemies defeated!':'  (' + s.enemies.length + ' enemies)'), CW/2, 22);
+  ctx.textAlign='left';
+}
+
+
 // BFS pathfinding on tile grid
 function bfsPath(startX, startY, goalX, goalY) {
   const sx = Math.floor(startX/TILE), sy = Math.floor(startY/TILE);
@@ -848,6 +1067,15 @@ function bfsPath(startX, startY, goalX, goalY) {
 function update() {
   frame++;
   if (gameState !== 'playing') return;
+  if (interiorCooldown > 0) interiorCooldown--;
+  if (interiorState) { updateInterior(); return; }
+  // ── Check if player walks into a landmark ──────────────────────────────────
+  if (interiorCooldown === 0) {
+    for (const lm of LANDMARK_INSTANCES) {
+      const dist = Math.sqrt((player.x-lm.px)**2 + (player.y-lm.py)**2);
+      if (dist < 55 * lm.scale) { enterInterior(lm); break; }
+    }
+  }
 
   // ── Biome timer & boss spawn ──────────────────────────────────────
   const curBiome = getBiomeAtPixel(player.x, player.y);
@@ -1985,10 +2213,11 @@ function drawHUD() {
 
 
 function render() {
-  // Always fill canvas so semi-transparent overlay has something to show over
   ctx.fillStyle = '#1a0a2e';
   ctx.fillRect(0, 0, CW, CH);
   if (gameState !== 'playing' && gameState !== 'paused') return;
+  // Interior map takes over rendering
+  if (interiorState && gameState === 'playing') { drawInterior(); return; }
   // Overwrite with game background when playing
   ctx.fillStyle = '#1a2e1a';
   ctx.fillRect(0, 0, CW, CH);
