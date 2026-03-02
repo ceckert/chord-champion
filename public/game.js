@@ -60,10 +60,60 @@ const GUNS = [
     tier:{ dmg:'Low', rate:'Fast', range:'Medium' } },
 ];
 let selectedGunId = 'pistol';
+let charPreviewAngle = 0;
+let _charShowcaseRAF = null;
+
+function runCharShowcase() {
+  if (_charShowcaseRAF) cancelAnimationFrame(_charShowcaseRAF);
+  function loop() {
+    const cv = document.getElementById('char-showcase');
+    if (!cv || document.getElementById('scr-charselect').style.display === 'none') {
+      _charShowcaseRAF = null; return;
+    }
+    const cx = cv.getContext('2d');
+    cx.clearRect(0, 0, 140, 140);
+    // Floor circle
+    cx.fillStyle = 'rgba(124,58,237,0.15)';
+    cx.beginPath(); cx.ellipse(70, 100, 38, 14, 0, 0, Math.PI*2); cx.fill();
+    cx.save();
+    cx.translate(70, 80);
+    cx.scale(2.5, 2.5); // scale up for showcase
+    drawCharBody(cx, selectedCharacter, 0);
+    // Gun arm rotates with charPreviewAngle
+    cx.save();
+    cx.translate(9, -1);
+    cx.rotate(charPreviewAngle);
+    cx.fillStyle = '#f9c74f'; cx.fillRect(0, -3, 8, 5);
+    const gid = selectedGunId || 'pistol';
+    if (gid === 'pistol') {
+      cx.fillStyle='#374151'; cx.fillRect(7,-3,9,6);
+      cx.fillStyle='#6b7280'; cx.fillRect(14,-2,4,4);
+      cx.fillStyle='#fbbf24'; cx.fillRect(15,-3,2,2);
+    } else if (gid === 'rifle') {
+      cx.fillStyle='#292524'; cx.fillRect(7,-2,18,5);
+      cx.fillStyle='#60a5fa'; cx.fillRect(13,-5,6,3);
+    } else if (gid === 'shotgun') {
+      cx.fillStyle='#78350f'; cx.fillRect(7,-4,14,9);
+      cx.fillStyle='#f97316'; cx.fillRect(21,-4,3,9);
+    } else {
+      cx.fillStyle='#1c1917'; cx.fillRect(7,-4,20,8);
+      cx.fillStyle='#44403c'; cx.fillRect(9,4,6,5);
+    }
+    cx.restore();
+    cx.restore();
+    // Handle A/D rotation
+    if (keys['a'] || keys['arrowleft'])  charPreviewAngle -= 0.06;
+    if (keys['d'] || keys['arrowright']) charPreviewAngle += 0.06;
+    _charShowcaseRAF = requestAnimationFrame(loop);
+  }
+  _charShowcaseRAF = requestAnimationFrame(loop);
+}
+
 let selectedCharacter = 'jimmy';
 
 function selectChar(name) {
   selectedCharacter = name;
+  const nm = document.getElementById('char-showcase-name'); if(nm) nm.textContent = name.charAt(0).toUpperCase()+name.slice(1);
   ['jimmy','hanna','bob','max'].forEach(n => {
     const card = document.getElementById('cs-' + n);
     const btn = document.getElementById('btn-' + n);
