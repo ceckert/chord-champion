@@ -881,11 +881,10 @@ function update() {
       player.hp -= (e.dmg || 10); player.invincible = 40;
       if (e.type === 'boss_glacier') { player.frozen = 90; } // freeze player briefly
       if (player.hp <= 0) {
-        const lost = Math.floor(player.coins * 0.3);
-        player.coins -= lost; player.hp = player.maxHp;
+        player.hp = player.maxHp;
         player.x = MAP_W/2*TILE; player.y = MAP_H/2*TILE;
         player.notes = []; enemies = [];
-        showNotif('You died! Lost ' + lost + ' MP', '#ff6b6b', 150);
+        showNotif('You died! Respawned at center.', '#ff6b6b', 150);
       }
     }
   }
@@ -915,17 +914,7 @@ function update() {
   if (mouseDown && gameState === 'playing') shoot(mouseX, mouseY);
 
   // Checkpoint detection
-  if (!checkpoint.reached) {
-    if (Math.abs((player.x + player.w/2) - (checkpoint.x + checkpoint.w/2)) < checkpoint.w &&
-        Math.abs((player.y + player.h/2) - (checkpoint.y + checkpoint.h/2)) < checkpoint.h) {
-      checkpoint.reached = true;
-      savedCoins += player.coins;
-      const banked = player.coins;
-      player.coins = 0;
-      checkpoint.reached = true;
-      showNotif('Checkpoint! ' + banked + ' MP banked.', '#22c55e', 180);
-    }
-  }
+
 }
 
 function drawPixelRect(x, y, w, h, color) {
@@ -1680,42 +1669,6 @@ function drawHUD() {
 }
 
 
-function drawCheckpointWorld() {
-  const s = worldToScreen(checkpoint.x, checkpoint.y);
-  if (s.x > canvas.width+60 || s.x < -60 || s.y > canvas.height+60 || s.y < -60) return;
-  const col = checkpoint.reached ? '#22c55e' : '#fbbf24';
-  ctx.fillStyle = '#6b7280';
-  ctx.fillRect(Math.round(s.x + 22), Math.round(s.y), 4, checkpoint.h);
-  ctx.fillStyle = col;
-  ctx.fillRect(Math.round(s.x + 26), Math.round(s.y), 18, 13);
-  ctx.save();
-  ctx.shadowColor = col; ctx.shadowBlur = 16;
-  ctx.strokeStyle = col; ctx.lineWidth = 2;
-  ctx.strokeRect(Math.round(s.x), Math.round(s.y), checkpoint.w, checkpoint.h);
-  ctx.restore();
-  ctx.fillStyle = col; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
-  ctx.fillText(checkpoint.reached ? 'SAVED' : 'SAVE', Math.round(s.x + checkpoint.w/2), Math.round(s.y + checkpoint.h/2 + 4));
-}
-
-function drawDirectionArrowWorld() {
-  if (checkpoint.reached) return;
-  const cx2 = checkpoint.x + checkpoint.w/2, cy2 = checkpoint.y + checkpoint.h/2;
-  const sx = cx2 - camera.x, sy = cy2 - camera.y;
-  if (sx > 20 && sx < canvas.width-20 && sy > 20 && sy < canvas.height-20) return;
-  const dx = cx2 - (player.x + player.w/2), dy = cy2 - (player.y + player.h/2);
-  const ang = Math.atan2(dy, dx);
-  const margin = 50;
-  const ax = canvas.width/2 + Math.cos(ang) * (canvas.width/2 - margin);
-  const ay = canvas.height/2 + Math.sin(ang) * (canvas.height/2 - margin);
-  ctx.save();
-  ctx.translate(ax, ay); ctx.rotate(ang);
-  ctx.fillStyle = '#fbbf24'; ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = 10;
-  ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(-10,-8); ctx.lineTo(-10,8); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center'; ctx.shadowBlur = 0;
-  ctx.fillText('SAVE', 0, 22);
-  ctx.restore();
-}
-
 function render() {
   // Always fill canvas so semi-transparent overlay has something to show over
   ctx.fillStyle = '#1a0a2e';
@@ -1725,7 +1678,6 @@ function render() {
   ctx.fillStyle = '#1a2e1a';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   drawMap();
-  drawCheckpointWorld();
   drawLandmarks();
   for (const n of mapNotes) drawMapNote(n);
   for (const b of bullets) drawBullet(b);
@@ -1815,7 +1767,6 @@ function render() {
   }
   const ps = worldToScreen(player.x, player.y);
   drawPlayer(ps.x, ps.y);
-  drawDirectionArrowWorld();
   drawHUD();
 
 
