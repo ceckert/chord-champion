@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v4.5-debug';
+const VERSION = 'v4.6-debug';
 const TILE = 32;
 const MAP_W = 160, MAP_H = 160;
 
@@ -204,30 +204,40 @@ function spawnEnemy() {
   else { ex = TILE; ey = (1+Math.floor(Math.random()*(MAP_H-2)))*TILE; }
   const biome = getBiomeAtPixel(player.x, player.y);
   const r = Math.random();
+  // ── Difficulty multipliers by biome (further = harder) ──────────
+  const BIOME_MULT = { forest:1.0, swamp:1.35, desert:1.5, tundra:1.9, volcano:2.0, void:2.6 };
+  const m = BIOME_MULT[biome] || 1.0;
   let type, w, h, hp, speed, dmg;
-  if (biome === 'swamp') {
-    type = r < 0.6 ? 'slimeling' : 'crawler';
-    if (type === 'slimeling') { w=36;h=24;hp=80;speed=0.6+r*0.3;dmg=12; }
-    else { w=28;h=20;hp=50;speed=0.7;dmg=15; }
+
+  // ── Forest: Crawler (slow, high dmg) | Runner (fast, low dmg) ──
+  if (biome === 'forest') {
+    if (r < 0.55) { type='crawler'; w=28;h=20;hp=Math.round(50*m);speed=0.8+r*0.4;dmg=Math.round(15*m); }
+    else          { type='runner';  w=18;h=38;hp=Math.round(25*m);speed=2.2+r*0.8;dmg=Math.round(6*m); }
+
+  // ── Swamp: Slimeling (fat, toxic) | Bogcrawler (armored, slow) ─
+  } else if (biome === 'swamp') {
+    if (r < 0.55) { type='slimeling';  w=36;h=24;hp=Math.round(80*m); speed=0.6+r*0.2;dmg=Math.round(12*m); }
+    else          { type='bogcrawler'; w=32;h=28;hp=Math.round(110*m);speed=0.5+r*0.2;dmg=Math.round(18*m); }
+
+  // ── Desert: Scorpling (fast, pincer) | Dunestalker (ambusher) ──
   } else if (biome === 'desert') {
-    type = r < 0.65 ? 'scorpling' : 'runner';
-    if (type === 'scorpling') { w=24;h=20;hp=30;speed=2.5+r*0.8;dmg=8; }
-    else { w=18;h=38;hp=25;speed=2.4;dmg=6; }
+    if (r < 0.55) { type='scorpling';   w=24;h=20;hp=Math.round(35*m); speed=2.5+r*0.8;dmg=Math.round(9*m); }
+    else          { type='dunestalker'; w=22;h=26;hp=Math.round(45*m); speed=3.0+r*0.6;dmg=Math.round(7*m); }
+
+  // ── Tundra: Yeti (tank, freeze) | Frost Imp (swarm, fast) ──────
   } else if (biome === 'tundra') {
-    type = r < 0.5 ? 'yeti' : 'crawler';
-    if (type === 'yeti') { w=40;h=44;hp=140;speed=0.7+r*0.3;dmg=22; }
-    else { w=28;h=20;hp=60;speed=0.8;dmg=15; }
+    if (r < 0.45) { type='yeti';      w=40;h=44;hp=Math.round(140*m);speed=0.7+r*0.3;dmg=Math.round(22*m); }
+    else          { type='frostimp';  w=18;h=22;hp=Math.round(40*m); speed=2.8+r*0.5;dmg=Math.round(10*m); }
+
+  // ── Volcano: Ember (fast, fire) | Magma Crab (armored, slow) ───
   } else if (biome === 'volcano') {
-    type = r < 0.6 ? 'ember' : 'runner';
-    if (type === 'ember') { w=20;h=28;hp=35;speed=2.8+r*0.7;dmg=10; }
-    else { w=18;h=38;hp=25;speed=2.5;dmg=7; }
-  } else if (biome === 'void') {
-    type = 'wraith';
-    w=26;h=32;hp=60;speed=1.8+r*0.8;dmg=18;
-  } else { // forest
-    type = r < 0.55 ? 'crawler' : 'runner';
-    if (type === 'crawler') { w=28;h=20;hp=50;speed=0.8+r*0.4;dmg=15; }
-    else { w=18;h=38;hp=25;speed=2.2+r*0.8;dmg=6; }
+    if (r < 0.55) { type='ember';     w=20;h=28;hp=Math.round(40*m); speed=2.8+r*0.7;dmg=Math.round(11*m); }
+    else          { type='magmacrab'; w=36;h=28;hp=Math.round(120*m);speed=0.6+r*0.2;dmg=Math.round(20*m); }
+
+  // ── Void: Wraith (phasing) | Void Shade (teleporting) ──────────
+  } else {
+    if (r < 0.5) { type='wraith';    w=26;h=32;hp=Math.round(60*m); speed=1.8+r*0.8;dmg=Math.round(18*m); }
+    else         { type='voidshade'; w=20;h=28;hp=Math.round(35*m); speed=3.5+r*0.5;dmg=Math.round(22*m); }
   }
   enemies.push({ type, x:ex, y:ey, w, h, hp, maxHp:hp, speed, baseDmg:dmg, dmg, damageCooldown:0 });
 }
@@ -592,7 +602,7 @@ function update() {
         if (e.hp <= 0) {
           enemies.splice(j, 1);
           if (e.isBoss) { bossActive = false; showNotif('🏆 Boss defeated! +500 coins!', '#fbbf24', 240); savedCoins += 500; }
-          const epGain = {crawler:10,runner:8,slimeling:14,scorpling:10,yeti:25,ember:12,wraith:18,boss_treant:200,boss_bogqueen:180,boss_sandking:190,boss_glacier:220,boss_drake:175,boss_voidlord:200}[e.type]||10;
+          const epGain = {crawler:10,runner:8,slimeling:14,bogcrawler:18,scorpling:12,dunestalker:14,yeti:28,frostimp:12,ember:14,magmacrab:22,wraith:20,voidshade:20,boss_treant:200,boss_bogqueen:180,boss_sandking:190,boss_glacier:220,boss_drake:175,boss_voidlord:200}[e.type]||10;
           player.ep += epGain;
           if (player.ep >= player.epMax) {
             player.ep = 0;
@@ -723,6 +733,14 @@ function update() {
       }
     }
 
+    // Void Shade teleports near player every 3s
+    if (e.type === 'voidshade' && frame % 180 === Math.floor(e.x) % 180) {
+      const ta = Math.random()*Math.PI*2;
+      const td = 80 + Math.random()*60;
+      e.x = Math.min((MAP_W-2)*TILE, Math.max(TILE, player.x + Math.cos(ta)*td));
+      e.y = Math.min((MAP_H-2)*TILE, Math.max(TILE, player.y + Math.sin(ta)*td));
+      e.path = null;
+    }
     // Player collision (psychic enemies don't attack player)
     if (e.psychic > 0) continue;
     if (player.invincible === 0 && rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)) {
@@ -1049,6 +1067,60 @@ function drawEnemyByType(e, x, y) {
     ctx.fillStyle='#000'; ctx.fillRect(Math.round(x+7),Math.round(y+3),2,2); ctx.fillRect(Math.round(x+13),Math.round(y+3),2,2);
     const legSwing=Math.sin(frame*0.25+e.x)*3;
     drawPixelRect(x+4,y+e.h-8,5,8+legSwing,'#a00020'); drawPixelRect(x+e.w-9,y+e.h-8,5,8-legSwing,'#a00020');
+  } else if (e.type === 'bogcrawler') {
+    // Swamp armored snapper — low, wide, dark
+    drawPixelRect(x+2,y+8,e.w-4,e.h-8,'#1a3a10'); // shell
+    drawPixelRect(x+4,y+2,e.w-8,10,'#2a5018'); // head
+    ctx.fillStyle='#0a2008'; ctx.fillRect(Math.round(x+4),Math.round(y+2),e.w-8,4); // shell ridges
+    ctx.fillRect(Math.round(x+4),Math.round(y+9),e.w-8,3);
+    ctx.fillStyle='#88ff44'; ctx.fillRect(Math.round(x+6),Math.round(y+3),5,5); ctx.fillRect(Math.round(x+e.w-11),Math.round(y+3),5,5); // eyes
+    ctx.fillStyle='#000'; ctx.fillRect(Math.round(x+8),Math.round(y+5),3,3); ctx.fillRect(Math.round(x+e.w-9),Math.round(y+5),3,3);
+    // Muddy legs
+    const ml=Math.sin(frame*0.12+e.x)*3;
+    for(let li=0;li<3;li++){ctx.fillStyle='#1a3a10';ctx.fillRect(Math.round(x+2+li*10),Math.round(y+e.h-6+ml),5,8);ctx.fillRect(Math.round(x+2+li*10),Math.round(y+e.h-6-ml),5,8);}
+  } else if (e.type === 'dunestalker') {
+    // Desert ambusher — lean, sandy, low profile
+    drawPixelRect(x+2,y+8,e.w-4,e.h-10,'#b88820'); // body
+    drawPixelRect(x+4,y+2,e.w-8,10,'#d4a030'); // head
+    // Hood/shadow over eyes
+    ctx.fillStyle='#805010'; ctx.fillRect(Math.round(x+4),Math.round(y+2),e.w-8,5);
+    ctx.fillStyle='#ff4400'; ctx.fillRect(Math.round(x+6),Math.round(y+5),4,4); ctx.fillRect(Math.round(x+e.w-10),Math.round(y+5),4,4); // glowing eyes
+    // Blade arms
+    ctx.fillStyle='#c0c0c0'; ctx.fillRect(Math.round(x-6),Math.round(y+6),8,3); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+6),8,3);
+    const ds=Math.sin(frame*0.35+e.x)*4;
+    drawPixelRect(x+4,y+e.h-6+ds,5,7,'#b88820'); drawPixelRect(x+e.w-9,y+e.h-6-ds,5,7,'#b88820');
+  } else if (e.type === 'frostimp') {
+    // Tundra swarm unit — small, spiky, fast
+    const fi=Math.sin(frame*0.25+e.y)*2;
+    drawPixelRect(x+2,y+6+fi,e.w-4,e.h-6,'#4488bb'); // body
+    drawPixelRect(x+4,y+fi,e.w-8,8,'#66aacc'); // head
+    // Ice spikes on back
+    ctx.fillStyle='#aaddff'; ctx.fillRect(Math.round(x+4),Math.round(y-4+fi),3,6); ctx.fillRect(Math.round(x+9),Math.round(y-6+fi),3,8); ctx.fillRect(Math.round(x+14),Math.round(y-4+fi),3,6);
+    ctx.fillStyle='#fff'; ctx.fillRect(Math.round(x+5),Math.round(y+1+fi),3,3); ctx.fillRect(Math.round(x+e.w-8),Math.round(y+1+fi),3,3); // eyes
+    const fa=Math.sin(frame*0.3+e.y)*4;
+    drawPixelRect(x-3,y+8+fa,5,4,'#4488bb'); drawPixelRect(x+e.w-2,y+8-fa,5,4,'#4488bb');
+  } else if (e.type === 'magmacrab') {
+    // Volcano armored crab — wide, red-orange, slow
+    ctx.fillStyle='#4a0800'; ctx.fillRect(Math.round(x),Math.round(y+10),e.w,e.h-10); // shell
+    ctx.fillStyle='#8b1800'; ctx.fillRect(Math.round(x+4),Math.round(y+2),e.w-8,12); // head
+    // Lava cracks
+    ctx.fillStyle='#ff4400'; ctx.fillRect(Math.round(x+6),Math.round(y+12),3,10); ctx.fillRect(Math.round(x+16),Math.round(y+15),3,8); ctx.fillRect(Math.round(x+26),Math.round(y+11),3,12);
+    ctx.fillStyle='#ffaa00'; ctx.fillRect(Math.round(x+8),Math.round(y+4),5,5); ctx.fillRect(Math.round(x+e.w-13),Math.round(y+4),5,5); // eyes
+    // Heavy claws
+    ctx.fillStyle='#3a0600'; ctx.fillRect(Math.round(x-10),Math.round(y+6),12,10); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+6),12,10);
+    const mc=Math.sin(frame*0.08+e.x)*2;
+    for(let ci=0;ci<3;ci++){ctx.fillStyle='#4a0800';ctx.fillRect(Math.round(x+4+ci*10),Math.round(y+e.h-4+mc),6,8);ctx.fillRect(Math.round(x+4+ci*10),Math.round(y+e.h-4-mc),6,8);}
+  } else if (e.type === 'voidshade') {
+    // Void teleporter — thin, dark, fast
+    const vs=0.4+0.4*Math.sin(frame*0.2+e.x);
+    ctx.save(); ctx.globalAlpha=vs;
+    drawPixelRect(x+4,y+10,e.w-8,e.h-10,'#0a0020');
+    drawPixelRect(x+5,y+2,e.w-10,10,'#180040');
+    ctx.globalAlpha=1; ctx.fillStyle='#ff00aa';
+    ctx.fillRect(Math.round(x+6),Math.round(y+4),4,4); ctx.fillRect(Math.round(x+e.w-10),Math.round(y+4),4,4);
+    ctx.shadowColor='#ff00aa'; ctx.shadowBlur=6;
+    ctx.fillRect(Math.round(x+6),Math.round(y+4),4,4); ctx.fillRect(Math.round(x+e.w-10),Math.round(y+4),4,4);
+    ctx.shadowBlur=0; ctx.restore();
   } else {
     // crawler (default)
     const crawl=Math.sin(frame*0.18+e.y)*2;
@@ -1168,7 +1240,7 @@ function drawEnemy(e) {
   const {x, y} = s;
   if (e.isBoss) { drawBoss(e, x, y); } else { drawEnemyByType(e, x, y); }
   // Health bar
-  const hpColor = {runner:'#e74c3c',crawler:'#2ecc71',slimeling:'#22cc22',scorpling:'#d4b020',yeti:'#88ccff',ember:'#ff6600',wraith:'#cc44ff'}[e.type]||'#fff';
+  const hpColor = {runner:'#e74c3c',crawler:'#2ecc71',slimeling:'#22cc22',bogcrawler:'#1a5010',scorpling:'#d4b020',dunestalker:'#c8902a',yeti:'#88ccff',frostimp:'#66aadd',ember:'#ff6600',magmacrab:'#cc3300',wraith:'#cc44ff',voidshade:'#ff00aa'}[e.type]||'#fff';
   if (e.isBoss) {
     drawPixelRect(x, y-14, e.w, 8, '#111');
     drawPixelRect(x, y-14, Math.round(e.w * e.hp / e.maxHp), 8, e.phase===2?'#ff2200':'#cc0044');
