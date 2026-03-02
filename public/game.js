@@ -1321,7 +1321,7 @@ function update() {
             if (player.level < 99) {
               player.level++;
               player.epMax = Math.floor(100 * Math.pow(1.18, player.level - 1));
-              player.hp = Math.min(player.maxHp, player.hp + 10);
+              player.hp = Math.min(player.maxHp, player.hp + Math.round(player.maxHp * 0.2));
               openLevelUp();
             }
           }
