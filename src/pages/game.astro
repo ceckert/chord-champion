@@ -26,6 +26,13 @@
     }
     #pause-overlay[hidden] { display: none; }
     .panel { color: #f9fafb;
+    .tabs { display: flex; gap: 0; width: 100%; margin-bottom: 14px; border-radius: 6px; overflow: hidden; border: 1.5px solid #4b2d8a; }
+    .tab-btn { flex: 1; padding: 10px 0; background: #1a0a2e; border: none; color: #a78bfa; font-family: monospace; font-size: 14px; font-weight: bold; cursor: pointer; border-right: 1px solid #4b2d8a; }
+    .tab-btn:last-child { border-right: none; }
+    .tab-btn.active { background: #7c3aed; color: #fff; }
+    .tab-btn:hover:not(.active) { background: #2d1b69; }
+    .tab-content { display: none; width: 100%; flex-direction: column; gap: 8px; }
+    .tab-content.active { display: flex; }
       background: #0a0428;
       border: 2px solid #7c3aed;
       border-radius: 8px;
@@ -67,6 +74,13 @@
     button.buy-btn:disabled { border-color: #4b5563; color: #6b7280; background: #111827; cursor: not-allowed; }
     .upg-max { color: #22c55e; font-family: monospace; font-size: 12px; font-weight: bold; text-align: center; margin-top: 5px; }
     .txt { color: #e2e8f0; font-family: monospace; font-size: 13px; line-height: 1.8; width: 100%; white-space: pre-wrap; }
+    .tabs { display: flex; width: 100%; margin-bottom: 12px; border-radius: 6px; overflow: hidden; border: 1.5px solid #4b2d8a; }
+    .tab-btn { flex: 1; padding: 10px 0; background: #1a0a2e; border: none; color: #a78bfa; font-family: monospace; font-size: 13px; font-weight: bold; cursor: pointer; border-right: 1px solid #4b2d8a; }
+    .tab-btn:last-child { border-right: none; }
+    .tab-btn.active { background: #7c3aed; color: #fff; }
+    .tab-btn:hover:not(.active) { background: #2d1b69; }
+    .tab-pane { display: none; width: 100%; flex-direction: column; gap: 8px; }
+    .tab-pane.active { display: flex; }
   </style>
 </head>
 <body>
@@ -81,10 +95,17 @@
     <button class="mbtn" onclick="uiShow('scr-levelplan')">LEVEL PLAN</button>
     <button class="mbtn" onclick="uiShow('scr-howtoplay')">HOW TO PLAY</button>
   </div>
-  <div id="scr-upgrades" class="panel" style="display:none">
+  <div id="scr-upgrades" class="panel" style="display:none; max-width:560px">
     <h2>UPGRADES</h2>
     <div class="coins" id="coins-display">Banked: 0</div>
-    <div class="upg-grid" id="upg-grid"></div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="uiTab('gun',this)">🔫 Gun</button>
+      <button class="tab-btn" onclick="uiTab('ability',this)">✨ Ability</button>
+      <button class="tab-btn" onclick="uiTab('stats',this)">❤️ Base Stats</button>
+    </div>
+    <div id="tab-gun" class="tab-pane active"></div>
+    <div id="tab-ability" class="tab-pane"></div>
+    <div id="tab-stats" class="tab-pane"></div>
     <button class="mbtn back" onclick="uiShow('scr-main')">BACK</button>
   </div>
   <div id="scr-levelplan" class="panel" style="display:none">

@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v2.2-debug';
+const VERSION = 'v2.3-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -144,23 +144,19 @@ function uiQuit() {
   uiShow('scr-main');
 }
 function uiUpgrades() {
-  document.getElementById('coins-display').textContent = 'Banked: ' + savedCoins;
-  const grid = document.getElementById('upg-grid');
-  grid.innerHTML = '';
-  const weapons = UPGRADES.filter(u => u.category === 'weapon');
-  const players = UPGRADES.filter(u => u.category === 'player');
-  [['WEAPON', weapons], ['PLAYER', players]].forEach(([title, list]) => {
-    const col = document.createElement('div');
-    const hdr = document.createElement('div');
-    hdr.className = 'upg-col-hdr'; hdr.textContent = title; col.appendChild(hdr);
-    list.forEach(u => {
+  document.getElementById('coins-display').textContent = 'Banked: ' + savedCoins + ' coins';
+  ['gun','ability','stats'].forEach(tab => {
+    const pane = document.getElementById('tab-' + tab);
+    pane.innerHTML = '';
+    UPGRADES[tab].forEach(u => {
       const cost = upgradeCost(u);
       const maxed = u.level >= u.max;
       const canAfford = savedCoins >= cost && !maxed;
       const card = document.createElement('div');
       card.className = 'upg-card' + (maxed ? ' maxed' : canAfford ? ' can' : '');
-      card.innerHTML = '<div class="upg-name">' + u.label + ' [' + u.level + '/' + u.max + ']</div>' +
-                       '<div class="upg-desc">' + u.desc + '</div>';
+      card.innerHTML =
+        '<div class="upg-name">' + u.label + ' <span style="color:#a78bfa">[Lv ' + u.level + '/' + u.max + ']</span></div>' +
+        '<div class="upg-desc">' + u.desc + '</div>';
       const dots = document.createElement('div'); dots.className = 'upg-dots';
       for (let i = 0; i < u.max; i++) {
         const d = document.createElement('div');
@@ -168,66 +164,30 @@ function uiUpgrades() {
       }
       card.appendChild(dots);
       if (maxed) {
-        const m = document.createElement('div'); m.className = 'upg-max'; m.textContent = 'MAX';
+        const m = document.createElement('div'); m.className = 'upg-max'; m.textContent = 'MAXED';
         card.appendChild(m);
       } else {
         const btn = document.createElement('button');
         btn.className = 'buy-btn'; btn.disabled = !canAfford;
         btn.textContent = cost + ' coins — BUY';
-        btn.onclick = () => { applyUpgrade(u); uiUpgrades(); };
+        btn.onclick = () => { if (applyUpgrade(u)) uiUpgrades(); };
         card.appendChild(btn);
       }
-      col.appendChild(card);
+      pane.appendChild(card);
     });
-    grid.appendChild(col);
   });
   uiShow('scr-upgrades');
 }
 
-// Show main menu on load
-uiShow('scr-main');
+function uiTab(tabName, btnEl) {
+  ['gun','ability','stats'].forEach(t => {
+    document.getElementById('tab-' + t).className = 'tab-pane' + (t === tabName ? ' active' : '');
+    document.getElementById('tab-' + t).style.display = t === tabName ? 'flex' : 'none';
+  });
+  btnEl.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btnEl.classList.add('active');
+}
 
-document.addEventListener('keydown', e => {
-  if (['Escape','Backspace'].includes(e.key) && gameState !== 'playing') e.preventDefault();
-  keys[e.key.toLowerCase()] = true;
-  if (e.key === 'Escape') {
-    if (gameState === 'playing') {
-      gameState = 'paused';
-      document.getElementById('pause-overlay').style.display = 'flex';
-    } else if (gameState === 'paused') {
-      uiResume();
-    } else {
-      uiShow('scr-main');
-    }
-  }
-});
-document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
-document.addEventListener('mousemove', e => {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  mouseX = (e.clientX - rect.left) * scaleX;
-  mouseY = (e.clientY - rect.top) * scaleY;
-});
-
-let mouseDown = false;
-canvas.addEventListener('mousedown', e => {
-  if (gameState !== 'playing') return;
-  mouseDown = true;
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const cx = (e.clientX - rect.left) * scaleX;
-  const cy = (e.clientY - rect.top) * scaleY;
-  shoot(cx, cy);
-});
-canvas.addEventListener('mouseup', () => { mouseDown = false; });
-canvas.addEventListener('mouseleave', () => { mouseDown = false; });
-
-canvas.addEventListener('contextmenu', e => {
-  e.preventDefault();
-  if (gameState === 'playing') forgeChord();
-});
 
 function forgeChord() {
   if (player.notes.length < 2) { showNotif('Need at least 2 notes!', '#ff6b6b'); return; }
@@ -434,13 +394,30 @@ function drawPixelRect(x, y, w, h, color) {
 }
 
 
-const UPGRADES = [
-  { id:'dmg',   label:'Bullet Damage', desc:'+20% dmg per level',     category:'weapon', baseCost:50,  level:0, max:10 },
-  { id:'fire',  label:'Fire Rate',     desc:'-10% cooldown per level', category:'weapon', baseCost:75,  level:0, max:10 },
-  { id:'maxhp', label:'Max HP',        desc:'+20 max HP per level',    category:'player', baseCost:60,  level:0, max:10 },
-  { id:'regen', label:'HP Regen',      desc:'+1 HP/5s per level',      category:'player', baseCost:200, level:0, max:10 },
-  { id:'armor', label:'Durability',    desc:'-5% dmg taken per level', category:'player', baseCost:80,  level:0, max:10 },
-];
+const UPGRADES = {
+  gun: [
+    { id:'dmg',    label:'Bullet Damage',  desc:'+20% bullet damage per level',    baseCost:50,  level:0, max:10 },
+    { id:'fire',   label:'Fire Rate',      desc:'-10% cooldown per level',          baseCost:75,  level:0, max:10 },
+    { id:'range',  label:'Bullet Range',   desc:'+15% bullet lifetime per level',   baseCost:60,  level:0, max:10 },
+    { id:'pierce', label:'Piercing',       desc:'Bullets pierce +1 enemy per level',baseCost:150, level:0, max:5  },
+  ],
+  ability: [
+    { id:'ab_fire',    label:'Fire Rounds',    desc:'Bullets ignite enemies (DOT)',         baseCost:200, level:0, max:5 },
+    { id:'ab_freeze',  label:'Frost Rounds',   desc:'Slow enemies on hit',                  baseCost:200, level:0, max:5 },
+    { id:'ab_explode', label:'Explosive',      desc:'Bullets explode on impact',            baseCost:300, level:0, max:5 },
+    { id:'ab_leech',   label:'Life Steal',     desc:'10% of dmg dealt restored as HP',      baseCost:250, level:0, max:5 },
+    { id:'ab_magnet',  label:'Note Magnet',    desc:'Auto-collect notes within range',      baseCost:175, level:0, max:5 },
+  ],
+  stats: [
+    { id:'maxhp',  label:'Max HP',          desc:'+20 max HP per level',             baseCost:60,  level:0, max:10 },
+    { id:'regen',  label:'HP Regen',        desc:'+1 HP per 5s per level',           baseCost:200, level:0, max:10 },
+    { id:'armor',  label:'Durability',      desc:'-5% damage taken per level',       baseCost:80,  level:0, max:10 },
+    { id:'speed',  label:'Move Speed',      desc:'+0.3 movement speed per level',    baseCost:100, level:0, max:5  },
+    { id:'luck',   label:'Coin Bonus',      desc:'+10% coins from chords per level', baseCost:120, level:0, max:10 },
+  ],
+};
+// Flat list for easy lookup
+const ALL_UPGRADES = [...UPGRADES.gun, ...UPGRADES.ability, ...UPGRADES.stats];
 function upgradeCost(u) { return Math.floor(u.baseCost * Math.pow(2, u.level)); }
 
 function applyUpgrade(u) {
@@ -449,12 +426,12 @@ function applyUpgrade(u) {
   if (savedCoins < cost) { showNotif('Not enough coins!', '#ef4444', 120); return; }
   savedCoins -= cost;
   u.level++;
-  // Apply effect
-  if (u.id === 'dmg')   { /* applied in bullet damage calc */ }
-  if (u.id === 'fire')  { player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, u.level))); }
+  if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, u.level)));
   if (u.id === 'maxhp') { player.maxHp = 100 + u.level * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
-  if (u.id === 'armor') { /* applied in damage calc */ }
-  showNotif(u.label + ' upgraded to level ' + u.level + '!', '#22c55e', 150);
+  if (u.id === 'speed') player.speed = 3 + u.level * 0.3;
+  if (u.id === 'range') { /* applied in bullet life calc */ }
+  showNotif(u.label + ' → Lv ' + u.level + '!', '#22c55e', 150);
+  return true;
 }
 
 
