@@ -1,9 +1,9 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = 800;
+canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const VERSION = 'v1.8-debug';
+const VERSION = 'v1.9-debug';
 const TILE = 32;
 const MAP_W = 60, MAP_H = 60;
 
@@ -433,10 +433,19 @@ function drawMap() {
     for (let tx = stx; tx < etx; tx++) {
       const sx = tx*TILE - camera.x, sy = ty*TILE - camera.y;
       if (map[ty][tx] === 1) {
-        drawPixelRect(sx, sy, TILE, TILE, '#7c3aed');
-        drawPixelRect(sx+2, sy+2, TILE-4, TILE-4, '#5b21b6');
-        drawPixelRect(sx, sy, TILE, 3, '#a78bfa');
-        drawPixelRect(sx, sy, 3, TILE, '#a78bfa');
+        // Tree trunk
+        ctx.fillStyle = '#5c3d1e';
+        ctx.fillRect(Math.round(sx + TILE/2 - 4), Math.round(sy + TILE*0.55), 8, Math.round(TILE*0.45));
+        // Tree canopy (layered circles for pixel look)
+        ctx.fillStyle = '#1a5c2a';
+        ctx.fillRect(Math.round(sx + 4), Math.round(sy + 6), TILE-8, TILE*0.55);
+        ctx.fillStyle = '#22803a';
+        ctx.fillRect(Math.round(sx + 7), Math.round(sy + 3), TILE-14, TILE*0.45);
+        ctx.fillStyle = '#2ecc5a';
+        ctx.fillRect(Math.round(sx + TILE/2 - 4), Math.round(sy + 1), 8, 8);
+        // Shadow on grass under tree
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.fillRect(Math.round(sx+3), Math.round(sy + TILE*0.7), TILE-6, 5);
       } else {
         const base = ((tx+ty)%2===0) ? '#2d6a4f' : '#27ae60';
         drawPixelRect(sx, sy, TILE, TILE, base);
