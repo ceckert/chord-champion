@@ -931,6 +931,16 @@ function updateInterior() {
         if (b.hp <= 0) {
           s.bossDefeated = true;
           awardBossLevel(); showNotif('🏆 ' + b.label + ' defeated! +1 LEVEL!','#fbbf24',240);
+          // Trigger level-up immediately inside interior
+          if (player.ep >= player.epMax) {
+            player.ep = 0;
+            if (player.level < 99) {
+              player.level++;
+              player.epMax = Math.floor(100 * Math.pow(1.18, player.level - 1));
+              player.hp = Math.min(player.maxHp, player.hp + Math.round(player.maxHp * 0.2));
+              openLevelUp();
+            }
+          }
         }
       }
     });
@@ -1100,8 +1110,11 @@ function drawInterior() {
   // Header bar
   ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,CW,36);
   ctx.fillStyle=t.accent; ctx.font='bold 14px monospace'; ctx.textAlign='center';
-  ctx.fillText('🏠 ' + t.name + (s.enemies.length===0?' — All enemies defeated!':'  (' + s.enemies.length + ' enemies)'), CW/2, 22);
+  ctx.fillText('🏠 ' + t.name + (s.enemies.length===0&&s.bossDefeated?' — Cleared!':s.bossDefeated?' (' + s.enemies.length + ' enemies)':' ⚔️ Boss alive!'), CW/2, 22);
   ctx.textAlign='left';
+
+  // Full player HUD (HP, EP, upgrades, MP)
+  drawHUD();
 }
 
 
