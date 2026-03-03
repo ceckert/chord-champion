@@ -1888,20 +1888,20 @@ function drawMap() {
         const seed2 = tx*31+ty*17;
         const v = seed2%3; // variant selector
         const cx3=Math.round(sx+TILE/2), cy3=Math.round(sy+TILE/2);
-        // ── Draw ground beneath obstacle so no dark box shows ─────
-        { let base2,det2;
-          if (biomeW==='swamp')    { base2=((tx+ty)%2===0)?'#1a3a1a':'#243a24'; det2='#0f2a0f'; }
-          else if (biomeW==='desert') { base2=((tx+ty)%2===0)?'#c8a84b':'#d4b860'; det2='#b89030'; }
-          else if (biomeW==='tundra') { base2=((tx+ty)%2===0)?'#a8c0d0':'#bcd0e0'; det2='#80a0b8'; }
-          else if (biomeW==='volcano') { base2=((tx+ty)%2===0)?'#3a1008':'#4a1a10'; det2='#6b1010'; }
-          else if (biomeW==='crystal') { base2=((tx+ty)%2===0)?'#1a2a4a':'#203050'; det2='#4488cc'; }
-          else if (biomeW==='storm')   { base2=((tx+ty)%2===0)?'#2a2a3a':'#323248'; det2='#8888cc'; }
-          else if (biomeW==='mushroom'){ base2=((tx+ty)%2===0)?'#3a1a4a':'#4a2258'; det2='#aa44cc'; }
-          else if (biomeW==='shadow')  { base2=((tx+ty)%2===0)?'#080810':'#100818'; det2='#2a0a3a'; }
-          else if (biomeW==='void')    { base2=((tx+ty)%2===0)?'#0a0818':'#12101e'; det2='#1a1028'; }
-          else { base2=((tx+ty)%2===0)?'#2d6a4f':'#27ae60'; det2='#1e5631'; }
-          ctx.fillStyle=base2; ctx.fillRect(Math.round(sx),Math.round(sy),TILE,TILE);
-          const sd2=tx*73+ty*137; if(sd2%5===0){ctx.fillStyle=det2;ctx.fillRect(Math.round(sx+(sd2%TILE)),Math.round(sy+((sd2*3)%TILE)),2,2);}
+        // ── Draw ground beneath obstacle matching floor tile system ──
+        { const sd2=tx*73+ty*137; const s3=sd2%4; let cols2,details2;
+          if (biomeW==='forest')      { cols2=['#2d6a4f','#2a6348','#2f7055','#1e5631']; details2=[['#1a4428',2,6],['#22573d',4,4]]; }
+          else if (biomeW==='swamp')  { cols2=['#1a3a1a','#1d3d1d','#213d21','#172f17']; details2=[['#0f2a0f',2,5],['#2a4a2a',4,8]]; }
+          else if (biomeW==='desert') { cols2=['#c8a84b','#d2b055','#c4a040','#d8bc6a']; details2=[['#b89030',3,5],['#e0cc80',1,9]]; }
+          else if (biomeW==='tundra') { cols2=['#a8c0d0','#b0c8d8','#a0b8cc','#bcd0e4']; details2=[['#80a0b8',2,5],['#d4eaf8',4,8]]; }
+          else if (biomeW==='volcano'){ cols2=['#3a1008','#421208','#320e06','#4a1810']; details2=[['#6b1010',2,5],['#8b1a0a',1,9]]; }
+          else if (biomeW==='crystal'){ cols2=['#1a2a4a','#1c2c50','#182848','#20304e']; details2=[['#4488cc',2,6],['#66aadd',3,10]]; }
+          else if (biomeW==='storm')  { cols2=['#2a2a3a','#2c2c3e','#282836','#323248']; details2=[['#8888cc',2,7],['#444466',1,4]]; }
+          else if (biomeW==='mushroom'){cols2=['#3a1a4a','#3d1c50','#381848','#42205a']; details2=[['#aa44cc',2,6],['#6622aa',1,9]]; }
+          else if (biomeW==='shadow') { cols2=['#080810','#0a0a14','#060610','#100818']; details2=[['#2a0a3a',2,6],['#1a0028',1,8]]; }
+          else                        { cols2=['#0a0818','#0c0a1e','#08061a','#100e20']; details2=[['#1a1028',2,5],['#2a1840',1,8]]; } // void
+          ctx.fillStyle=cols2[s3]; ctx.fillRect(Math.round(sx),Math.round(sy),TILE,TILE);
+          details2.forEach(([col,size,freq])=>{ if(sd2%freq===0){ ctx.fillStyle=col; ctx.fillRect(Math.round(sx+(sd2%TILE)),Math.round(sy+((sd2*3+col.charCodeAt(1))%TILE)),size,size); } });
         }
         // ── Draw obstacle at 1.5× scale centred on tile ───────────
         ctx.save();
