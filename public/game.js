@@ -2383,14 +2383,37 @@ function drawEnemyByType(e, x, y) {
     for(let wi=0;wi<3;wi++){const wo=Math.sin(frame*0.1+wi+e.x)*3;ctx.fillRect(Math.round(x+4+wi*7),Math.round(y+e.h-4+wo),5,6);}
     ctx.restore();
   } else if (e.type === 'runner') {
-    drawPixelRect(x+3, y+14, e.w-6, e.h-14, '#a00020');
-    drawPixelRect(x+4, y+6, e.w-8, 12, '#cc1a35');
-    drawPixelRect(x+5, y, e.w-10, 9, '#e8203f');
-    ctx.fillStyle='#ff4466'; ctx.fillRect(Math.round(x+6),Math.round(y-4),2,5); ctx.fillRect(Math.round(x+10),Math.round(y-6),2,7); ctx.fillRect(Math.round(x+14),Math.round(y-4),2,5);
-    ctx.fillStyle='#fff'; ctx.fillRect(Math.round(x+6),Math.round(y+2),3,3); ctx.fillRect(Math.round(x+12),Math.round(y+2),3,3);
-    ctx.fillStyle='#000'; ctx.fillRect(Math.round(x+7),Math.round(y+3),2,2); ctx.fillRect(Math.round(x+13),Math.round(y+3),2,2);
-    const legSwing=Math.sin(frame*0.25+e.x)*3;
-    drawPixelRect(x+4,y+e.h-8,5,8+legSwing,'#a00020'); drawPixelRect(x+e.w-9,y+e.h-8,5,8-legSwing,'#a00020');
+    // runner — Forest Sprite / Wood Goblin (fast, lanky, leafy)
+    const run = Math.sin(frame*0.3+e.x)*3;
+    // Legs (fast)
+    const legSwing = Math.sin(frame*0.32+e.x)*5;
+    ctx.fillStyle='#2d5a10'; ctx.fillRect(Math.round(x+3),Math.round(y+e.h-10),5,10+legSwing); ctx.fillRect(Math.round(x+e.w-8),Math.round(y+e.h-10),5,10-legSwing);
+    // Feet
+    ctx.fillStyle='#4a3a08'; ctx.fillRect(Math.round(x+1),Math.round(y+e.h+legSwing-2),7,4); ctx.fillRect(Math.round(x+e.w-8),Math.round(y+e.h-legSwing-2),7,4);
+    // Body — bark-brown tunic
+    ctx.fillStyle='#4a3010'; ctx.fillRect(Math.round(x+3),Math.round(y+14),e.w-6,e.h-22);
+    ctx.fillStyle='#6a4820'; ctx.fillRect(Math.round(x+5),Math.round(y+14),e.w-10,e.h-26);
+    // Leaf cape (two triangles on back)
+    ctx.fillStyle='#1a6a08';
+    ctx.beginPath(); ctx.moveTo(Math.round(x+3),Math.round(y+14)); ctx.lineTo(Math.round(x-4),Math.round(y+24)); ctx.lineTo(Math.round(x+6),Math.round(y+26)); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(Math.round(x+e.w-3),Math.round(y+14)); ctx.lineTo(Math.round(x+e.w+4),Math.round(y+24)); ctx.lineTo(Math.round(x+e.w-6),Math.round(y+26)); ctx.fill();
+    ctx.fillStyle='#2a8a10';
+    ctx.beginPath(); ctx.moveTo(Math.round(x+4),Math.round(y+16)); ctx.lineTo(Math.round(x-2),Math.round(y+22)); ctx.lineTo(Math.round(x+5),Math.round(y+23)); ctx.fill();
+    // Head
+    ctx.fillStyle='#5a8a28'; ctx.fillRect(Math.round(x+4),Math.round(y+2),e.w-8,14);
+    ctx.fillStyle='#6aaa32'; ctx.fillRect(Math.round(x+5),Math.round(y+3),e.w-10,7); // face
+    // Leaf hair / crown
+    ctx.fillStyle='#1a6a08'; ctx.fillRect(Math.round(x+4),Math.round(y-2),4,6); ctx.fillRect(Math.round(x+8),Math.round(y-4),4,7); ctx.fillRect(Math.round(x+e.w-8),Math.round(y-2),4,6);
+    ctx.fillStyle='#2a8a10'; ctx.fillRect(Math.round(x+6),Math.round(y-5),3,5); ctx.fillRect(Math.round(x+e.w-9),Math.round(y-3),3,4);
+    // Eyes (big yellow goblin eyes)
+    ctx.fillStyle='#ffee44'; ctx.fillRect(Math.round(x+5),Math.round(y+4),4,5); ctx.fillRect(Math.round(x+e.w-9),Math.round(y+4),4,5);
+    ctx.fillStyle='#1a0a00'; ctx.fillRect(Math.round(x+6),Math.round(y+5),2,3); ctx.fillRect(Math.round(x+e.w-8),Math.round(y+5),2,3);
+    // Pointy nose
+    ctx.fillStyle='#4a7a20'; ctx.fillRect(Math.round(x+e.w/2-1),Math.round(y+9),3,4);
+    // Twig arms
+    ctx.strokeStyle='#4a3010'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(Math.round(x+4),Math.round(y+18)); ctx.lineTo(Math.round(x-4),Math.round(y+14+run)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(Math.round(x+e.w-4),Math.round(y+18)); ctx.lineTo(Math.round(x+e.w+4),Math.round(y+14-run)); ctx.stroke();
   } else if (e.type === 'bogcrawler') {
     // Swamp armored snapper — low, wide, dark
     drawPixelRect(x+2,y+8,e.w-4,e.h-8,'#1a3a10'); // shell
@@ -2510,14 +2533,30 @@ function drawEnemyByType(e, x, y) {
     ctx.fillRect(Math.round(x+6),Math.round(y+4),4,4); ctx.fillRect(Math.round(x+e.w-10),Math.round(y+4),4,4);
     ctx.shadowBlur=0; ctx.restore();
   } else {
-    // crawler (default)
-    const crawl=Math.sin(frame*0.18+e.y)*2;
-    drawPixelRect(x+2, y+8+crawl, e.w-4, e.h-8, '#1a6b2a');
-    drawPixelRect(x+4, y+crawl, e.w-8, 12, '#25923a');
-    ctx.fillStyle='#aaff44'; ctx.fillRect(Math.round(x+5),Math.round(y+2+crawl),7,7); ctx.fillRect(Math.round(x+16),Math.round(y+2+crawl),7,7);
-    ctx.fillStyle='#000'; ctx.fillRect(Math.round(x+7),Math.round(y+4+crawl),4,4); ctx.fillRect(Math.round(x+18),Math.round(y+4+crawl),4,4);
-    const armSwing=Math.sin(frame*0.18+e.y)*4;
-    drawPixelRect(x-4,y+10+armSwing,7,4,'#1a6b2a'); drawPixelRect(x+e.w-3,y+10-armSwing,7,4,'#1a6b2a');
+    // crawler — Forest Stag Beetle (wide, armored, 6-legged)
+    const crawl = Math.sin(frame*0.14+e.y)*1.5;
+    const cx2 = x + e.w/2, cy2 = y + e.h/2;
+    // Shell — dark green carapace with shine
+    ctx.fillStyle='#1a4a10'; ctx.fillRect(Math.round(x+3),Math.round(y+4+crawl),e.w-6,e.h-4);
+    ctx.fillStyle='#2a6a18'; ctx.fillRect(Math.round(x+5),Math.round(y+4+crawl),e.w-10,e.h-8);
+    ctx.fillStyle='#3a8a22'; ctx.fillRect(Math.round(x+8),Math.round(y+6+crawl),e.w-16,6); // shell highlight
+    // Head
+    ctx.fillStyle='#1a4a10'; ctx.fillRect(Math.round(x+6),Math.round(y+crawl),e.w-12,8);
+    // Mandibles
+    ctx.fillStyle='#4a8a10'; ctx.fillRect(Math.round(x),Math.round(y+2+crawl),7,4); ctx.fillRect(Math.round(x+e.w-7),Math.round(y+2+crawl),7,4);
+    ctx.fillStyle='#2a6a08'; ctx.fillRect(Math.round(x-3),Math.round(y+1+crawl),5,3); ctx.fillRect(Math.round(x+e.w-2),Math.round(y+1+crawl),5,3);
+    // 3 pairs of legs
+    const legA = Math.sin(frame*0.22+e.y)*4;
+    [y+e.h*0.35, y+e.h*0.55, y+e.h*0.72].forEach((ly,i)=>{
+      const off = (i%2===0)?legA:-legA;
+      ctx.fillStyle='#1a4a10';
+      ctx.fillRect(Math.round(x-6),Math.round(ly+off),8,3); ctx.fillRect(Math.round(x-10),Math.round(ly+off+3),5,3);
+      ctx.fillRect(Math.round(x+e.w-2),Math.round(ly-off),8,3); ctx.fillRect(Math.round(x+e.w+2),Math.round(ly-off+3),5,3);
+    });
+    // Eyes (compound — 4 tiny dots)
+    ctx.fillStyle='#88ff44';
+    ctx.fillRect(Math.round(x+7),Math.round(y+1+crawl),3,3); ctx.fillRect(Math.round(x+11),Math.round(y+1+crawl),3,3);
+    ctx.fillRect(Math.round(x+e.w-10),Math.round(y+1+crawl),3,3); ctx.fillRect(Math.round(x+e.w-14),Math.round(y+1+crawl),3,3);
   }
 }
 
