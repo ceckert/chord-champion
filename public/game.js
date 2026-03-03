@@ -2132,7 +2132,7 @@ function drawMap() {
         ctx.beginPath(); ctx.ellipse(cx3+5,cy3+13,9,3,0,0,Math.PI*2); ctx.fill();
       } else {
         const biomeHere = getBiome(tx, ty);
-        const seed = tx*73+ty*137;
+        const seed = tileHash(tx, ty);
         const s3 = seed%4; // 0-3 variant
         let cols, details;
         if (biomeHere==='forest') {
@@ -2172,7 +2172,7 @@ function drawMap() {
         details.forEach(([col,size,freq]) => {
           if (seed%freq===0) {
             ctx.fillStyle=col;
-            const dx=seed%TILE, dy=(seed*3+col.charCodeAt(1))%TILE;
+            const dx=(seed^(seed>>>7))%TILE, dy=(tileHash(tx^17,ty^31)+(col.charCodeAt(1)*7))%TILE;
             ctx.fillRect(Math.round(sx+dx),Math.round(sy+dy),size,size);
           }
         });
@@ -3717,6 +3717,15 @@ function drawGunModel(cx, gid) {
     cx.fillStyle='#292524'; cx.fillRect(8,4,5,6);
     cx.fillStyle='#1c1917'; cx.fillRect(9,5,3,4);
   }
+}
+
+// ── Tile hash — better pseudo-random noise for terrain variation ──────────────
+function tileHash(tx, ty) {
+  let h = (tx * 374761393 + ty * 668265263) >>> 0;
+  h = (h ^ (h >>> 13)) >>> 0;
+  h = (Math.imul(h, 1274126177)) >>> 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  return h;
 }
 function loop() { update(); render(); requestAnimationFrame(loop); }
 window.addEventListener('resize', () => { CW = window.innerWidth; CH = window.innerHeight; });
