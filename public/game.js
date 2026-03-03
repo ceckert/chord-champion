@@ -148,180 +148,146 @@ function drawCharPreview(canvasId, charName) {
 }
 
 function drawCharBody(cx, charName, frame) {
-  const bob = Math.sin((frame||0)*0.14)*0.8; // subtle walk bob
-  // Shadow
+  const bob = Math.sin((frame||0)*0.14)*0.7;
+  // Shadow (ground)
   cx.fillStyle='rgba(0,0,0,0.18)';
-  cx.beginPath(); cx.ellipse(2,14+bob,11,4,0,0,Math.PI*2); cx.fill();
+  cx.beginPath(); cx.ellipse(2,13,11,4,0,0,Math.PI*2); cx.fill();
 
   if (charName==='jimmy') {
-    // ── Jimmy — blue pajamas, brown spiky hair ──────────────────────────────
-    // Legs with shoes
-    cx.fillStyle='#7c3aed'; cx.fillRect(-10,13,8,6+bob); cx.fillRect(2,13,8,6-bob);
-    cx.fillStyle='#1e1b4b'; cx.fillRect(-10,18,8,3); cx.fillRect(2,18,8,3); // shoes
-    cx.fillStyle='#312e81'; cx.fillRect(-10,18,8,1); cx.fillRect(2,18,8,1); // shoe highlight
-    // Body — blue pajama shirt
-    cx.fillStyle='#1d4ed8'; cx.fillRect(-9,-6,18,20);
-    cx.fillStyle='#3b82f6'; cx.fillRect(-9,-6,18,2); // collar shadow area
-    // Stripe details
-    cx.fillStyle='#93c5fd'; cx.fillRect(-9,-3,18,1); cx.fillRect(-9,3,18,1); cx.fillRect(-9,9,18,1);
-    // Button strip + collar
-    cx.fillStyle='#bfdbfe'; cx.fillRect(-2,-6,4,8); // button strip
-    cx.fillStyle='#eff6ff'; cx.fillRect(-2,-6,4,1); cx.fillRect(-1,-5,1,2); cx.fillRect(-1,0,1,2); cx.fillRect(-1,4,1,2);
-    cx.fillStyle='#93c5fd'; cx.fillRect(-8,-6,3,3); cx.fillRect(5,-6,3,3); // collar
-    // Arms (slightly animated)
-    cx.fillStyle='#2563eb'; cx.fillRect(-14,-4,6,12+bob); cx.fillRect(9,-4,6,12-bob);
-    cx.fillStyle='#f9c74f'; cx.fillRect(-14,7+bob,6,4); cx.fillRect(9,7-bob,6,4); // hands
-    // Head
-    cx.fillStyle='#f9c74f'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
-    cx.fillStyle='#f59e0b'; cx.fillRect(-8,-18,16,4); // forehead shadow
-    // Hair — brown spikes
-    cx.fillStyle='#78350f';
-    cx.beginPath(); cx.arc(0,-18,8,Math.PI,0); cx.fill();
-    cx.fillRect(-4,-22,3,6); cx.fillRect(1,-24,3,7); cx.fillRect(-8,-19,3,5); cx.fillRect(5,-21,3,6);
-    // Eyes with pupils
-    cx.fillStyle='#1a0a2e'; cx.fillRect(-5,-14,4,4); cx.fillRect(2,-14,4,4);
-    cx.fillStyle='#fff'; cx.fillRect(-4,-13,2,2); cx.fillRect(3,-13,2,2);
-    cx.fillStyle='#1a0a2e'; cx.fillRect(-4,-13,1,1); cx.fillRect(3,-13,1,1);
+    // ── Jimmy — top-down, blue pajamas ──────────────────────────────────────
+    // Feet/shoe soles (bottom, top-down)
+    cx.fillStyle='#1e1b4b';
+    cx.fillRect(-9,8+bob,7,5); cx.fillRect(3,8-bob,7,5);
+    // Legs (short, stubby)
+    cx.fillStyle='#3730a3';
+    cx.fillRect(-9,3+bob,7,7); cx.fillRect(3,3-bob,7,7);
+    // Body / shirt (top-down rectangle, slightly wider than tall)
+    cx.fillStyle='#1d4ed8'; cx.fillRect(-11,-4,22,10);
+    // Shirt highlight (top edge = nearest to viewer)
+    cx.fillStyle='#3b82f6'; cx.fillRect(-11,-4,22,2);
+    // Collar
+    cx.fillStyle='#93c5fd'; cx.fillRect(-3,-4,6,3);
+    // Arm stubs (left and right of body)
+    cx.fillStyle='#2563eb'; cx.fillRect(-16,-2,6,7); cx.fillRect(11,-2,6,7);
+    cx.fillStyle='#f9c74f'; cx.fillRect(-16,4,6,3); cx.fillRect(11,4,6,3); // hands
+    // Head (top-down: mostly hair visible, small face strip at front)
+    // Hair top (most of head)
+    cx.fillStyle='#78350f'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
+    // Hair spikes
+    cx.fillStyle='#92400e';
+    cx.fillRect(-3,-20,3,6); cx.fillRect(1,-21,3,7); cx.fillRect(-8,-18,3,5);
+    // Small face strip (bottom of head = front, visible strip)
+    cx.fillStyle='#f9c74f'; cx.fillRect(-7,-6,14,3);
+    // Eyes (tiny dots visible from above)
+    cx.fillStyle='#1a0a2e'; cx.fillRect(-5,-6,2,2); cx.fillRect(3,-6,2,2);
     // Blush
-    cx.fillStyle='rgba(255,150,100,0.35)'; cx.beginPath(); cx.arc(-6,-11,3,0,Math.PI*2); cx.fill();
-    cx.beginPath(); cx.arc(6,-11,3,0,Math.PI*2); cx.fill();
-    // Smile
-    cx.strokeStyle='#92400e'; cx.lineWidth=1.2;
-    cx.beginPath(); cx.arc(0,-10,2.5,0.4,Math.PI-0.4); cx.stroke();
+    cx.fillStyle='rgba(255,150,100,0.4)';
+    cx.beginPath(); cx.arc(-5,-5,2,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(5,-5,2,0,Math.PI*2); cx.fill();
 
   } else if (charName==='hanna') {
-    // ── Hanna — lavender hoodie, long blond hair, pink cheeks ───────────────
+    // ── Hanna — top-down, lavender hoodie ───────────────────────────────────
+    // Feet
+    cx.fillStyle='#be185d'; cx.fillRect(-9,8+bob,7,5); cx.fillRect(3,8-bob,7,5);
     // Legs
-    cx.fillStyle='#f472b6'; cx.fillRect(-10,13,8,6+bob); cx.fillRect(2,13,8,6-bob);
-    cx.fillStyle='#be185d'; cx.fillRect(-10,18,8,3); cx.fillRect(2,18,8,3); // dark boots
-    cx.fillStyle='#f9a8d4'; cx.fillRect(-10,18,8,1); cx.fillRect(2,18,8,1); // boot highlight
-    // Body — hoodie
-    cx.fillStyle='#a855f7'; cx.fillRect(-9,-6,18,20);
-    cx.fillStyle='#c084fc'; cx.fillRect(-9,-6,18,3); // hood edge
-    cx.fillStyle='#d8b4fe'; cx.fillRect(-9,-3,18,1); cx.fillRect(-9,6,18,1); // lines
-    // Pocket
-    cx.fillStyle='#9333ea'; cx.fillRect(-6,6,12,7); cx.strokeStyle='#7e22ce'; cx.lineWidth=0.8; cx.strokeRect(-6,6,12,7);
-    // Hood drawstrings
-    cx.strokeStyle='#e9d5ff'; cx.lineWidth=1;
-    cx.beginPath(); cx.moveTo(-2,3); cx.lineTo(-1,9); cx.stroke();
-    cx.beginPath(); cx.moveTo(2,3); cx.lineTo(1,9); cx.stroke();
-    // Arms
-    cx.fillStyle='#9333ea'; cx.fillRect(-14,-4,6,12+bob); cx.fillRect(9,-4,6,12-bob);
-    cx.fillStyle='#fde68a'; cx.fillRect(-14,7+bob,6,4); cx.fillRect(9,7-bob,6,4); // hands
-    // Head
-    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
-    // Long blond hair
-    cx.fillStyle='#fbbf24';
-    cx.beginPath(); cx.arc(0,-18,9,Math.PI,0); cx.fill();
-    cx.fillRect(-12,-20,6,28); cx.fillRect(7,-20,5,26); // side locks
-    cx.fillRect(-9,-23,6,6); cx.fillRect(2,-24,5,7); // top spikes
-    // Hair shine
-    cx.fillStyle='#fef3c7'; cx.fillRect(-4,-22,3,4); cx.fillRect(1,-23,2,5);
+    cx.fillStyle='#db2777'; cx.fillRect(-9,3+bob,7,7); cx.fillRect(3,3-bob,7,7);
+    // Body
+    cx.fillStyle='#9333ea'; cx.fillRect(-11,-4,22,10);
+    cx.fillStyle='#c084fc'; cx.fillRect(-11,-4,22,2); // hood edge highlight
+    cx.fillStyle='#a855f7'; cx.fillRect(-3,-4,6,3); // hood opening
+    // Arm stubs
+    cx.fillStyle='#7e22ce'; cx.fillRect(-16,-2,6,7); cx.fillRect(11,-2,6,7);
+    cx.fillStyle='#fde68a'; cx.fillRect(-16,4,6,3); cx.fillRect(11,4,6,3);
+    // Head — mostly blond hair
+    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
+    // Hair highlights
+    cx.fillStyle='#fef3c7'; cx.beginPath(); cx.arc(-2,-14,4,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,-12,7,0,Math.PI*2); cx.fill();
     // Star clip
-    cx.fillStyle='#f472b6'; cx.fillRect(8,-20,4,4);
-    cx.fillStyle='#fff'; cx.fillRect(9,-19,2,2);
-    // Eyes
-    cx.fillStyle='#1a0a2e'; cx.fillRect(-5,-14,4,4); cx.fillRect(2,-14,4,4);
-    cx.fillStyle='#fff'; cx.fillRect(-4,-13,2,2); cx.fillRect(3,-13,2,2);
-    cx.fillStyle='#6d28d9'; cx.fillRect(-4,-13,1,1); cx.fillRect(3,-13,1,1); // purple pupils
-    // Lashes
-    cx.strokeStyle='#1a0a2e'; cx.lineWidth=1;
-    cx.beginPath(); cx.moveTo(-5,-14); cx.lineTo(-6,-16); cx.stroke();
-    cx.beginPath(); cx.moveTo(-2,-14); cx.lineTo(-1,-16); cx.stroke();
-    cx.beginPath(); cx.moveTo(2,-14); cx.lineTo(1,-16); cx.stroke();
-    cx.beginPath(); cx.moveTo(5,-14); cx.lineTo(6,-16); cx.stroke();
-    // Blush
-    cx.fillStyle='rgba(236,72,153,0.3)'; cx.beginPath(); cx.arc(-6,-11,3,0,Math.PI*2); cx.fill();
-    cx.beginPath(); cx.arc(6,-11,3,0,Math.PI*2); cx.fill();
-    cx.strokeStyle='#92400e'; cx.lineWidth=1.2;
-    cx.beginPath(); cx.arc(0,-10,2.5,0.4,Math.PI-0.4); cx.stroke();
+    cx.fillStyle='#f472b6'; cx.fillRect(5,-18,5,5);
+    cx.fillStyle='#fff'; cx.fillRect(6,-17,3,3);
+    // Face strip
+    cx.fillStyle='#fde68a'; cx.fillRect(-7,-6,14,3);
+    // Eyes with lashes
+    cx.fillStyle='#1a0a2e'; cx.fillRect(-5,-6,2,2); cx.fillRect(3,-6,2,2);
+    cx.fillStyle='#6d28d9'; cx.fillRect(-5,-6,1,1); cx.fillRect(3,-6,1,1);
+    cx.fillStyle='rgba(236,72,153,0.35)';
+    cx.beginPath(); cx.arc(-4,-5,2,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(4,-5,2,0,Math.PI*2); cx.fill();
 
   } else if (charName==='bob') {
-    // ── Bob — chubby, red tee, blue shorts, rosy cheeks ─────────────────────
-    // Chubby legs + big shoes
-    cx.fillStyle='#1d4ed8'; cx.fillRect(-12,12,11,8+bob); cx.fillRect(2,12,11,8-bob);
-    cx.fillStyle='#1e3a8a'; cx.fillRect(-12,19,11,4); cx.fillRect(2,19,11,4);
-    cx.fillStyle='#60a5fa'; cx.fillRect(-12,19,11,1); cx.fillRect(2,19,11,1);
-    // Wide body
-    cx.fillStyle='#dc2626'; cx.fillRect(-12,-6,24,20);
-    cx.fillStyle='#ef4444'; cx.fillRect(-12,-6,24,3); // collar area
-    cx.fillStyle='#fca5a5'; cx.fillRect(-12,-2,24,1); cx.fillRect(-12,6,24,1); // stripes
-    // T-shirt collar
-    cx.fillStyle='#b91c1c'; cx.fillRect(-5,-6,10,4); cx.fillStyle='#fee2e2'; cx.fillRect(-4,-5,8,2);
-    // Belt
-    cx.fillStyle='#78350f'; cx.fillRect(-12,12,24,3);
-    cx.fillStyle='#fbbf24'; cx.fillRect(-2,12,4,3); // buckle
-    cx.fillStyle='#92400e'; cx.fillRect(-1,13,2,1);
-    // Chubby arms
-    cx.fillStyle='#b91c1c'; cx.fillRect(-17,-3,7,13+bob); cx.fillRect(11,-3,7,13-bob);
-    cx.fillStyle='#f9c74f'; cx.fillRect(-17,9+bob,7,5); cx.fillRect(11,9-bob,7,5);
-    // Big head
-    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,-10,11,0,Math.PI*2); cx.fill();
-    cx.fillStyle='#f59e0b'; cx.fillRect(-9,-17,18,4);
-    // Short hair with part
-    cx.fillStyle='#292524';
-    cx.beginPath(); cx.arc(0,-18,9,Math.PI,0); cx.fill();
-    cx.fillRect(-9,-20,18,5);
-    cx.fillStyle='#44403c'; cx.fillRect(-1,-21,2,5); // hair part
-    // Eyes
-    cx.fillStyle='#1a0a2e'; cx.fillRect(-6,-13,5,5); cx.fillRect(2,-13,5,5);
-    cx.fillStyle='#fff'; cx.fillRect(-5,-12,2,2); cx.fillRect(3,-12,2,2);
-    cx.fillStyle='#92400e'; cx.fillRect(-5,-12,1,1); cx.fillRect(3,-12,1,1); // brown pupils
-    // Big rosy cheeks
-    cx.fillStyle='rgba(255,100,80,0.4)'; cx.beginPath(); cx.arc(-7,-8,4,0,Math.PI*2); cx.fill();
-    cx.beginPath(); cx.arc(7,-8,4,0,Math.PI*2); cx.fill();
-    // Big grin
-    cx.strokeStyle='#92400e'; cx.lineWidth=1.5;
-    cx.beginPath(); cx.arc(0,-7,3.5,0.3,Math.PI-0.3); cx.stroke();
+    // ── Bob — top-down, wide chubby red shirt ────────────────────────────────
+    // Feet (bigger/wider)
+    cx.fillStyle='#1e3a8a'; cx.fillRect(-11,8+bob,9,6); cx.fillRect(4,8-bob,9,6);
+    // Legs
+    cx.fillStyle='#1d4ed8'; cx.fillRect(-11,3+bob,9,7); cx.fillRect(4,3-bob,9,7);
+    // Body (wider to show chubby)
+    cx.fillStyle='#dc2626'; cx.fillRect(-13,-4,26,10);
+    cx.fillStyle='#ef4444'; cx.fillRect(-13,-4,26,2);
+    cx.fillStyle='#fee2e2'; cx.fillRect(-4,-4,8,3); // collar area
+    // Arm stubs (chubby/wider)
+    cx.fillStyle='#b91c1c'; cx.fillRect(-18,-1,6,8); cx.fillRect(13,-1,6,8);
+    cx.fillStyle='#f9c74f'; cx.fillRect(-18,5,6,4); cx.fillRect(13,5,6,4);
+    // Head (big round)
+    cx.fillStyle='#292524'; cx.beginPath(); cx.arc(0,-12,10,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#44403c'; cx.beginPath(); cx.arc(0,-12,8,0,Math.PI*2); cx.fill();
+    // Face strip (wider)
+    cx.fillStyle='#fbbf24'; cx.fillRect(-8,-6,16,4);
+    // Eyes (rounder)
+    cx.fillStyle='#1a0a2e'; cx.fillRect(-5,-6,3,3); cx.fillRect(3,-6,3,3);
+    cx.fillStyle='#fff'; cx.fillRect(-4,-5,1,1); cx.fillRect(4,-5,1,1);
+    // Rosy cheeks visible from above
+    cx.fillStyle='rgba(255,100,80,0.45)';
+    cx.beginPath(); cx.arc(-6,-4,2.5,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.arc(6,-4,2.5,0,Math.PI*2); cx.fill();
 
   } else {
-    // ── Max — fluffy goldendoodle on all fours ───────────────────────────────
+    // ── Max — top-down goldendoodle ──────────────────────────────────────────
     cx.save(); cx.translate(0,8); cx.scale(0.72,0.72);
-    // Body
-    cx.fillStyle='#fde68a'; cx.fillRect(-14,2,28,10);
-    // Fluffy top bumps
-    cx.fillStyle='#fef3c7';
-    for (let bx=-12; bx<=10; bx+=6) { cx.beginPath(); cx.arc(bx,4,4,0,Math.PI*2); cx.fill(); }
-    cx.fillStyle='#fde68a'; cx.fillRect(-12,6,24,6); // body base
-    // Belly lighter patch
-    cx.fillStyle='#fffbeb'; cx.beginPath(); cx.ellipse(0,9,8,4,0,0,Math.PI*2); cx.fill();
-    // 4 legs with paw pads
+    // Hind paws
+    cx.fillStyle='#f59e0b';
+    cx.beginPath(); cx.ellipse(9,14,5,3,0,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.ellipse(-9,14,5,3,0,0,Math.PI*2); cx.fill();
+    // Front paws
+    cx.beginPath(); cx.ellipse(9,-12,5,3,0,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.ellipse(-9,-12,5,3,0,0,Math.PI*2); cx.fill();
+    // Leg stubs
     cx.fillStyle='#fde68a';
-    [[-12,11],[- 4,11],[4,11],[10,11]].forEach(([lx,ly])=>{
-      cx.fillRect(lx,ly,5,7);
-      cx.fillStyle='#f59e0b'; cx.beginPath(); cx.arc(lx+2,ly+7,2.5,0,Math.PI*2); cx.fill(); // paw
-      cx.fillStyle='#fde68a';
-    });
-    // Wagging tail
-    const tailWag = Math.sin((frame||0)*0.22)*0.3;
-    cx.save(); cx.translate(14,0); cx.rotate(-0.4+tailWag);
-    cx.fillStyle='#fef3c7'; cx.beginPath(); cx.arc(0,-4,6,0,Math.PI*2); cx.fill();
-    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,-4,4,0,Math.PI*2); cx.fill();
-    cx.restore();
-    // Collar
-    cx.fillStyle='#ef4444'; cx.fillRect(-16,-2,6,3); cx.fillRect(-13,-3,4,5);
-    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(-11,2,2,0,Math.PI*2); cx.fill(); // tag
-    // Head
-    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(-13,-3,9,0,Math.PI*2); cx.fill();
+    cx.fillRect(5,9,7,6); cx.fillRect(-12,9,7,6);   // hind
+    cx.fillRect(5,-11,7,6); cx.fillRect(-12,-11,7,6); // front
+    // Body (oval top-down)
+    cx.fillStyle='#fde68a'; cx.beginPath(); cx.ellipse(0,2,14,10,0,0,Math.PI*2); cx.fill();
+    // Fluffy back patches
     cx.fillStyle='#fef3c7';
-    [-19,-13,-7].forEach(bx=>{ cx.beginPath(); cx.arc(bx,-9,4.5,0,Math.PI*2); cx.fill(); }); // poof
-    // Ears
-    cx.fillStyle='#f59e0b'; cx.beginPath(); cx.arc(-19,2,6,0,Math.PI*2); cx.fill();
-    cx.beginPath(); cx.arc(-8,2,5,0,Math.PI*2); cx.fill();
-    cx.fillStyle='#fde68a'; cx.beginPath(); cx.arc(-19,1,3,0,Math.PI*2); cx.fill();
-    // Snout
-    cx.fillStyle='#fff8e1'; cx.fillRect(-20,-5,10,7);
-    cx.fillStyle='#1c1917'; cx.beginPath(); cx.ellipse(-16,-2,3.5,2.5,0,0,Math.PI*2); cx.fill(); // nose
-    cx.fillStyle='#fff'; cx.beginPath(); cx.arc(-15,-2.5,1,0,Math.PI*2); cx.fill(); // nose glint
-    // Tongue
-    cx.fillStyle='#fca5a5'; cx.beginPath(); cx.ellipse(-16,3.5,2.5,3.5,0,0,Math.PI*2); cx.fill();
-    cx.fillStyle='#f87171'; cx.fillRect(-17,3,2,4);
+    cx.beginPath(); cx.ellipse(-4,6,6,5,0,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.ellipse(4,6,6,5,0,0,Math.PI*2); cx.fill();
+    // Collar
+    cx.fillStyle='#ef4444'; cx.beginPath(); cx.ellipse(0,-6,10,3,0,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,-5,2.5,0,Math.PI*2); cx.fill();
+    // Head (top-down oval)
+    cx.fillStyle='#fde68a'; cx.beginPath(); cx.ellipse(0,-14,9,8,0,0,Math.PI*2); cx.fill();
+    // Fluffy top of head
+    cx.fillStyle='#fef3c7';
+    [-7,0,7].forEach(bx=>{ cx.beginPath(); cx.arc(bx,-18,4,0,Math.PI*2); cx.fill(); });
+    // Floppy ears (top-down, oval to sides)
+    cx.fillStyle='#f59e0b';
+    cx.beginPath(); cx.ellipse(-12,-14,5,7,0.3,0,Math.PI*2); cx.fill();
+    cx.beginPath(); cx.ellipse(12,-14,5,7,-0.3,0,Math.PI*2); cx.fill();
+    // Snout top-down
+    cx.fillStyle='#fff8e1'; cx.beginPath(); cx.ellipse(0,-10,5,4,0,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#1c1917'; cx.beginPath(); cx.ellipse(0,-10,3,2,0,0,Math.PI*2); cx.fill(); // nose
+    cx.fillStyle='#fff'; cx.beginPath(); cx.arc(1,-11,1,0,Math.PI*2); cx.fill();
     // Eyes
-    cx.fillStyle='#1a0a2e'; cx.fillRect(-18,-7,4,4); cx.fillRect(-10,-7,4,4);
-    cx.fillStyle='#fff'; cx.fillRect(-17,-6,2,2); cx.fillRect(-9,-6,2,2);
-    cx.fillStyle='#78350f'; cx.fillRect(-17,-6,1,1); cx.fillRect(-9,-6,1,1);
+    cx.fillStyle='#1a0a2e'; cx.fillRect(-6,-17,3,3); cx.fillRect(4,-17,3,3);
+    cx.fillStyle='#78350f'; cx.fillRect(-5,-16,1,1); cx.fillRect(5,-16,1,1);
+    // Tail (top-down, curl at back right)
+    const tailWag = Math.sin((frame||0)*0.22)*0.4;
+    cx.save(); cx.translate(12,8); cx.rotate(tailWag);
+    cx.fillStyle='#fef3c7'; cx.beginPath(); cx.arc(0,0,5,0,Math.PI*2); cx.fill();
+    cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,0,3,0,Math.PI*2); cx.fill();
     cx.restore();
-    return; // skip shared eyes for max
+    cx.restore();
+    return;
   }
 }
 
