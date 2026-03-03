@@ -618,6 +618,7 @@ function uiShow(screenId) {
 }
 function uiPlay() {
   document.getElementById('ui-overlay').style.display = 'none';
+  player.coins = 0;
   gameState = 'playing';
   interiorCooldown = 180;
   clearedStructures.clear();
@@ -694,6 +695,8 @@ function uiResume() {
 }
 function uiQuit() {
   document.getElementById('pause-overlay').style.display = 'none';
+  savedCoins += player.coins;
+  player.coins = 0;
   gameState = 'menu';
   uiShow('scr-main');
 }
@@ -844,7 +847,7 @@ function forgeChord() {
     return;
   }
   const rootName = NOTE_NAMES[best.root];
-  savedCoins += best.def.coins; // permanent — never lost on death
+  player.coins += best.def.coins; // mid-game wallet — banked on quit
   const usedPitches = [...best.needed];
   player.notes = player.notes.filter(p => {
     const idx = usedPitches.indexOf(p);
@@ -955,7 +958,7 @@ function updateInterior() {
     s.enemies.forEach((e,ei) => {
       if (Math.abs(b.x-e.x)<e.w&&Math.abs(b.y-e.y)<e.h) {
         e.hp -= b.dmg; s.bullets.splice(i,1);
-        if (e.hp<=0) { sfxEnemyDie(); s.enemies.splice(ei,1); showNotif('+5 MP!','#22c55e',60); savedCoins+=5; }
+        if (e.hp<=0) { sfxEnemyDie(); s.enemies.splice(ei,1); showNotif('+5 MP!','#22c55e',60); player.coins+=5; }
       }
     });
   });
@@ -1105,7 +1108,7 @@ function updateInterior() {
   // Chest collect
   const cd = Math.sqrt((s.px-s.chestX)**2+(s.py-s.chestY)**2);
   if (!s.chestCollected && cd < 40 && mouseDown) {
-    s.chestCollected = true; savedCoins += 50;
+    s.chestCollected = true; player.coins += 50;
     showNotif('📦 +50 MP from chest!','#fbbf24',180);
   }
   // Exit ladder
@@ -1694,7 +1697,7 @@ function update() {
       if (!ch.collected) {
         const cdx = (player.x+player.w/2)-ch.x, cdy = (player.y+player.h/2)-ch.y;
         if (Math.sqrt(cdx*cdx+cdy*cdy) < 48) {
-          ch.collected = true; savedCoins += 50;
+          ch.collected = true; player.coins += 50;
           showNotif('📦 +50 MP from chest!','#fbbf24',180);
         }
       }
