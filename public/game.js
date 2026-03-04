@@ -518,7 +518,7 @@ function spawnEnemy(nearPlayer) {
   // ── Forest (center): Crawler | Runner ──────────────────────────
   if (biome === 'forest') {
     if (r<0.55){type='crawler';   w=28;h=20;hp=Math.round(28*m); speed=0.8+r*0.4;dmg=Math.round(10*m);}
-    else       {type='runner';    w=18;h=38;hp=Math.round(15*m); speed=2.2+r*0.8;dmg=Math.round(4*m);}
+    else       {type='runner';    w=18;h=38;hp=Math.round(15*m); speed=1.54+r*0.56;dmg=Math.round(4*m);}
 
   // ── Swamp (mid-right): Slimeling | Bogcrawler ───────────────────
   } else if (biome === 'swamp') {
@@ -527,27 +527,27 @@ function spawnEnemy(nearPlayer) {
 
   // ── Desert (mid-left): Scorpling | Dunestalker ──────────────────
   } else if (biome === 'desert') {
-    if (r<0.55){type='scorpling';  w=24;h=20;hp=Math.round(35*m); speed=2.5+r*0.8;dmg=Math.round(9*m);}
-    else       {type='dunestalker';w=22;h=26;hp=Math.round(45*m); speed=3.0+r*0.6;dmg=Math.round(7*m);}
+    if (r<0.55){type='scorpling';  w=24;h=20;hp=Math.round(35*m); speed=1.75+r*0.56;dmg=Math.round(9*m);}
+    else       {type='dunestalker';w=22;h=26;hp=Math.round(45*m); speed=2.1+r*0.42;dmg=Math.round(7*m);}
 
   // ── Tundra (top-left): Yeti | Frost Imp ─────────────────────────
   } else if (biome === 'tundra') {
     if (r<0.45){type='yeti';    w=40;h=44;hp=Math.round(140*m);speed=0.7+r*0.3;dmg=Math.round(22*m);}
-    else       {type='frostimp';w=18;h=22;hp=Math.round(40*m); speed=2.8+r*0.5;dmg=Math.round(10*m);}
+    else       {type='frostimp';w=18;h=22;hp=Math.round(40*m); speed=1.96+r*0.35;dmg=Math.round(10*m);}
 
   // ── Crystal (top-center): Crystal Golem | Gem Sprite ────────────
   } else if (biome === 'crystal') {
     if (r<0.45){type='crystalgolem';w=38;h=42;hp=Math.round(130*m);speed=0.6+r*0.2;dmg=Math.round(20*m);}
-    else       {type='gemsprite';   w=16;h=20;hp=Math.round(28*m); speed=3.2+r*0.6;dmg=Math.round(8*m);}
+    else       {type='gemsprite';   w=16;h=20;hp=Math.round(28*m); speed=2.24+r*0.42;dmg=Math.round(8*m);}
 
   // ── Storm (top-right): Wind Elemental | Storm Hawk ───────────────
   } else if (biome === 'storm') {
-    if (r<0.5){type='windelemental';w=28;h=36;hp=Math.round(55*m); speed=2.2+r*0.6;dmg=Math.round(14*m);}
-    else      {type='stormhawk';    w=32;h=24;hp=Math.round(45*m); speed=3.5+r*0.8;dmg=Math.round(10*m);}
+    if (r<0.5){type='windelemental';w=28;h=36;hp=Math.round(55*m); speed=1.54+r*0.42;dmg=Math.round(14*m);}
+    else      {type='stormhawk';    w=32;h=24;hp=Math.round(45*m); speed=2.45+r*0.56;dmg=Math.round(10*m);}
 
   // ── Volcano (bot-left): Ember | Magma Crab ──────────────────────
   } else if (biome === 'volcano') {
-    if (r<0.55){type='ember';    w=20;h=28;hp=Math.round(40*m); speed=2.8+r*0.7;dmg=Math.round(11*m);}
+    if (r<0.55){type='ember';    w=20;h=28;hp=Math.round(40*m); speed=1.96+r*0.49;dmg=Math.round(11*m);}
     else       {type='magmacrab';w=36;h=28;hp=Math.round(120*m);speed=0.6+r*0.2;dmg=Math.round(20*m);}
 
   // ── Mushroom (bot-center): Spore Puff | Mycelium Creep ──────────
@@ -557,13 +557,13 @@ function spawnEnemy(nearPlayer) {
 
   // ── Shadow (bot-right): Wraith | Void Shade ─────────────────────
   } else if (biome === 'shadow') {
-    if (r<0.5){type='wraith';   w=26;h=32;hp=Math.round(60*m); speed=1.8+r*0.8;dmg=Math.round(18*m);}
-    else      {type='voidshade';w=20;h=28;hp=Math.round(35*m); speed=3.5+r*0.5;dmg=Math.round(22*m);}
+    if (r<0.5){type='wraith';   w=26;h=32;hp=Math.round(60*m); speed=1.26+r*0.56;dmg=Math.round(18*m);}
+    else      {type='voidshade';w=20;h=28;hp=Math.round(35*m); speed=2.45+r*0.35;dmg=Math.round(22*m);}
 
   // ── Void (border ring): Wraith | Void Shade (hardest) ───────────
   } else {
-    if (r<0.5){type='wraith';   w=28;h=34;hp=Math.round(80*m); speed=2.0+r*0.8;dmg=Math.round(22*m);}
-    else      {type='voidshade';w=22;h=30;hp=Math.round(45*m); speed=4.0+r*0.5;dmg=Math.round(28*m);}
+    if (r<0.5){type='wraith';   w=28;h=34;hp=Math.round(80*m); speed=1.4+r*0.56;dmg=Math.round(22*m);}
+    else      {type='voidshade';w=22;h=30;hp=Math.round(45*m); speed=2.8+r*0.35;dmg=Math.round(28*m);}
   }
   enemies.push({ type, x:ex, y:ey, w, h, hp, maxHp:hp, speed, baseDmg:dmg, dmg, damageCooldown:0 });
 }
