@@ -2591,15 +2591,15 @@ const HAZARD_CFG = {
   shadow:  {color:'#220033',dmg:2,slow:0.5,label:'Void tear'}
 };
 const WILDLIFE_CFG = {
-  forest:  [{c:'#44aa22',sz:6,sp:2.5,label:'🦋'},{c:'#aa6622',sz:5,sp:3,label:'🐿️'}],
-  swamp:   [{c:'#22aa44',sz:7,sp:1.5,label:'🐸'},{c:'#44cc22',sz:4,sp:2,label:'🐍'}],
-  desert:  [{c:'#d4a030',sz:5,sp:3,label:'🦎'},{c:'#c8c080',sz:4,sp:4,label:'🪲'}],
-  tundra:  [{c:'#ffffff',sz:6,sp:2,label:'🐇'},{c:'#aaccff',sz:5,sp:3.5,label:'❄'}],
-  volcano: [{c:'#cc4400',sz:5,sp:3,label:'🦎'},{c:'#ff6600',sz:4,sp:4,label:'🪲'}],
-  crystal: [{c:'#88aaff',sz:5,sp:2.5,label:'✨'},{c:'#ccaaff',sz:4,sp:3,label:'💎'}],
-  storm:   [{c:'#aaaacc',sz:5,sp:4,label:'🐦'},{c:'#8888bb',sz:4,sp:5,label:'⚡'}],
-  mushroom:[{c:'#cc44aa',sz:6,sp:1.5,label:'🍄'},{c:'#882266',sz:5,sp:2,label:'🐛'}],
-  shadow:  [{c:'#8800cc',sz:5,sp:2,label:'👁'},{c:'#440066',sz:4,sp:3,label:'🌑'}]
+  forest:  [{type:'unicorn',   sp:1.4},{type:'unicorn',   sp:1.6}],
+  swamp:   [{type:'alligator', sp:1.0},{type:'alligator', sp:1.2}],
+  desert:  [{type:'camel',     sp:1.2},{type:'camel',     sp:1.0}],
+  tundra:  [{type:'penguin',   sp:1.5},{type:'penguin',   sp:1.3}],
+  volcano: [{type:'lemur',     sp:1.8},{type:'lemur',     sp:2.0}],
+  crystal: [{type:'crystaldeer',sp:1.6},{type:'crystaldeer',sp:1.4}],
+  storm:   [{type:'eagle',     sp:3.0},{type:'eagle',     sp:3.5}],
+  mushroom:[{type:'bunny',     sp:2.0},{type:'bunny',     sp:2.2}],
+  shadow:  [{type:'blackcat',  sp:1.6},{type:'blackcat',  sp:1.8}]
 };
 
 // =====================================================================
@@ -3895,8 +3895,9 @@ function initExploration() {
       for (let w=0;w<2;w++) {
         const wp = randFloorInBiome(bm);
         WILDLIFE.push({x:wp.x, y:wp.y, vx:0, vy:0, biome:bm,
-          color:cfg.c, sz:cfg.sz, speed:cfg.sp,
+          type:cfg.type, speed:cfg.sp,
           idleTimer:Math.floor(Math.random()*120),
+          frame:Math.floor(Math.random()*60),
           fleeing:false});
       }
     });
@@ -4367,6 +4368,279 @@ function drawSpawnPad() {
   ctx.fillStyle = '#aaaacc';
   ctx.font = '8px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   ctx.fillText('SPAWN', cx, cy + 50);
+
+  ctx.restore();
+}
+
+// =====================================================================
+// WILDLIFE CREATURE PIXEL ART
+// =====================================================================
+function drawWildlifeCreature(type, cx, cy, fr, fleeing) {
+  const bob = Math.sin(fr*0.14)*1.5;
+  ctx.save();
+  ctx.translate(cx, cy + bob);
+
+  if (type === 'unicorn') {
+    // White horse, rainbow mane, golden horn
+    const leg = Math.sin(fr*0.2)*4;
+    // Legs
+    ctx.fillStyle='#f0f0f0';
+    ctx.fillRect(-7,4,3,6+leg); ctx.fillRect(-2,4,3,6-leg);
+    ctx.fillRect(3,4,3,6-leg);  ctx.fillRect(8,4,3,6+leg);
+    // Hooves
+    ctx.fillStyle='#888'; ctx.fillRect(-7,9+leg,3,2); ctx.fillRect(-2,9-leg,3,2); ctx.fillRect(3,9-leg,3,2); ctx.fillRect(8,9+leg,3,2);
+    // Body
+    ctx.fillStyle='#f8f8ff'; ctx.fillRect(-9,-2,18,8);
+    ctx.fillStyle='#fff'; ctx.fillRect(-8,-2,16,3);
+    // Tail (rainbow flick)
+    const tf = Math.sin(fr*0.18)*3;
+    ctx.fillStyle='#ff88cc'; ctx.fillRect(9,-1+tf,4,3);
+    ctx.fillStyle='#88aaff'; ctx.fillRect(10,0+tf,3,3);
+    ctx.fillStyle='#88ffaa'; ctx.fillRect(10,2+tf,3,2);
+    // Neck + head
+    ctx.fillStyle='#f8f8ff'; ctx.fillRect(-9,-8,7,8);
+    ctx.fillRect(-11,-12,9,6);
+    // Mane (rainbow)
+    ctx.fillStyle='#ff88cc'; ctx.fillRect(-10,-14,3,6); ctx.fillRect(-8,-15,2,7);
+    ctx.fillStyle='#ff88ff'; ctx.fillRect(-6,-14,2,5);
+    // Horn (golden)
+    ctx.fillStyle='#ffd700';
+    ctx.beginPath(); ctx.moveTo(-8,-18); ctx.lineTo(-5,-18); ctx.lineTo(-6,-12); ctx.closePath(); ctx.fill();
+    // Eye
+    ctx.fillStyle='#1a0a2e'; ctx.fillRect(-9,-11,3,2);
+    ctx.fillStyle='#aa66ff'; ctx.fillRect(-9,-11,2,2);
+    ctx.fillStyle='#fff'; ctx.fillRect(-9,-12,1,1);
+    // Nostril
+    ctx.fillStyle='#ffaabb'; ctx.fillRect(-12,-10,2,1);
+
+  } else if (type === 'alligator') {
+    // Long flat green body, snout, tail
+    const tail = Math.sin(fr*0.1)*3;
+    // Tail
+    ctx.fillStyle='#2a6a10'; ctx.fillRect(12,-1,10,4); ctx.fillRect(20,0+tail,7,3); ctx.fillRect(25,1+tail,5,2);
+    // Body
+    ctx.fillStyle='#1a5a08'; ctx.fillRect(-12,-3,26,7);
+    ctx.fillStyle='#2a7a18'; ctx.fillRect(-11,-2,24,3); // back highlights
+    // Scale ridges
+    ctx.fillStyle='#1a5a08';
+    for(let i=0;i<4;i++){ctx.fillRect(-8+i*5,-3,3,2);}
+    // Legs
+    ctx.fillStyle='#2a6a10';
+    ctx.fillRect(-10,3,4,4); ctx.fillRect(-2,3,4,4); ctx.fillRect(6,3,4,4); ctx.fillRect(12,3,4,4);
+    // Snout (long flat)
+    ctx.fillStyle='#2a7a18'; ctx.fillRect(-20,-2,10,5);
+    ctx.fillStyle='#1a5a08'; ctx.fillRect(-20,-1,10,2);
+    // Teeth
+    ctx.fillStyle='#f0f0e0';
+    for(let t2=0;t2<3;t2++){ctx.fillRect(-18+t2*3,-1,1,2);}
+    // Eye (bumps on top)
+    ctx.fillStyle='#228800'; ctx.fillRect(-6,-5,4,3); ctx.fillRect(2,-5,4,3);
+    ctx.fillStyle='#ffee00'; ctx.fillRect(-5,-5,2,2); ctx.fillRect(3,-5,2,2);
+    ctx.fillStyle='#000'; ctx.fillRect(-5,-5,1,1); ctx.fillRect(3,-5,1,1);
+    ctx.fillStyle='#fff'; ctx.fillRect(-4,-5,1,1); ctx.fillRect(4,-5,1,1);
+
+  } else if (type === 'camel') {
+    // Tan camel with humps, long neck, knobby legs
+    const leg = Math.sin(fr*0.15)*3;
+    // Legs (long, knobby)
+    ctx.fillStyle='#c8902a';
+    ctx.fillRect(-7,4,4,9+leg); ctx.fillRect(-1,4,4,9-leg);
+    ctx.fillRect(5,4,4,9-leg);  ctx.fillRect(11,4,4,9+leg);
+    // Hooves
+    ctx.fillStyle='#6a4820'; for(const lx of [-7,-1,5,11]){ctx.fillRect(lx,12,4,2);}
+    // Body
+    ctx.fillStyle='#d4a030'; ctx.fillRect(-9,-2,20,8);
+    // Humps
+    ctx.fillStyle='#c8902a'; ctx.fillRect(-7,-8,7,8); ctx.fillRect(2,-10,7,10);
+    ctx.fillStyle='#d4a030'; ctx.fillRect(-6,-7,5,6); ctx.fillRect(3,-9,5,8);
+    // Neck
+    ctx.fillStyle='#d4a030'; ctx.fillRect(-14,-6,6,10);
+    // Head
+    ctx.fillRect(-17,-10,8,6);
+    ctx.fillStyle='#c8902a'; ctx.fillRect(-17,-10,8,2);
+    // Snout / lips
+    ctx.fillStyle='#e8b840'; ctx.fillRect(-20,-8,5,3);
+    ctx.fillStyle='#c8902a'; ctx.fillRect(-20,-7,5,1);
+    // Eye
+    ctx.fillStyle='#1a0a00'; ctx.fillRect(-15,-9,2,2);
+    ctx.fillStyle='#fff'; ctx.fillRect(-15,-9,1,1);
+    // Ear
+    ctx.fillStyle='#c8902a'; ctx.fillRect(-13,-12,3,3);
+    ctx.fillStyle='#e8b840'; ctx.fillRect(-13,-11,2,2);
+
+  } else if (type === 'penguin') {
+    // Black and white penguin, waddle
+    const wad = Math.sin(fr*0.22)*2;
+    // Feet (orange)
+    ctx.fillStyle='#ff8800';
+    ctx.fillRect(-5,9+wad,5,3); ctx.fillRect(1,9-wad,5,3);
+    // Body (black outer, white belly)
+    ctx.fillStyle='#1a1a2e'; ctx.beginPath(); ctx.ellipse(0,2,7,9,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#f0f0f0'; ctx.beginPath(); ctx.ellipse(0,3,4,6,0,0,Math.PI*2); ctx.fill();
+    // Wings (flat, at sides, flap slightly)
+    const wf = Math.sin(fr*0.22)*3;
+    ctx.fillStyle='#1a1a2e';
+    ctx.fillRect(-10,0+wf,4,8); ctx.fillRect(7,0-wf,4,8);
+    // Head
+    ctx.fillStyle='#1a1a2e'; ctx.beginPath(); ctx.ellipse(0,-7,6,6,0,0,Math.PI*2); ctx.fill();
+    // White face patch
+    ctx.fillStyle='#f0f0f0'; ctx.beginPath(); ctx.ellipse(0,-7,3,4,0,0,Math.PI*2); ctx.fill();
+    // Beak
+    ctx.fillStyle='#ff8800'; ctx.fillRect(-2,-8,4,4);
+    ctx.fillStyle='#ff6600'; ctx.fillRect(-2,-7,4,2);
+    // Eyes
+    ctx.fillStyle='#1a1a2e'; ctx.fillRect(-4,-9,2,2); ctx.fillRect(3,-9,2,2);
+    ctx.fillStyle='#fff'; ctx.fillRect(-4,-9,1,1); ctx.fillRect(3,-9,1,1);
+
+  } else if (type === 'lemur') {
+    // Ring-tailed lemur, striped tail arching up
+    const leg = Math.sin(fr*0.18)*2;
+    // Tail (long, striped, arches up behind)
+    for(let t2=0;t2<6;t2++){
+      const ty2 = -4-t2*3; const tx2 = 8+t2*2;
+      ctx.fillStyle = t2%2===0 ? '#1a1a1a' : '#f0f0f0';
+      ctx.fillRect(tx2,ty2,3,4);
+    }
+    // Legs
+    ctx.fillStyle='#888888'; ctx.fillRect(-5,4,3,6+leg); ctx.fillRect(3,4,3,6-leg);
+    ctx.fillStyle='#555'; ctx.fillRect(-5,9+leg,4,2); ctx.fillRect(3,9-leg,4,2);
+    // Body (grey)
+    ctx.fillStyle='#aaaaaa'; ctx.fillRect(-7,-2,14,8);
+    ctx.fillStyle='#f0f0f0'; ctx.fillRect(-5,-1,10,3); // white belly
+    // Arms
+    ctx.fillStyle='#888888'; ctx.fillRect(-9,0,3,5); ctx.fillRect(7,0,3,5);
+    // Head (round)
+    ctx.fillStyle='#aaaaaa'; ctx.beginPath(); ctx.ellipse(0,-8,6,6,0,0,Math.PI*2); ctx.fill();
+    // Face — white patches around eyes
+    ctx.fillStyle='#f0f0f0'; ctx.beginPath(); ctx.ellipse(-3,-8,3,3,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(3,-8,3,3,0,0,Math.PI*2); ctx.fill();
+    // Eyes (huge, orange)
+    ctx.fillStyle='#ff8800'; ctx.fillRect(-5,-10,3,4); ctx.fillRect(3,-10,3,4);
+    ctx.fillStyle='#000'; ctx.fillRect(-5,-10,2,3); ctx.fillRect(3,-10,2,3);
+    ctx.fillStyle='#fff'; ctx.fillRect(-4,-10,1,1); ctx.fillRect(4,-10,1,1);
+    // Snout
+    ctx.fillStyle='#555'; ctx.beginPath(); ctx.ellipse(0,-6,3,2,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#222'; ctx.fillRect(-1,-6,2,2); // nose
+
+  } else if (type === 'crystaldeer') {
+    // Blue-crystal deer, glowing antlers
+    const leg = Math.sin(fr*0.16)*3;
+    // Legs (crystal blue)
+    ctx.fillStyle='#4488cc';
+    ctx.fillRect(-6,4,3,8+leg); ctx.fillRect(0,4,3,8-leg);
+    ctx.fillRect(5,4,3,8-leg);  ctx.fillRect(10,4,3,8+leg);
+    // Hooves
+    ctx.fillStyle='#2266aa'; for(const lx of [-6,0,5,10]){ctx.fillRect(lx,11,3,2);}
+    // Body
+    ctx.fillStyle='#66aaee'; ctx.fillRect(-8,-2,18,8);
+    ctx.fillStyle='#88ccff'; ctx.fillRect(-7,-2,16,2); // shimmer
+    // Crystal facets on body
+    ctx.fillStyle='#4488cc'; ctx.fillRect(-4,0,3,3); ctx.fillRect(4,0,3,3);
+    // Neck
+    ctx.fillStyle='#66aaee'; ctx.fillRect(-10,-6,6,8);
+    // Head
+    ctx.fillRect(-13,-10,8,6);
+    ctx.fillStyle='#88ccff'; ctx.fillRect(-13,-10,8,2);
+    // Antlers (crystal shards)
+    ctx.fillStyle='#aaddff';
+    ctx.fillRect(-14,-18,2,9); ctx.fillRect(-14,-18,6,2); // left
+    ctx.fillRect(-12,-15,4,2); ctx.fillRect(-10,-18,2,5);
+    ctx.fillRect(-8,-18,2,8); ctx.fillRect(-8,-18,5,2);  // right
+    ctx.fillRect(-6,-15,3,2); ctx.fillRect(-5,-18,2,5);
+    // Glow on antlers
+    ctx.globalAlpha=0.3+0.3*Math.sin(fr*0.12);
+    ctx.fillStyle='#88eeff';
+    ctx.beginPath(); ctx.arc(-11,-16,5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-6,-16,5,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+    // Eye
+    ctx.fillStyle='#1a2a4a'; ctx.fillRect(-12,-8,2,2);
+    ctx.fillStyle='#88ccff'; ctx.fillRect(-12,-8,1,1);
+    ctx.fillStyle='#fff'; ctx.fillRect(-11,-8,1,1);
+
+  } else if (type === 'eagle') {
+    // Soaring storm eagle
+    const flap = Math.sin(fr*0.35)*5;
+    // Wings (wide span, dark brown)
+    ctx.fillStyle='#2a2a44';
+    ctx.fillRect(-18,-2+flap,8,5); ctx.fillRect(-24,0+flap,7,3); // left wing
+    ctx.fillRect(11,-2-flap,8,5); ctx.fillRect(18,0-flap,7,3);   // right wing
+    ctx.fillStyle='#444466';
+    ctx.fillRect(-17,-1+flap,7,3); ctx.fillRect(11,-1-flap,7,3);
+    // Body
+    ctx.fillStyle='#2a2a44'; ctx.beginPath(); ctx.ellipse(0,0,7,5,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#f0f0f0'; ctx.beginPath(); ctx.ellipse(0,1,4,3,0,0,Math.PI*2); ctx.fill();
+    // Tail feathers
+    ctx.fillStyle='#2a2a44'; ctx.fillRect(6,-1,8,3); ctx.fillRect(10,-2,6,5);
+    // Head (white)
+    ctx.fillStyle='#f0f0f0'; ctx.beginPath(); ctx.ellipse(0,-6,5,4,0,0,Math.PI*2); ctx.fill();
+    // Beak (yellow, hooked)
+    ctx.fillStyle='#ffcc00'; ctx.fillRect(3,-8,5,3); ctx.fillRect(6,-6,3,3);
+    // Eye
+    ctx.fillStyle='#ffcc00'; ctx.fillRect(-1,-8,3,3);
+    ctx.fillStyle='#1a1a00'; ctx.fillRect(0,-8,2,2);
+    ctx.fillStyle='#fff'; ctx.fillRect(1,-8,1,1);
+
+  } else if (type === 'bunny') {
+    // Purple mushroom forest bunny
+    const hop = Math.abs(Math.sin(fr*0.25))*3;
+    // Feet
+    ctx.fillStyle='#cc88ee'; ctx.fillRect(-6,6-hop,5,4); ctx.fillRect(2,6-hop,5,4);
+    // Body
+    ctx.fillStyle='#bb66dd'; ctx.beginPath(); ctx.ellipse(0,0+hop,6,7,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ddaaff'; ctx.beginPath(); ctx.ellipse(0,1+hop,4,5,0,0,Math.PI*2); ctx.fill();
+    // Fluffy tail
+    ctx.fillStyle='#f0f0f0'; ctx.beginPath(); ctx.arc(7,2+hop,3,0,Math.PI*2); ctx.fill();
+    // Head
+    ctx.fillStyle='#cc88ee'; ctx.beginPath(); ctx.ellipse(0,-8+hop,5,5,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ddaaff'; ctx.beginPath(); ctx.ellipse(0,-8+hop,3,3,0,0,Math.PI*2); ctx.fill();
+    // Ears (tall)
+    ctx.fillStyle='#cc88ee'; ctx.fillRect(-5,-18+hop,4,11); ctx.fillRect(2,-18+hop,4,11);
+    ctx.fillStyle='#ff88aa'; ctx.fillRect(-4,-17+hop,2,9); ctx.fillRect(3,-17+hop,2,9);
+    // Eyes
+    ctx.fillStyle='#1a0a2e'; ctx.fillRect(-3,-9+hop,2,2); ctx.fillRect(2,-9+hop,2,2);
+    ctx.fillStyle='#ff44aa'; ctx.fillRect(-2,-9+hop,1,1); ctx.fillRect(2,-9+hop,1,1);
+    // Nose
+    ctx.fillStyle='#ff88aa'; ctx.fillRect(-1,-7+hop,2,1);
+
+  } else if (type === 'blackcat') {
+    // Shadow black cat, glowing eyes, curled tail
+    const step = Math.sin(fr*0.16)*2;
+    // Tail (curled up and over)
+    ctx.fillStyle='#1a1a2e';
+    ctx.fillRect(8,-2,4,8); ctx.fillRect(10,-6,5,5); ctx.fillRect(12,-8,4,4); ctx.fillRect(14,-6,3,3);
+    // Legs
+    ctx.fillStyle='#1a1a2e'; ctx.fillRect(-6,4,3,6+step); ctx.fillRect(0,4,3,6-step);
+    ctx.fillRect(5,4,3,6-step); ctx.fillRect(10,4,3,6+step);
+    // Paws
+    ctx.fillStyle='#2a2a3e'; for(const lx of [-6,0,5,10]){ctx.fillRect(lx,9,4,2);}
+    // Body
+    ctx.fillStyle='#1a1a2e'; ctx.beginPath(); ctx.ellipse(2,0,8,6,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#2a2a3e'; ctx.beginPath(); ctx.ellipse(2,-1,6,4,0,0,Math.PI*2); ctx.fill();
+    // Head
+    ctx.fillStyle='#1a1a2e'; ctx.beginPath(); ctx.ellipse(-2,-8,6,6,0,0,Math.PI*2); ctx.fill();
+    // Ears (pointy)
+    ctx.fillStyle='#1a1a2e'; ctx.fillRect(-7,-16,4,8); ctx.fillRect(1,-16,4,8);
+    ctx.fillStyle='#8800cc'; ctx.fillRect(-6,-15,2,6); ctx.fillRect(2,-15,2,6);
+    // Eyes (glowing purple/green)
+    const eyeGlow = 0.6 + 0.4*Math.sin(fr*0.15);
+    ctx.globalAlpha=eyeGlow; ctx.fillStyle='#88ff44';
+    ctx.fillRect(-5,-10,3,3); ctx.fillRect(0,-10,3,3);
+    ctx.globalAlpha=1; ctx.fillStyle='#000';
+    ctx.fillRect(-4,-9,1,2); ctx.fillRect(1,-9,1,2);
+    // Whiskers
+    ctx.strokeStyle='#4a4a6a'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(-7,-8); ctx.lineTo(-12,-7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-7,-7); ctx.lineTo(-12,-8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(3,-8); ctx.lineTo(8,-7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(3,-7); ctx.lineTo(8,-8); ctx.stroke();
+  }
+
+  // Flee exclamation
+  if (fleeing) {
+    ctx.fillStyle='rgba(255,80,80,0.85)'; ctx.font='bold 10px monospace'; ctx.textAlign='center';
+    ctx.fillText('!', 0, -22);
+  }
 
   ctx.restore();
 }
