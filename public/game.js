@@ -4039,7 +4039,7 @@ function initExploration() {
     // Wildlife (2 types × 2 individuals per biome = 4 critters)
     const cfgs = WILDLIFE_CFG[bm]||[];
     cfgs.forEach(cfg => {
-      for (let w=0;w<2;w++) {
+      for (let w=0;w<15;w++) {
         const wp = randFloorInBiome(bm);
         WILDLIFE.push({x:wp.x, y:wp.y, vx:0, vy:0, biome:bm,
           type:cfg.type, speed:cfg.sp,
