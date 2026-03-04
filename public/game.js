@@ -1440,73 +1440,7 @@ function update() {
         if (e.bleeding > 0) actualDmg = Math.round(actualDmg * (e.bleedMult || 1.5));
         e.hp -= actualDmg;
 
-        // Active ability effect (only one equipped at a time)
-        for (const abId of equippedAbilities) {
-        const ab = ALL_UPGRADES.find(u => u.id === abId);
-        const abLv = ab ? totalLevel(ab.id) : 0;
-        if (ab && abLv > 0) {
-          if (ab.id === 'ab_fire') {
-            e.burning = 300 + abLv*60; e.burnDmg = 3 + abLv*2;
-            if (!e.wasFireNotif) { showNotif('🔥 Burning!', '#f97316', 45); e.wasFireNotif=true; }
-          }
-          if (ab.id === 'ab_bleed') {
-            e.bleeding = 300; e.bleedMult = 1.3 + abLv*0.1;
-            showNotif('🩸 Bleeding! (+' + Math.round(actualDmg*0.3) + '% dmg)', '#dc2626', 45);
-          }
-          if (ab.id === 'ab_freeze') {
-            e.frozen = Math.min(600,(e.frozen||0)+180); e.frozenSpeedMult = Math.max(0.1, 0.55 - abLv*0.09);
-            if (!e.wasFreezeNotif) { showNotif('🧊 Frozen!', '#67e8f9', 45); e.wasFreezeNotif=true; }
-          }
-          if (ab.id === 'ab_weaken' && !e.weakened) {
-            e.weakened=400; e.dmg=Math.round((e.dmg||10)*(0.7-abLv*0.05));
-            showNotif('💀 Weakened! (-' + (30+abLv*5) + '% dmg)', '#94a3b8', 55);
-          }
-          if (ab.id === 'ab_poison') {
-            e.poisonStacks=Math.min(10,(e.poisonStacks||0)+1); e.poisonTimer=400;
-            showNotif('☠️ Poison x' + e.poisonStacks, '#4ade80', 45);
-          }
-          if (ab.id === 'ab_leech') {
-            const heal = Math.max(3, Math.ceil(actualDmg * (0.25 + abLv*0.05)));
-            player.hp = Math.min(player.maxHp, player.hp + heal);
-            showNotif('💚 +' + heal + ' HP', '#22c55e', 45);
-          }
-          if (ab.id === 'ab_knockback') {
-            const kbdx=e.x-player.x,kbdy=e.y-player.y,kbl=Math.sqrt(kbdx*kbdx+kbdy*kbdy)||1;
-            const kbDist = 60 + abLv*20;
-            e.x+=(kbdx/kbl)*kbDist; e.y+=(kbdy/kbl)*kbDist;
-            showNotif('💨 Knockback!', '#e2e8f0', 35);
-          }
-          if (ab.id === 'ab_magnetic') {
-            const mgdx=player.x-e.x,mgdy=player.y-e.y,mgl=Math.sqrt(mgdx*mgdx+mgdy*mgdy)||1;
-            e.x+=(mgdx/mgl)*(40+abLv*10); e.y+=(mgdy/mgl)*(40+abLv*10);
-            showNotif('🧲 Pulled!', '#fbbf24', 35);
-          }
-          if (ab.id === 'ab_psychic') {
-            e.psychic = 300 + abLv*60; e.psychicDmg = 8 + abLv*4;
-            showNotif('🧠 Psychic!', '#a855f7', 60);
-          }
-          if (ab.id === 'ab_explode') {
-            const splashR = 40 + abLv*10;
-            const splashDmg = Math.round(actualDmg * 0.6); // 60% of bullet dmg, not extra
-            triggerExplosion(b.x, b.y, splashR, splashDmg);
-          }
-          if (ab.id === 'ab_lightning') {
-            let closest = null, closestDist = 220;
-            for (const oe of enemies) {
-              if (oe === e) continue;
-              const d = Math.sqrt((oe.x-e.x)**2+(oe.y-e.y)**2);
-              if (d < closestDist) { closestDist=d; closest=oe; }
-            }
-            if (closest) {
-              const ldmg = Math.round(actualDmg * (0.5 + abLv*0.1));
-              closest.hp -= ldmg; closest.burnFlash = 8;
-              lightningArcs.push({ x1:e.x+e.w/2, y1:e.y+e.h/2, x2:closest.x+closest.w/2, y2:closest.y+closest.h/2, life:12 });
-              showNotif('⚡ Chain -' + ldmg, '#fbbf24', 45);
-              if (closest.hp <= 0) enemies.splice(enemies.indexOf(closest), 1);
-            }
-          }
-        } // end ab check
-        } // end equippedAbilities loop
+        applyAbilitiesOnHit(e, actualDmg, enemies, b.x, b.y, player.x, player.y, false);
 
         if (e.hp <= 0) {
           enemies.splice(j, 1);
@@ -4228,6 +4162,91 @@ function drawExploration() {
     ctx.fillStyle='#ffd700'; ctx.font='bold 10px monospace'; ctx.textAlign='center';
     ctx.fillText(icon+' '+shrineBuffType.toUpperCase()+' '+secs+'s', CW/2, 15);
     ctx.restore();
+  }
+}
+
+// =====================================================================
+// SHARED ABILITY HIT LOGIC — used by both world and interior bullet hits
+// playerPx/playerPy = player position in the same coordinate space as enemies
+// isInterior = true when called from interior (screen-space coords)
+// =====================================================================
+function applyAbilitiesOnHit(e, actualDmg, enemyList, bx, by, playerPx, playerPy, isInterior) {
+  for (const abId of equippedAbilities) {
+    const ab = ALL_UPGRADES.find(u => u.id === abId);
+    const abLv = ab ? totalLevel(ab.id) : 0;
+    if (!ab || abLv <= 0) continue;
+    if (ab.id === 'ab_fire') {
+      e.burning = 300 + abLv*60; e.burnDmg = 3 + abLv*2;
+      if (!e.wasFireNotif) { showNotif('🔥 Burning!', '#f97316', 45); e.wasFireNotif=true; }
+    }
+    if (ab.id === 'ab_bleed') {
+      e.bleeding = 300; e.bleedMult = 1.3 + abLv*0.1;
+      showNotif('🩸 Bleeding! (+' + Math.round(actualDmg*0.3) + '% dmg)', '#dc2626', 45);
+    }
+    if (ab.id === 'ab_freeze') {
+      e.frozen = Math.min(600,(e.frozen||0)+180); e.frozenSpeedMult = Math.max(0.1, 0.55 - abLv*0.09);
+      if (!e.wasFreezeNotif) { showNotif('🧊 Frozen!', '#67e8f9', 45); e.wasFreezeNotif=true; }
+    }
+    if (ab.id === 'ab_weaken' && !e.weakened) {
+      e.weakened=400; e.dmg=Math.round((e.dmg||10)*(0.7-abLv*0.05));
+      showNotif('💀 Weakened! (-' + (30+abLv*5) + '% dmg)', '#94a3b8', 55);
+    }
+    if (ab.id === 'ab_poison') {
+      e.poisonStacks=Math.min(10,(e.poisonStacks||0)+1); e.poisonTimer=400;
+      showNotif('☠️ Poison x' + e.poisonStacks, '#4ade80', 45);
+    }
+    if (ab.id === 'ab_leech') {
+      const heal = Math.max(3, Math.ceil(actualDmg * (0.25 + abLv*0.05)));
+      player.hp = Math.min(player.maxHp, player.hp + heal);
+      showNotif('💚 +' + heal + ' HP', '#22c55e', 45);
+    }
+    if (ab.id === 'ab_knockback') {
+      const kbdx=e.x-playerPx,kbdy=e.y-playerPy,kbl=Math.sqrt(kbdx*kbdx+kbdy*kbdy)||1;
+      const kbDist = 60 + abLv*20;
+      e.x+=(kbdx/kbl)*kbDist; e.y+=(kbdy/kbl)*kbDist;
+      showNotif('💨 Knockback!', '#e2e8f0', 35);
+    }
+    if (ab.id === 'ab_magnetic') {
+      const mgdx=playerPx-e.x,mgdy=playerPy-e.y,mgl=Math.sqrt(mgdx*mgdx+mgdy*mgdy)||1;
+      e.x+=(mgdx/mgl)*(40+abLv*10); e.y+=(mgdy/mgl)*(40+abLv*10);
+      showNotif('🧲 Pulled!', '#fbbf24', 35);
+    }
+    if (ab.id === 'ab_psychic') {
+      e.psychic = 300 + abLv*60; e.psychicDmg = 8 + abLv*4;
+      showNotif('🧠 Psychic!', '#a855f7', 60);
+    }
+    if (ab.id === 'ab_pierce') { /* handled at call site */ }
+    if (ab.id === 'ab_explode') {
+      const splashR = 40 + abLv*10;
+      const splashDmg = Math.round(actualDmg * 0.6);
+      if (!isInterior) {
+        triggerExplosion(bx, by, splashR, splashDmg);
+      } else {
+        // Interior splash: damage nearby enemies in screen-space
+        for (const oe of enemyList) {
+          if (oe === e) continue;
+          const od = Math.sqrt((oe.x-bx)**2+(oe.y-by)**2);
+          if (od < splashR) oe.hp -= splashDmg;
+        }
+      }
+    }
+    if (ab.id === 'ab_lightning') {
+      let closest = null, closestDist = 220;
+      for (const oe of enemyList) {
+        if (oe === e) continue;
+        const d = Math.sqrt((oe.x-e.x)**2+(oe.y-e.y)**2);
+        if (d < closestDist) { closestDist=d; closest=oe; }
+      }
+      if (closest) {
+        const ldmg = Math.round(actualDmg * (0.5 + abLv*0.1));
+        closest.hp -= ldmg; closest.burnFlash = 8;
+        if (!isInterior) {
+          lightningArcs.push({ x1:e.x+e.w/2, y1:e.y+e.h/2, x2:closest.x+closest.w/2, y2:closest.y+closest.h/2, life:12 });
+        }
+        showNotif('⚡ Chain -' + ldmg, '#fbbf24', 45);
+        if (closest.hp <= 0) enemyList.splice(enemyList.indexOf(closest), 1);
+      }
+    }
   }
 }
 function loop() { update(); render(); requestAnimationFrame(loop); }
