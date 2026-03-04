@@ -934,7 +934,8 @@ function updateInterior() {
   const s = interiorState;
   if (!s) return;
   s.shootCooldown--;
-  const spd = player.speed;
+  const shrineSpd = (shrineBuffType==='speed' && shrineBuffTimer>0) ? 1.4 : 1.0;
+  const spd = (player.speed + totalLevel('speed')*0.3) * shrineSpd;
   let nx = s.px, ny = s.py;
   if (keys['a']||keys['arrowleft'])  nx -= spd;
   if (keys['d']||keys['arrowright']) nx += spd;
@@ -951,7 +952,11 @@ function updateInterior() {
     sfxShoot(selectedGunId);
     const dx = mouseX - s.px, dy = mouseY - s.py;
     const len = Math.sqrt(dx*dx+dy*dy)||1;
-    s.bullets.push({ x:s.px, y:s.py, vx:dx/len*12, vy:dy/len*12, life:60, dmg:gun.dmg });
+    const intDmgMult = (1 + totalLevel('power')*0.15) * ((shrineBuffType==='damage'&&shrineBuffTimer>0)?1.5:1.0);
+    const intLife = (gun.life||60) + totalLevel('range')*10;
+    const intSpread = gun.spread||0;
+    const intAngle = Math.atan2(dy,dx) + (Math.random()-0.5)*intSpread;
+    s.bullets.push({ x:s.px, y:s.py, vx:Math.cos(intAngle)*12, vy:Math.sin(intAngle)*12, life:intLife, dmg:Math.round(gun.dmg*intDmgMult) });
   }
   s.bullets.forEach((b,i) => {
     b.x+=b.vx; b.y+=b.vy; b.life--;
@@ -1006,7 +1011,7 @@ function updateInterior() {
     b.x = Math.max(40,Math.min(CW-40,b.x)); b.y = Math.max(110,Math.min(CH-80,b.y));
     // Contact damage
     if (Math.abs(s.px-b.x)<b.w*0.6&&Math.abs(s.py-b.y)<b.h*0.6&&frame%28===0) {
-      player.hp -= Math.round(b.dmg*1.3*getDiff().enemyDmg); player.invincible=30;
+      { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*1.3*getDiff().enemyDmg*acR); player.invincible=30; }
     }
     // ── Special attacks ────────────────────────────────────────────────────────
     b.specialCooldown--;
@@ -1065,20 +1070,20 @@ function updateInterior() {
         a.x+=a.vx; a.y+=a.vy;
         if (a.x<0||a.x>CW||a.y<80||a.y>CH) return false;
         if (Math.abs(s.px-a.x)<16&&Math.abs(s.py-a.y)<16) {
-          player.hp -= Math.round(b.dmg*1.4*getDiff().enemyDmg); player.invincible=25; return false;
+          { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*1.4*getDiff().enemyDmg*acR); player.invincible=25; return false; }
         }
       } else if (a.kind==='aoe') {
         a.r = a.maxR * (1 - a.life/a.initLife); // linear expansion
         const aoeD = Math.sqrt((s.px-a.x)**2+(s.py-a.y)**2);
         if (Math.abs(aoeD - a.r) < 28 && !a.hit) { // ring contact band
           a.hit = true; // damage once per ring pass
-          player.hp -= Math.round(b.dmg*1.4*getDiff().enemyDmg);
+          { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*1.4*getDiff().enemyDmg*acR); }
           player.invincible = 45;
           showNotif('-'+Math.round(b.dmg*1.4*getDiff().enemyDmg)+' HP!','#ff4444',50);
         } else if (Math.abs(aoeD - a.r) > 40) { a.hit = false; } // allow next ring
       } else if (a.kind==='hazard') {
         if (Math.sqrt((s.px-a.x)**2+(s.py-a.y)**2) < a.r && frame%25===0) {
-          player.hp -= Math.round(b.dmg*0.9*getDiff().enemyDmg);
+          { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*0.9*getDiff().enemyDmg*acR); }
         }
       }
       return a.life > 0;
