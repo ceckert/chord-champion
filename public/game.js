@@ -343,6 +343,22 @@ function loadGame() {
   } catch(e) {}
 }
 
+function onPlayerDeath() {
+  // Keep coins earned this run, reset everything else
+  const savedRunCoins = player.coins;
+  resetRunState();
+  player.coins = savedRunCoins;
+  // Return to map center
+  player.x = MAP_W/2*TILE - player.w/2;
+  player.y = MAP_H/2*TILE - player.h/2;
+  enemies = [];
+  bossActive = false;
+  biomeTimer = 0;
+  interiorState = null;
+  interiorCooldown = 180;
+  showNotif('💀 You died! Run reset — MP kept.','#ff4444',240);
+}
+
 function resetRunState() {
   // Per-run state — resets every new game, does NOT affect shop upgrades
   player.level = 1;
@@ -1039,12 +1055,7 @@ function updateInterior() {
   });
   // Death check inside interior
   if (player.hp <= 0) {
-    player.hp = player.maxHp;
-    interiorState = null;
-    interiorCooldown = 120;
-    player.x = MAP_W/2*TILE - player.w/2;
-    player.y = MAP_H/2*TILE - player.h/2;
-    showNotif('💀 Escaped! Respawned at center.','#ff4444',180);
+    onPlayerDeath();
     return;
   }
 
@@ -1659,10 +1670,7 @@ function update() {
       const acReduct = 1 - totalLevel('ac') * 0.08; player.hp -= Math.round((e.dmg || 10) * acReduct); player.invincible = 40;
       if (e.type === 'boss_glacier') { player.frozen = 90; } // freeze player briefly
       if (player.hp <= 0) {
-        player.hp = player.maxHp;
-        player.x = MAP_W/2*TILE; player.y = MAP_H/2*TILE;
-        player.notes = []; enemies = [];
-        showNotif('You died! Respawned at center.', '#ff6b6b', 150);
+        onPlayerDeath();
       }
     }
   }
