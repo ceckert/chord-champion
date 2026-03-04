@@ -4186,6 +4186,11 @@ function updateExploration() {
     if (tx2>=0&&tx2<MAP_W&&ty2>=0&&ty2<MAP_H&&map[ty2]&&map[ty2][tx2]!==0) {
       w.x -= w.vx; w.y -= w.vy; w.vx=0; w.vy=0;
     }
+    // Advance frame counter — fast when moving/fleeing, slow when grazing
+    const moving = Math.abs(w.vx) > 0.1 || Math.abs(w.vy) > 0.1;
+    w.frame += w.fleeing ? 3 : moving ? 1.5 : 0.4;
+    // Track grazing state (idle and not fleeing)
+    w.grazing = !w.fleeing && !moving;
   });
 }
 
@@ -4336,7 +4341,18 @@ function drawExploration() {
     const ss = worldToScreen(w.x, w.y);
     if (ss.x<-40||ss.x>CW+40||ss.y<-40||ss.y>CH+40) return;
     ctx.save();
-    drawWildlifeCreature(w.type, ss.x, ss.y, w.frame, w.fleeing);
+    ctx.translate(Math.round(ss.x), Math.round(ss.y));
+    // Grazing: tilt forward with slow head-bob; Walking: body bounce; Fleeing: fast bounce
+    if (w.grazing) {
+      const grazeDip = Math.abs(Math.sin(w.frame * 0.05)) * 4; // slow head dip
+      ctx.translate(0, grazeDip * 0.5);
+      ctx.rotate(0.15 * Math.abs(Math.sin(w.frame * 0.04))); // gentle forward lean
+    } else {
+      const bounce = Math.abs(Math.sin(w.frame * (w.fleeing ? 0.35 : 0.2))) * (w.fleeing ? 3 : 1.5);
+      ctx.translate(0, -bounce);
+      if (w.vx < -0.1) ctx.scale(-1, 1); // flip to face direction of travel
+    }
+    drawWildlifeCreature(w.type, 0, 0, w.frame, w.fleeing);
     ctx.restore();
   });
 
