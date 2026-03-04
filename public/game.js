@@ -2870,6 +2870,7 @@ function render() {
   ctx.fillRect(0, 0, CW, CH);
   drawMap();
   drawRivers();
+  drawSpawnPad();
   drawLandmarks();
   for (const n of mapNotes) drawMapNote(n);
   for (const b of bullets) drawBullet(b);
@@ -4248,6 +4249,94 @@ function applyAbilitiesOnHit(e, actualDmg, enemyList, bx, by, playerPx, playerPy
       }
     }
   }
+}
+
+// =====================================================================
+// SPAWN PAD — decorative musical rune circle at map center
+// =====================================================================
+function drawSpawnPad() {
+  const wx = MAP_W / 2 * TILE, wy = MAP_H / 2 * TILE;
+  const s = worldToScreen(wx, wy);
+  const cx = Math.round(s.x), cy = Math.round(s.y);
+  // Only draw if on screen
+  if (cx < -160 || cx > CW+160 || cy < -160 || cy > CH+160) return;
+
+  const t = frame * 0.02;
+  const pulse = 0.5 + 0.5 * Math.sin(t * 2);
+
+  ctx.save();
+
+  // ── Outer stone ring ─────────────────────────────────────────────
+  ctx.strokeStyle = '#555566'; ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.arc(cx, cy, 80, 0, Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = '#333344'; ctx.lineWidth = 12;
+  ctx.beginPath(); ctx.arc(cx, cy, 84, 0, Math.PI*2); ctx.stroke();
+  ctx.strokeStyle = '#777788'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(cx, cy, 80, 0, Math.PI*2); ctx.stroke();
+
+  // ── Inner glowing ring ───────────────────────────────────────────
+  const hue = (frame * 0.5) % 360;
+  const glowColor = `hsl(${hue}, 80%, 60%)`;
+  ctx.globalAlpha = 0.3 + pulse * 0.25;
+  ctx.strokeStyle = glowColor; ctx.lineWidth = 4;
+  ctx.shadowColor = glowColor; ctx.shadowBlur = 18;
+  ctx.beginPath(); ctx.arc(cx, cy, 60, 0, Math.PI*2); ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // ── Floor inlay — subtle tiled platform ─────────────────────────
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = '#8888aa';
+  ctx.beginPath(); ctx.arc(cx, cy, 78, 0, Math.PI*2); ctx.fill();
+
+  // ── 4 corner rune stones ─────────────────────────────────────────
+  const runeAngles = [0, Math.PI/2, Math.PI, Math.PI*3/2];
+  const runeSymbols = ['♩', '♪', '♫', '♬'];
+  runeAngles.forEach((ang, i) => {
+    const rx = cx + Math.cos(ang + t*0.3) * 68;
+    const ry = cy + Math.sin(ang + t*0.3) * 68;
+    ctx.globalAlpha = 1;
+    // Stone base
+    ctx.fillStyle = '#444455';
+    ctx.fillRect(Math.round(rx-7), Math.round(ry-7), 14, 14);
+    ctx.fillStyle = '#666677';
+    ctx.fillRect(Math.round(rx-5), Math.round(ry-6), 10, 10);
+    // Rune glyph
+    ctx.globalAlpha = 0.7 + pulse * 0.3;
+    ctx.fillStyle = glowColor;
+    ctx.shadowColor = glowColor; ctx.shadowBlur = 8;
+    ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(runeSymbols[i], Math.round(rx), Math.round(ry));
+    ctx.shadowBlur = 0;
+  });
+
+  // ── Rotating inner arc ───────────────────────────────────────────
+  ctx.globalAlpha = 0.5 + pulse * 0.3;
+  ctx.strokeStyle = glowColor; ctx.lineWidth = 2;
+  ctx.shadowColor = glowColor; ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 44, t, t + Math.PI * 1.5);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 44, t + Math.PI, t + Math.PI * 2.5);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // ── Center musical note ──────────────────────────────────────────
+  ctx.globalAlpha = 0.85 + pulse * 0.15;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = glowColor; ctx.shadowBlur = 14 + pulse * 8;
+  ctx.font = `bold ${22 + Math.round(pulse*4)}px monospace`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('♪', cx, cy - 2);
+  ctx.shadowBlur = 0;
+
+  // ── Spawn label ──────────────────────────────────────────────────
+  ctx.globalAlpha = 0.45 + pulse * 0.2;
+  ctx.fillStyle = '#aaaacc';
+  ctx.font = '8px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('SPAWN', cx, cy + 50);
+
+  ctx.restore();
 }
 function loop() { update(); render(); requestAnimationFrame(loop); }
 window.addEventListener('resize', () => { CW = window.innerWidth; CH = window.innerHeight; });
