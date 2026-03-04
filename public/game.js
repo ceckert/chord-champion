@@ -167,9 +167,6 @@ function drawCharBody(cx, charName, frame) {
     cx.fillStyle='#3b82f6'; cx.fillRect(-11,-4,22,2);
     // Collar
     cx.fillStyle='#93c5fd'; cx.fillRect(-3,-4,6,3);
-    // Arm stubs (left and right of body)
-    cx.fillStyle='#2563eb'; cx.fillRect(-16,-2,6,7); cx.fillRect(11,-2,6,7);
-    cx.fillStyle='#f9c74f'; cx.fillRect(-16,4,6,3); cx.fillRect(11,4,6,3); // hands
     // Head (top-down: mostly hair visible, small face strip at front)
     // Hair top (most of head)
     cx.fillStyle='#78350f'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
@@ -195,9 +192,6 @@ function drawCharBody(cx, charName, frame) {
     cx.fillStyle='#9333ea'; cx.fillRect(-11,-4,22,10);
     cx.fillStyle='#c084fc'; cx.fillRect(-11,-4,22,2); // hood edge highlight
     cx.fillStyle='#a855f7'; cx.fillRect(-3,-4,6,3); // hood opening
-    // Arm stubs
-    cx.fillStyle='#7e22ce'; cx.fillRect(-16,-2,6,7); cx.fillRect(11,-2,6,7);
-    cx.fillStyle='#fde68a'; cx.fillRect(-16,4,6,3); cx.fillRect(11,4,6,3);
     // Head — mostly blond hair
     cx.fillStyle='#fbbf24'; cx.beginPath(); cx.arc(0,-12,9,0,Math.PI*2); cx.fill();
     // Hair highlights
@@ -225,9 +219,6 @@ function drawCharBody(cx, charName, frame) {
     cx.fillStyle='#dc2626'; cx.fillRect(-13,-4,26,10);
     cx.fillStyle='#ef4444'; cx.fillRect(-13,-4,26,2);
     cx.fillStyle='#fee2e2'; cx.fillRect(-4,-4,8,3); // collar area
-    // Arm stubs (chubby/wider)
-    cx.fillStyle='#b91c1c'; cx.fillRect(-18,-1,6,8); cx.fillRect(13,-1,6,8);
-    cx.fillStyle='#f9c74f'; cx.fillRect(-18,5,6,4); cx.fillRect(13,5,6,4);
     // Head (big round)
     cx.fillStyle='#292524'; cx.beginPath(); cx.arc(0,-12,10,0,Math.PI*2); cx.fill();
     cx.fillStyle='#44403c'; cx.beginPath(); cx.arc(0,-12,8,0,Math.PI*2); cx.fill();
