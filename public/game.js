@@ -3857,12 +3857,19 @@ function getBiomeCellBounds(biomeName) {
 function randFloorInBiome(biomeName) {
   const b = getBiomeCellBounds(biomeName);
   if (!b) return {x: MAP_W/2*TILE, y: MAP_H/2*TILE};
-  for (let attempt=0;attempt<40;attempt++) {
+  for (let attempt=0;attempt<60;attempt++) {
     const wx = b.cx + (Math.random()-0.5)*b.half*2;
     const wy = b.cy + (Math.random()-0.5)*b.half*2;
     const tx = Math.floor(wx/TILE), ty = Math.floor(wy/TILE);
-    if (tx>=0&&tx<MAP_W&&ty>=0&&ty<MAP_H&&tileMap[ty]&&tileMap[ty][tx]===0) return {x:wx,y:wy};
+    if (!(tx>=0&&tx<MAP_W&&ty>=0&&ty<MAP_H&&tileMap[ty]&&tileMap[ty][tx]===0)) continue;
+    // Keep at least 150px away from any landmark to prevent accidental interior entry
+    const tooClose = LANDMARK_INSTANCES.some(lm => {
+      const dx=wx-lm.px, dy=wy-lm.py;
+      return Math.sqrt(dx*dx+dy*dy) < 150;
+    });
+    if (!tooClose) return {x:wx, y:wy};
   }
+  // Fallback: biome center (far from landmarks usually)
   return {x:b.cx, y:b.cy};
 }
 
