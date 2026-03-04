@@ -4255,7 +4255,8 @@ function applyAbilitiesOnHit(e, actualDmg, enemyList, bx, by, playerPx, playerPy
 // SPAWN PAD — decorative musical rune circle at map center
 // =====================================================================
 function drawSpawnPad() {
-  const wx = MAP_W / 2 * TILE, wy = MAP_H / 2 * TILE;
+  // Center on player spawn — offset by player half-size (w=24, h=28)
+  const wx = MAP_W / 2 * TILE + 12, wy = MAP_H / 2 * TILE + 14;
   const s = worldToScreen(wx, wy);
   const cx = Math.round(s.x), cy = Math.round(s.y);
   // Only draw if on screen
