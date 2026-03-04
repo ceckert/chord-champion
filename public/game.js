@@ -3224,6 +3224,62 @@ function initLandmarks() {
 }
 
 
+function drawRiverMouth(sx, sy, angle, lineW, waterColor) {
+  // Rocky cave formation where river goes underground
+  const r = lineW * 0.72;
+  ctx.save();
+  ctx.translate(Math.round(sx), Math.round(sy));
+  ctx.rotate(angle);
+
+  // Dark underground hole (oval, receding)
+  const holeGrad = ctx.createRadialGradient(0, 0, r*0.05, 0, 0, r*0.75);
+  holeGrad.addColorStop(0, '#000008');
+  holeGrad.addColorStop(0.6, '#0a0a14');
+  holeGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = holeGrad;
+  ctx.beginPath(); ctx.ellipse(0, 0, r*0.75, r*0.55, 0, 0, Math.PI*2); ctx.fill();
+
+  // Rocky surround — irregular boulders in a rough arc
+  const rockSeeds = [0,1,2,3,4,5,6,7,8,9,10];
+  rockSeeds.forEach((i, idx) => {
+    const ang = (idx / rockSeeds.length) * Math.PI * 2 + i * 0.3;
+    const dist = r * (0.62 + (i%3)*0.08);
+    const rx2 = Math.cos(ang) * dist;
+    const ry2 = Math.sin(ang) * dist * 0.7;
+    const rs = r * (0.18 + (i%4)*0.06);
+    // Rock shadow
+    ctx.fillStyle = '#111118';
+    ctx.beginPath(); ctx.ellipse(rx2+2, ry2+2, rs, rs*0.8, ang*0.3, 0, Math.PI*2); ctx.fill();
+    // Rock face
+    const rockHue = 210 + (i%3)*15;
+    ctx.fillStyle = `hsl(${rockHue},12%,${22+(i%4)*5}%)`;
+    ctx.beginPath(); ctx.ellipse(rx2, ry2, rs, rs*0.8, ang*0.3, 0, Math.PI*2); ctx.fill();
+    // Rock highlight
+    ctx.fillStyle = `hsl(${rockHue},10%,${32+(i%3)*6}%)`;
+    ctx.beginPath(); ctx.ellipse(rx2-rs*0.2, ry2-rs*0.25, rs*0.5, rs*0.35, ang*0.3, 0, Math.PI*2); ctx.fill();
+  });
+
+  // Water rushing in — narrow stream entering the hole
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = waterColor;
+  ctx.beginPath();
+  ctx.moveTo(-lineW*0.5, -r*0.12);
+  ctx.lineTo(0, -r*0.08);
+  ctx.lineTo(0, r*0.08);
+  ctx.lineTo(-lineW*0.5, r*0.12);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mist/foam at entrance
+  ctx.globalAlpha = 0.25 + 0.15*Math.sin(frame*0.08 + sx);
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.ellipse(-r*0.1, 0, r*0.35, r*0.18, 0, 0, Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 0.12 + 0.08*Math.sin(frame*0.12 + sy);
+  ctx.beginPath(); ctx.ellipse(r*0.05, -r*0.1, r*0.2, r*0.1, 0.3, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+}
+
 function drawRivers() {
   for (const rv of RIVER_DATA) {
     const pts = rv.worldPoints;
@@ -3267,6 +3323,17 @@ function drawRivers() {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.restore();
+
+    // ── Rocky cave mouths at both ends ────────────────────────────────────────
+    const p0 = worldToScreen(pts[0].x, pts[0].y);
+    const p1 = worldToScreen(pts[1].x, pts[1].y);
+    const angle0 = Math.atan2(p0.y - p1.y, p0.x - p1.x); // pointing away from river
+    drawRiverMouth(p0.x, p0.y, angle0, lineW, rv.waterColor);
+
+    const pN  = worldToScreen(pts[pts.length-1].x, pts[pts.length-1].y);
+    const pN1 = worldToScreen(pts[pts.length-2].x, pts[pts.length-2].y);
+    const angleN = Math.atan2(pN.y - pN1.y, pN.x - pN1.x);
+    drawRiverMouth(pN.x, pN.y, angleN, lineW, rv.waterColor);
   }
 }
 
