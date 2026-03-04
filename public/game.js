@@ -2327,37 +2327,77 @@ function drawEnemyByType(e, x, y) {
     for(let wi=0;wi<3;wi++){const wo=Math.sin(frame*0.1+wi+e.x)*3;ctx.fillRect(Math.round(x+4+wi*7),Math.round(y+e.h-4+wo),5,6);}
     ctx.restore();
   } else if (e.type === 'runner') {
-    // runner — Forest Sprite / Wood Goblin (fast, lanky, leafy)
-    const run = Math.sin(frame*0.3+e.x)*3;
-    // Legs (fast)
-    const legSwing = Math.sin(frame*0.32+e.x)*5;
-    ctx.fillStyle='#2d5a10'; ctx.fillRect(Math.round(x+3),Math.round(y+e.h-10),5,10+legSwing); ctx.fillRect(Math.round(x+e.w-8),Math.round(y+e.h-10),5,10-legSwing);
-    // Feet
-    ctx.fillStyle='#4a3a08'; ctx.fillRect(Math.round(x+1),Math.round(y+e.h+legSwing-2),7,4); ctx.fillRect(Math.round(x+e.w-8),Math.round(y+e.h-legSwing-2),7,4);
-    // Body — bark-brown tunic
-    ctx.fillStyle='#4a3010'; ctx.fillRect(Math.round(x+3),Math.round(y+14),e.w-6,e.h-22);
-    ctx.fillStyle='#6a4820'; ctx.fillRect(Math.round(x+5),Math.round(y+14),e.w-10,e.h-26);
-    // Leaf cape (two triangles on back)
+    // runner — Forest Sprite / Wood Goblin — full stride animation
+    const cycle = frame * 0.28 + e.x * 0.01; // run cycle phase
+    const stride = Math.sin(cycle);           // -1 to +1, drives leg/arm alternation
+    const bob   = Math.abs(Math.sin(cycle)) * 2; // body bounces twice per stride cycle
+
+    // ── Legs — proper alternating stride ──────────────────────────
+    // Left leg swings forward when stride>0, backward when stride<0
+    const lLegAngle = stride * 10;   // degrees-equivalent pixel offset
+    const rLegAngle = -stride * 10;  // opposite phase
+    const legLen = 10;
+    // Upper legs (thigh)
+    ctx.fillStyle = '#2d5a10';
+    // Left thigh
+    ctx.fillRect(Math.round(x+3), Math.round(y+e.h-12+bob), 5, 6);
+    // Right thigh
+    ctx.fillRect(Math.round(x+e.w-8), Math.round(y+e.h-12+bob), 5, 6);
+    // Lower legs (shin — swing out opposite to thigh for knee bend effect)
+    const lShin = stride * 8;
+    const rShin = -stride * 8;
+    ctx.fillStyle = '#1e4008';
+    // Left shin
+    ctx.fillRect(Math.round(x+3+lLegAngle*0.4), Math.round(y+e.h-6+bob), 4, 7);
+    // Right shin
+    ctx.fillRect(Math.round(x+e.w-7+rLegAngle*0.4), Math.round(y+e.h-6+bob), 4, 7);
+    // Feet — land flat, lifted on back-swing
+    ctx.fillStyle = '#4a3a08';
+    const lFootY = stride > 0 ? y+e.h+bob+1 : y+e.h+bob-3; // lifted on back-swing
+    const rFootY = stride < 0 ? y+e.h+bob+1 : y+e.h+bob-3;
+    ctx.fillRect(Math.round(x+1+lLegAngle*0.5), Math.round(lFootY), 7, 3);
+    ctx.fillRect(Math.round(x+e.w-8+rLegAngle*0.5), Math.round(rFootY), 7, 3);
+
+    // ── Body — with forward lean and bounce ───────────────────────
+    ctx.fillStyle='#4a3010'; ctx.fillRect(Math.round(x+3),Math.round(y+13+bob),e.w-6,e.h-22);
+    ctx.fillStyle='#6a4820'; ctx.fillRect(Math.round(x+5),Math.round(y+14+bob),e.w-10,e.h-26);
+
+    // ── Leaf cape — flaps with stride ────────────────────────────
+    const capeFlap = stride * 3;
     ctx.fillStyle='#1a6a08';
-    ctx.beginPath(); ctx.moveTo(Math.round(x+3),Math.round(y+14)); ctx.lineTo(Math.round(x-4),Math.round(y+24)); ctx.lineTo(Math.round(x+6),Math.round(y+26)); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(Math.round(x+e.w-3),Math.round(y+14)); ctx.lineTo(Math.round(x+e.w+4),Math.round(y+24)); ctx.lineTo(Math.round(x+e.w-6),Math.round(y+26)); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(Math.round(x+3),Math.round(y+14+bob)); ctx.lineTo(Math.round(x-5),Math.round(y+24+bob+capeFlap)); ctx.lineTo(Math.round(x+6),Math.round(y+27+bob)); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(Math.round(x+e.w-3),Math.round(y+14+bob)); ctx.lineTo(Math.round(x+e.w+5),Math.round(y+24+bob-capeFlap)); ctx.lineTo(Math.round(x+e.w-6),Math.round(y+27+bob)); ctx.fill();
     ctx.fillStyle='#2a8a10';
-    ctx.beginPath(); ctx.moveTo(Math.round(x+4),Math.round(y+16)); ctx.lineTo(Math.round(x-2),Math.round(y+22)); ctx.lineTo(Math.round(x+5),Math.round(y+23)); ctx.fill();
-    // Head
-    ctx.fillStyle='#5a8a28'; ctx.fillRect(Math.round(x+4),Math.round(y+2),e.w-8,14);
-    ctx.fillStyle='#6aaa32'; ctx.fillRect(Math.round(x+5),Math.round(y+3),e.w-10,7); // face
+    ctx.beginPath(); ctx.moveTo(Math.round(x+4),Math.round(y+16+bob)); ctx.lineTo(Math.round(x-2),Math.round(y+22+bob+capeFlap*0.6)); ctx.lineTo(Math.round(x+5),Math.round(y+24+bob)); ctx.fill();
+
+    // ── Head — bobs with body, slight nod ────────────────────────
+    const headBob = bob * 0.6;
+    ctx.fillStyle='#5a8a28'; ctx.fillRect(Math.round(x+4),Math.round(y+2+headBob),e.w-8,14);
+    ctx.fillStyle='#6aaa32'; ctx.fillRect(Math.round(x+5),Math.round(y+3+headBob),e.w-10,7);
     // Leaf hair / crown
-    ctx.fillStyle='#1a6a08'; ctx.fillRect(Math.round(x+4),Math.round(y-2),4,6); ctx.fillRect(Math.round(x+8),Math.round(y-4),4,7); ctx.fillRect(Math.round(x+e.w-8),Math.round(y-2),4,6);
-    ctx.fillStyle='#2a8a10'; ctx.fillRect(Math.round(x+6),Math.round(y-5),3,5); ctx.fillRect(Math.round(x+e.w-9),Math.round(y-3),3,4);
-    // Eyes (big yellow goblin eyes)
-    ctx.fillStyle='#ffee44'; ctx.fillRect(Math.round(x+5),Math.round(y+4),4,5); ctx.fillRect(Math.round(x+e.w-9),Math.round(y+4),4,5);
-    ctx.fillStyle='#1a0a00'; ctx.fillRect(Math.round(x+6),Math.round(y+5),2,3); ctx.fillRect(Math.round(x+e.w-8),Math.round(y+5),2,3);
-    // Pointy nose
-    ctx.fillStyle='#4a7a20'; ctx.fillRect(Math.round(x+e.w/2-1),Math.round(y+9),3,4);
-    // Twig arms
-    ctx.strokeStyle='#4a3010'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(Math.round(x+4),Math.round(y+18)); ctx.lineTo(Math.round(x-4),Math.round(y+14+run)); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(Math.round(x+e.w-4),Math.round(y+18)); ctx.lineTo(Math.round(x+e.w+4),Math.round(y+14-run)); ctx.stroke();
+    ctx.fillStyle='#1a6a08'; ctx.fillRect(Math.round(x+4),Math.round(y-2+headBob),4,6); ctx.fillRect(Math.round(x+8),Math.round(y-4+headBob),4,7); ctx.fillRect(Math.round(x+e.w-8),Math.round(y-2+headBob),4,6);
+    ctx.fillStyle='#2a8a10'; ctx.fillRect(Math.round(x+6),Math.round(y-5+headBob),3,5); ctx.fillRect(Math.round(x+e.w-9),Math.round(y-3+headBob),3,4);
+    // Eyes
+    ctx.fillStyle='#ffee44'; ctx.fillRect(Math.round(x+5),Math.round(y+4+headBob),4,5); ctx.fillRect(Math.round(x+e.w-9),Math.round(y+4+headBob),4,5);
+    ctx.fillStyle='#1a0a00'; ctx.fillRect(Math.round(x+6),Math.round(y+5+headBob),2,3); ctx.fillRect(Math.round(x+e.w-8),Math.round(y+5+headBob),2,3);
+    // Nose
+    ctx.fillStyle='#4a7a20'; ctx.fillRect(Math.round(x+e.w/2-1),Math.round(y+9+headBob),3,4);
+
+    // ── Arms — counter-swing opposite to legs ────────────────────
+    // Left arm swings back when left leg is forward (stride>0), and vice versa
+    const lArmSwing = -stride * 9;
+    const rArmSwing = stride * 9;
+    ctx.strokeStyle='#4a3010'; ctx.lineWidth=2; ctx.lineCap='round';
+    // Left arm: shoulder → elbow → hand
+    const lShoulder = {x: x+4, y: y+17+bob};
+    const lElbow    = {x: x+4+lArmSwing*0.5, y: y+22+bob};
+    const lHand     = {x: x+4+lArmSwing, y: y+26+bob};
+    ctx.beginPath(); ctx.moveTo(Math.round(lShoulder.x),Math.round(lShoulder.y)); ctx.lineTo(Math.round(lElbow.x),Math.round(lElbow.y)); ctx.lineTo(Math.round(lHand.x),Math.round(lHand.y)); ctx.stroke();
+    // Right arm
+    const rShoulder = {x: x+e.w-4, y: y+17+bob};
+    const rElbow    = {x: x+e.w-4+rArmSwing*0.5, y: y+22+bob};
+    const rHand     = {x: x+e.w-4+rArmSwing, y: y+26+bob};
+    ctx.beginPath(); ctx.moveTo(Math.round(rShoulder.x),Math.round(rShoulder.y)); ctx.lineTo(Math.round(rElbow.x),Math.round(rElbow.y)); ctx.lineTo(Math.round(rHand.x),Math.round(rHand.y)); ctx.stroke();
   } else if (e.type === 'bogcrawler') {
     // Swamp armored snapper — low, wide, dark
     drawPixelRect(x+2,y+8,e.w-4,e.h-8,'#1a3a10'); // shell
