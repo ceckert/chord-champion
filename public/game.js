@@ -298,6 +298,71 @@ const camera = { x: 0, y: 0 };
 function worldToScreen(wx, wy) { return { x: wx - camera.x, y: wy - camera.y }; }
 
 let savedCoins = 0; // banked MP — spent in upgrades
+
+// =====================================================================
+// SAVE / LOAD — localStorage meta-progression only
+// What saves:  savedCoins, shop upgrade levels, selectedGun, selectedChar
+// What resets: player level/ep/hp, bonusUpgrades, equippedAbilities (per-run)
+// =====================================================================
+function saveGame() {
+  const data = {
+    savedCoins,
+    selectedGun: selectedGunId,
+    selectedChar: selectedCharacter,
+    upgrades: {}
+  };
+  ALL_UPGRADES.forEach(u => { if (u.level > 0) data.upgrades[u.id] = u.level; });
+  try { localStorage.setItem('chordchampion_save', JSON.stringify(data)); } catch(e) {}
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem('chordchampion_save');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (typeof data.savedCoins === 'number') savedCoins = data.savedCoins;
+    if (data.selectedGun) selectedGunId = data.selectedGun;
+    if (data.selectedChar) selectedCharacter = data.selectedChar;
+    if (data.upgrades) {
+      ALL_UPGRADES.forEach(u => {
+        if (data.upgrades[u.id]) {
+          u.level = data.upgrades[u.id];
+          // Re-apply stat effects from shop upgrades
+          if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, u.level)));
+          if (u.id === 'maxhp') { player.maxHp = 150 + u.level * 20; player.hp = player.maxHp; }
+          if (u.id === 'speed') player.speed = 3 + u.level * 0.3;
+        }
+      });
+    }
+    // Re-equip abilities from shop purchases
+    ALL_UPGRADES.filter(u => u.id.startsWith('ab_') && u.level > 0).forEach(u => {
+      if (!equippedAbilities.includes(u.id) && equippedAbilities.length < 3) {
+        equippedAbilities.push(u.id);
+      }
+    });
+  } catch(e) {}
+}
+
+function resetRunState() {
+  // Per-run state — resets every new game, does NOT affect shop upgrades
+  player.level = 1;
+  player.ep = 0;
+  player.epMax = 100;
+  player.bonusUpgrades = {};
+  player.coins = 0;
+  player.hp = player.maxHp; // full HP at start
+  player.invincible = 0;
+  equippedAbilities = [];
+  // Re-equip abilities that were shop-purchased (not run bonuses)
+  ALL_UPGRADES.filter(u => u.id.startsWith('ab_') && u.level > 0).forEach(u => {
+    if (!equippedAbilities.includes(u.id) && equippedAbilities.length < 3) {
+      equippedAbilities.push(u.id);
+    }
+  });
+  shrineBuffType = null;
+  shrineBuffTimer = 0;
+}
+
 const player = {
   x: MAP_W / 2 * TILE, y: MAP_H / 2 * TILE,
   level: 1, ep: 0, epMax: 100, bonusUpgrades: {},
@@ -609,7 +674,7 @@ function uiShow(screenId) {
 }
 function uiPlay() {
   document.getElementById('ui-overlay').style.display = 'none';
-  player.coins = 0;
+  resetRunState();
   gameState = 'playing';
   interiorCooldown = 180;
   clearedStructures.clear();
@@ -688,7 +753,8 @@ function uiResume() {
 function uiQuit() {
   document.getElementById('pause-overlay').style.display = 'none';
   savedCoins += player.coins;
-  player.coins = 0;
+  resetRunState();
+  saveGame();
   gameState = 'menu';
   uiShow('scr-main');
 }
@@ -711,6 +777,7 @@ function uiRefundAll() {
   player.shootRate = 40; player.speed = 3; player.maxHp = 150;
   player.hp = Math.min(player.hp, player.maxHp);
   savedCoins += refund;
+  saveGame();
   showNotif('↩ Refunded ' + refund + ' MP!', '#22c55e', 180);
   uiUpgrades();
 }
@@ -1676,6 +1743,8 @@ const UPGRADES = {
 };
 // Flat list for easy lookup
 const ALL_UPGRADES = [...UPGRADES.gun, ...UPGRADES.ability, ...UPGRADES.stats];
+// Load save on startup
+setTimeout(loadGame, 0);
 function upgradeCost(u) { return Math.floor(u.baseCost * Math.pow(2, u.level)); }
 function totalLevel(id) {
   const u = ALL_UPGRADES.find(u => u.id === id);
@@ -1688,6 +1757,7 @@ function applyUpgrade(u) {
   const cost = upgradeCost(u);
   if (savedCoins < cost) { showNotif('Not enough Music Points!', '#ef4444', 120); return; }
   savedCoins -= cost;
+  saveGame();
   u.level++;
   if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, totalLevel('fire'))));
   if (u.id === 'maxhp') { player.maxHp = 150 + totalLevel('maxhp') * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
