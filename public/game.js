@@ -3239,6 +3239,7 @@ function initLandmarks() {
 
 function drawRiverMouth(sx, sy, angle, lineW, waterColor) {
   // Rocky cave formation where river goes underground
+  if (!lineW || !isFinite(lineW) || lineW <= 0) return;
   const r = lineW * 0.72;
   ctx.save();
   ctx.translate(Math.round(sx), Math.round(sy));
@@ -3297,7 +3298,7 @@ function drawRivers() {
   for (const rv of RIVER_DATA) {
     const pts = rv.worldPoints;
     if (pts.length < 2) continue;
-    const lineW = (rv.riverRadius*2+1)*TILE;
+    const lineW = (rv.riverW) * TILE;
 
     // ── Draw smooth water path ────────────────────────────────────────────────
     ctx.save();
@@ -3996,7 +3997,7 @@ function randFloorInBiome(biomeName) {
     const wx = b.cx + (Math.random()-0.5)*b.half*2;
     const wy = b.cy + (Math.random()-0.5)*b.half*2;
     const tx = Math.floor(wx/TILE), ty = Math.floor(wy/TILE);
-    if (!(tx>=0&&tx<MAP_W&&ty>=0&&ty<MAP_H&&tileMap[ty]&&tileMap[ty][tx]===0)) continue;
+    if (!(tx>=0&&tx<MAP_W&&ty>=0&&ty<MAP_H&&map[ty]&&map[ty][tx]===0)) continue;
     // Keep at least 150px away from any landmark to prevent accidental interior entry
     const tooClose = LANDMARK_INSTANCES.some(lm => {
       const dx=wx-lm.px, dy=wy-lm.py;
@@ -4176,7 +4177,7 @@ function updateExploration() {
     // Move and clamp
     w.x += w.vx; w.y += w.vy;
     const tx2 = Math.floor(w.x/TILE), ty2 = Math.floor(w.y/TILE);
-    if (tx2>=0&&tx2<MAP_W&&ty2>=0&&ty2<MAP_H&&tileMap[ty2]&&tileMap[ty2][tx2]!==0) {
+    if (tx2>=0&&tx2<MAP_W&&ty2>=0&&ty2<MAP_H&&map[ty2]&&map[ty2][tx2]!==0) {
       w.x -= w.vx; w.y -= w.vy; w.vx=0; w.vy=0;
     }
   });
@@ -4843,7 +4844,7 @@ function initMinimap() {
 
   for (let ty = 0; ty < MAP_H; ty += step) {
     for (let tx = 0; tx < MAP_W; tx += step) {
-      const tile = tileMap[ty] ? tileMap[ty][tx] : 1;
+      const tile = map[ty] ? map[ty][tx] : 1;
       const bm   = getBiomeAtTile(tx, ty);
       if (tile === 2) mc.fillStyle = '#3a6aaa'; // water
       else if (tile === 1) mc.fillStyle = BIOME_MM_OBSTACLE[bm] || '#111';
