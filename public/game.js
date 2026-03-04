@@ -684,6 +684,7 @@ function uiPlay() {
   initLandmarks();
   initWorldChests();
   setTimeout(() => preSpawnEnemies(3), 300);
+  initMinimap();
   initExploration();
   canvas.setAttribute('tabindex', '0');
   canvas.focus();
@@ -3062,6 +3063,7 @@ function render() {
   const ps = worldToScreen(player.x, player.y);
   drawPlayer(ps.x, ps.y);
   drawExploration();
+  drawMinimap();
   drawHUD();
 
 
@@ -4712,6 +4714,158 @@ function drawWildlifeCreature(type, cx, cy, fr, fleeing) {
     ctx.fillText('!', 0, -22);
   }
 
+  ctx.restore();
+}
+
+// =====================================================================
+// MINI-MAP — circular, bottom-right, pre-rendered offscreen canvas
+// =====================================================================
+const MM_DIAM = 170;  // total diameter (px)
+const MM_R    = MM_DIAM / 2;
+let   minimapCanvas = null;
+
+const BIOME_MM_COLORS = {
+  forest:'#2d6a4f',   swamp:'#1a3a1a',   desert:'#c8a84b',
+  tundra:'#90b8cc',   volcano:'#3a1008', crystal:'#1a2a4a',
+  storm:'#2a2a3a',    mushroom:'#3a1a4a',shadow:'#080810',
+  void:'#080818'
+};
+const BIOME_MM_OBSTACLE = {
+  forest:'#143520',  swamp:'#0a1e0a',   desert:'#8a6820',
+  tundra:'#5888a0',  volcano:'#200808', crystal:'#0a1830',
+  storm:'#18182a',   mushroom:'#200a30',shadow:'#040408',
+  void:'#040408'
+};
+
+function getBiomeAtTile(tx, ty) {
+  const CELL_T = Math.floor((MAP_W - VOID_BORDER*2) / 3);
+  const col = Math.floor((tx - VOID_BORDER) / CELL_T);
+  const row = Math.floor((ty - VOID_BORDER) / CELL_T);
+  if (col<0||col>2||row<0||row>2) return 'void';
+  return BIOME_GRID[row][col];
+}
+
+function initMinimap() {
+  minimapCanvas = document.createElement('canvas');
+  minimapCanvas.width  = MM_DIAM;
+  minimapCanvas.height = MM_DIAM;
+  const mc = minimapCanvas.getContext('2d');
+  const step = 4; // sample every 4 tiles
+  const pxPerSample = MM_DIAM / (MAP_W / step);
+
+  for (let ty = 0; ty < MAP_H; ty += step) {
+    for (let tx = 0; tx < MAP_W; tx += step) {
+      const tile = tileMap[ty] ? tileMap[ty][tx] : 1;
+      const bm   = getBiomeAtTile(tx, ty);
+      if (tile === 2) mc.fillStyle = '#3a6aaa'; // water
+      else if (tile === 1) mc.fillStyle = BIOME_MM_OBSTACLE[bm] || '#111';
+      else mc.fillStyle = BIOME_MM_COLORS[bm] || '#222';
+      const mx = Math.round((tx / MAP_W) * MM_DIAM);
+      const my = Math.round((ty / MAP_H) * MM_DIAM);
+      const sz = Math.ceil(pxPerSample) + 1;
+      mc.fillRect(mx, my, sz, sz);
+    }
+  }
+
+  // Draw landmarks as gold squares
+  mc.fillStyle = '#ffd700';
+  LANDMARK_INSTANCES.forEach(lm => {
+    const mx = Math.round((lm.px / (MAP_W * TILE)) * MM_DIAM);
+    const my = Math.round((lm.py / (MAP_H * TILE)) * MM_DIAM);
+    mc.fillRect(mx - 2, my - 2, 5, 5);
+    mc.fillStyle = '#aa8800';
+    mc.fillRect(mx - 1, my - 1, 3, 3);
+    mc.fillStyle = '#ffd700';
+  });
+
+  // Spawn marker (white dot)
+  const spx = Math.round(((MAP_W/2*TILE+12) / (MAP_W*TILE)) * MM_DIAM);
+  const spy = Math.round(((MAP_H/2*TILE+14) / (MAP_H*TILE)) * MM_DIAM);
+  mc.fillStyle = '#ffffff';
+  mc.beginPath(); mc.arc(spx, spy, 3, 0, Math.PI*2); mc.fill();
+  mc.fillStyle = '#ffd700';
+  mc.beginPath(); mc.arc(spx, spy, 2, 0, Math.PI*2); mc.fill();
+}
+
+function drawMinimap() {
+  if (!minimapCanvas) return;
+  const mx0 = CW - MM_R - 14;
+  const my0 = CH - MM_R - 14;
+
+  ctx.save();
+
+  // ── Decorative border rings ───────────────────────────────────────
+  // Outer shadow glow
+  ctx.shadowColor = '#000';
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(mx0, my0, MM_R + 6, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Outer stone ring
+  const grad = ctx.createRadialGradient(mx0, my0, MM_R+2, mx0, my0, MM_R+7);
+  grad.addColorStop(0, '#5a5a7a');
+  grad.addColorStop(0.5, '#3a3a5a');
+  grad.addColorStop(1, '#1a1a2e');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(mx0, my0, MM_R + 7, 0, Math.PI*2); ctx.fill();
+
+  // Accent ring (animated hue)
+  const hue2 = (frame * 0.3) % 360;
+  ctx.strokeStyle = `hsl(${hue2},60%,50%)`;
+  ctx.lineWidth = 2;
+  ctx.shadowColor = `hsl(${hue2},80%,60%)`;
+  ctx.shadowBlur = 8;
+  ctx.beginPath(); ctx.arc(mx0, my0, MM_R + 4, 0, Math.PI*2); ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Inner dark border
+  ctx.strokeStyle = '#1a1a2e';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(mx0, my0, MM_R + 1, 0, Math.PI*2); ctx.stroke();
+
+  // 8 corner jewels on the border ring
+  for (let i=0;i<8;i++) {
+    const ang = (i/8)*Math.PI*2 + frame*0.005;
+    const jx = mx0 + Math.cos(ang)*(MM_R+5);
+    const jy = my0 + Math.sin(ang)*(MM_R+5);
+    ctx.fillStyle = i%2===0 ? `hsl(${hue2+45},70%,60%)` : '#888aaa';
+    ctx.fillRect(Math.round(jx-2), Math.round(jy-2), 4, 4);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(Math.round(jx-1), Math.round(jy-1), 2, 2);
+  }
+
+  // ── Circular clip + map image ─────────────────────────────────────
+  ctx.beginPath(); ctx.arc(mx0, my0, MM_R, 0, Math.PI*2); ctx.clip();
+  ctx.drawImage(minimapCanvas, mx0 - MM_R, my0 - MM_R, MM_DIAM, MM_DIAM);
+
+  // ── Fog of war vignette ───────────────────────────────────────────
+  const fog = ctx.createRadialGradient(mx0, my0, MM_R*0.5, mx0, my0, MM_R);
+  fog.addColorStop(0, 'rgba(0,0,0,0)');
+  fog.addColorStop(1, 'rgba(0,0,0,0.45)');
+  ctx.fillStyle = fog;
+  ctx.beginPath(); ctx.arc(mx0, my0, MM_R, 0, Math.PI*2); ctx.fill();
+
+  // ── Player dot ───────────────────────────────────────────────────
+  const pdx2 = Math.round((player.x / (MAP_W*TILE)) * MM_DIAM);
+  const pdy2 = Math.round((player.y / (MAP_H*TILE)) * MM_DIAM);
+  const pdx3 = mx0 - MM_R + pdx2;
+  const pdy3 = my0 - MM_R + pdy2;
+  const playerPulse = 0.7 + 0.3*Math.sin(frame*0.2);
+  ctx.shadowColor = '#fff'; ctx.shadowBlur = 6*playerPulse;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(pdx3, pdy3, 3, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath(); ctx.arc(pdx3, pdy3, 2, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // ── "MAP" label ──────────────────────────────────────────────────
+  ctx.restore();
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(mx0 - 16, my0 - MM_R - 20, 32, 14);
+  ctx.fillStyle = '#aaaacc'; ctx.font = '9px monospace'; ctx.textAlign = 'center';
+  ctx.fillText('MAP', mx0, my0 - MM_R - 9);
   ctx.restore();
 }
 function loop() { update(); render(); requestAnimationFrame(loop); }
