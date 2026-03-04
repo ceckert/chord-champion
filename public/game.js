@@ -1,7 +1,7 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const PIXEL_RATIO = 2;
-const CW = window.innerWidth, CH = window.innerHeight;
+let CW = window.innerWidth, CH = window.innerHeight;
 canvas.style.width  = CW + 'px';
 canvas.style.height = CH + 'px';
 canvas.width  = CW * PIXEL_RATIO;
