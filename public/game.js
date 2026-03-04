@@ -725,11 +725,24 @@ function openLevelUp() {
     if (!valid.length) return null;
     return valid[Math.floor(Math.random() * valid.length)];
   }
-  const picks = [
-    pickFrom(UPGRADES.gun),
-    pickFrom(UPGRADES.ability),
-    pickFrom(UPGRADES.stats)
-  ].filter(Boolean);
+  // Always try 1 from each category first, then fill remaining slots from any pool
+  const picks = [];
+  const cat1 = pickFrom(UPGRADES.gun);
+  const cat2 = pickFrom(UPGRADES.ability);
+  const cat3 = pickFrom(UPGRADES.stats);
+  if (cat1) picks.push(cat1);
+  if (cat2) picks.push(cat2);
+  if (cat3) picks.push(cat3);
+  // Fill to 3 if any category was exhausted — draw from combined pool, no duplicates
+  while (picks.length < 3) {
+    const allValid = ALL_UPGRADES.filter(u => {
+      if (picks.includes(u)) return false;
+      const tot = u.level + (player.bonusUpgrades[u.id]||0);
+      return tot < u.max;
+    });
+    if (!allValid.length) break;
+    picks.push(allValid[Math.floor(Math.random() * allValid.length)]);
+  }
   const el = document.getElementById('levelup-overlay');
   const title = document.getElementById('levelup-title');
   const opts = document.getElementById('levelup-options');
