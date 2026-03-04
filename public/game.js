@@ -518,7 +518,7 @@ function spawnEnemy(nearPlayer) {
   // ── Forest (center): Crawler | Runner ──────────────────────────
   if (biome === 'forest') {
     if (r<0.55){type='crawler';   w=28;h=20;hp=Math.round(28*m); speed=0.8+r*0.4;dmg=Math.round(10*m);}
-    else       {type='runner';    w=18;h=38;hp=Math.round(15*m); speed=1.54+r*0.56;dmg=Math.round(4*m);}
+    else       {type='runner';    w=18;h=38;hp=Math.round(15*m); speed=1.08+r*0.39;dmg=Math.round(4*m);}
 
   // ── Swamp (mid-right): Slimeling | Bogcrawler ───────────────────
   } else if (biome === 'swamp') {
