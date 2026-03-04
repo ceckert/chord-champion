@@ -2975,10 +2975,16 @@ function drawHUD() {
     ctx.restore();
   }
 
-  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0, CH-26, CW, 26);
+  // Controls bar — centred, leaves minimap area (bottom-right) clear
+  const ctrlW = Math.min(600, CW - (MM_DIAM + 40));
+  const ctrlX = (CW - ctrlW) / 2;
+  ctx.fillStyle='rgba(0,0,0,0.55)';
+  ctx.beginPath();
+  ctx.roundRect(ctrlX, CH-28, ctrlW, 24, 8);
+  ctx.fill();
   ctx.fillStyle='#a78bfa'; ctx.font='11px monospace'; ctx.textAlign='center';
   ctx.textBaseline='middle';
-  ctx.fillText('WASD move  |  Left-click shoot  |  Right-click forge chord  |  ESC pause', CW/2, CH-13);
+  ctx.fillText('WASD move  |  Click shoot  |  Right-click chord  |  ESC pause', CW/2, CH-16);
 }
 
 
@@ -4328,22 +4334,9 @@ function drawExploration() {
   // ── Wildlife ──────────────────────────────────────────────────────
   WILDLIFE.forEach(w => {
     const ss = worldToScreen(w.x, w.y);
-    if (ss.x<-20||ss.x>CW+20||ss.y<-20||ss.y>CH+20) return;
-    const bob2 = Math.sin(frame*0.2+w.x)*1.5;
+    if (ss.x<-40||ss.x>CW+40||ss.y<-40||ss.y>CH+40) return;
     ctx.save();
-    ctx.fillStyle = w.color;
-    // Tiny critter body (oval)
-    ctx.beginPath();
-    ctx.ellipse(Math.round(ss.x),Math.round(ss.y+bob2),w.sz,w.sz*0.7,0,0,Math.PI*2);
-    ctx.fill();
-    // Eyes
-    ctx.fillStyle='#000';
-    ctx.fillRect(Math.round(ss.x-w.sz*0.5),Math.round(ss.y+bob2-2),2,2);
-    ctx.fillRect(Math.round(ss.x+w.sz*0.2),Math.round(ss.y+bob2-2),2,2);
-    if (w.fleeing) {
-      ctx.fillStyle='rgba(255,0,0,0.6)'; ctx.font='8px monospace'; ctx.textAlign='center';
-      ctx.fillText('!',Math.round(ss.x),Math.round(ss.y+bob2-w.sz-2));
-    }
+    drawWildlifeCreature(w.type, ss.x, ss.y, w.frame, w.fleeing);
     ctx.restore();
   });
 
