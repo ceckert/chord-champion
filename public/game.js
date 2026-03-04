@@ -4926,7 +4926,17 @@ function drawMinimap() {
 
   // ── Circular clip + map image ─────────────────────────────────────
   ctx.beginPath(); ctx.arc(mx0, my0, MM_R, 0, Math.PI*2); ctx.clip();
-  ctx.drawImage(minimapCanvas, mx0 - MM_R, my0 - MM_R, MM_DIAM, MM_DIAM);
+  // ── Crop minimap to 150% of screen view, centred on player ──────
+  const mmScaleX = MM_DIAM / (MAP_W * TILE);
+  const mmScaleY = MM_DIAM / (MAP_H * TILE);
+  // Source region on the pre-rendered minimap canvas (in minimap pixels)
+  const srcW = CW * 1.5 * mmScaleX;
+  const srcH = CH * 1.5 * mmScaleY;
+  const pcx  = (player.x + player.w/2) * mmScaleX;
+  const pcy  = (player.y + player.h/2) * mmScaleY;
+  const srcX = Math.max(0, Math.min(MM_DIAM - srcW, pcx - srcW/2));
+  const srcY = Math.max(0, Math.min(MM_DIAM - srcH, pcy - srcH/2));
+  ctx.drawImage(minimapCanvas, srcX, srcY, srcW, srcH, mx0 - MM_R, my0 - MM_R, MM_DIAM, MM_DIAM);
 
   // ── Fog of war vignette ───────────────────────────────────────────
   const fog = ctx.createRadialGradient(mx0, my0, MM_R*0.5, mx0, my0, MM_R);
@@ -4935,17 +4945,13 @@ function drawMinimap() {
   ctx.fillStyle = fog;
   ctx.beginPath(); ctx.arc(mx0, my0, MM_R, 0, Math.PI*2); ctx.fill();
 
-  // ── Player dot ───────────────────────────────────────────────────
-  const pdx2 = Math.round((player.x / (MAP_W*TILE)) * MM_DIAM);
-  const pdy2 = Math.round((player.y / (MAP_H*TILE)) * MM_DIAM);
-  const pdx3 = mx0 - MM_R + pdx2;
-  const pdy3 = my0 - MM_R + pdy2;
+  // ── Player dot — always at centre since view is centred on player ─
   const playerPulse = 0.7 + 0.3*Math.sin(frame*0.2);
   ctx.shadowColor = '#fff'; ctx.shadowBlur = 6*playerPulse;
   ctx.fillStyle = '#ffffff';
-  ctx.beginPath(); ctx.arc(pdx3, pdy3, 3, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx0, my0, 3, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#ffd700';
-  ctx.beginPath(); ctx.arc(pdx3, pdy3, 2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx0, my0, 2, 0, Math.PI*2); ctx.fill();
   ctx.shadowBlur = 0;
 
   // ── "MAP" label ──────────────────────────────────────────────────
