@@ -3163,11 +3163,15 @@ function initLandmarks() {
     const by0 = (VOID_BORDER + r*CELL) * TILE;
     const bw = CELL * TILE, bh = CELL * TILE;
     const margin = 120;
+    const spawnX = MAP_W / 2 * TILE, spawnY = MAP_H / 2 * TILE;
     for (let i = 0; i < 15; i++) {
       const px = bx0 + margin + rand() * (bw - margin*2);
       const py = by0 + margin + rand() * (bh - margin*2);
       const scale = 0.65 + rand() * 0.65; // 0.65–1.3x
       const colorShift = (rand() - 0.5) * 30; // slight hue/brightness variation
+      // Skip landmarks too close to player spawn point
+      const dSpawn = Math.sqrt((px-spawnX)**2 + (py-spawnY)**2);
+      if (dSpawn < 220) continue;
       LANDMARK_INSTANCES.push({ px, py, fn, scale, colorShift, biome: b });
     }
   }));
