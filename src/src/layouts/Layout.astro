@@ -1,0 +1,59 @@
+---
+import siteData from '../data/site.json';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+const pageTitle = title || siteData.seo.title;
+const pageDescription = description || siteData.seo.description;
+
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `${r} ${g} ${b}`;
+}
+
+const primaryRgb = hexToRgb(siteData.theme?.primaryColor || "#6366f1");
+const accentRgb = hexToRgb(siteData.theme?.accentColor || "#f59e0b");
+
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDescription} />
+    {siteData.seo.keywords.length > 0 && <meta name="keywords" content={siteData.seo.keywords.join(', ')} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:locale" content={siteData.seo.locale} />
+    {siteData.seo.ogImage && <meta property="og:image" content={siteData.seo.ogImage} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <style define:vars={{ primaryRgb, accentRgb }}>
+      :root {
+        --color-primary: var(--primaryRgb);
+        --color-accent: var(--accentRgb);
+      }
+    </style>
+    <Header />
+    <main>
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

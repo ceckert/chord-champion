@@ -1,0 +1,21 @@
+---
+interface Props {
+  image: string;
+  headline: string;
+  subheadline?: string;
+  ctaText?: string;
+  ctaLink?: string;
+}
+const { image, headline, subheadline, ctaText = 'Get Started', ctaLink = '/contact' } = Astro.props;
+---
+<section class="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
+  <div class="absolute inset-0">
+    <img src={image} alt="" class="w-full h-full object-cover" loading="eager" />
+    <div class="absolute inset-0 bg-black/50"></div>
+  </div>
+  <div class="relative z-10 text-center text-white px-4 max-w-4xl mx-auto">
+    <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">{headline}</h1>
+    {subheadline && <p class="text-lg md:text-xl mb-8 text-gray-200 max-w-2xl mx-auto">{subheadline}</p>}
+    <a href={ctaLink} class="btn-primary text-lg !py-4 !px-8">{ctaText}</a>
+  </div>
+</section>

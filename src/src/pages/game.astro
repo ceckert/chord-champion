@@ -1,0 +1,277 @@
+---
+// Chord Champion Game
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chord Champion</title>
+  <style is:global>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a0a2e; margin: 0; overflow: hidden; border: none; outline: none; }
+    canvas { display: block; image-rendering: pixelated; cursor: crosshair; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+    #ui-overlay {
+      position: fixed; inset: 0;
+      display: flex; justify-content: center; align-items: center;
+      z-index: 100;
+      background: rgba(0,0,0,0.55);
+    }
+    #ui-overlay[hidden] { display: none; }
+    #pause-overlay {
+      position: fixed; inset: 0;
+      display: flex; justify-content: center; align-items: center;
+      z-index: 200;
+      background: rgba(0,0,0,0.75);
+    }
+    #pause-overlay[hidden] { display: none; }
+    .panel { color: #f9fafb;
+    .tabs { display: flex; gap: 0; width: 100%; margin-bottom: 14px; border-radius: 6px; overflow: hidden; border: 1.5px solid #4b2d8a; flex-shrink: 0; position: sticky; top: 0; z-index: 5; }
+    .tab-btn { flex: 1; padding: 10px 0; background: #1a0a2e; border: none; color: #a78bfa; font-family: monospace; font-size: 14px; font-weight: bold; cursor: pointer; border-right: 1px solid #4b2d8a; }
+    .tab-btn:last-child { border-right: none; }
+    .tab-btn.active { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3); }
+    .tab-btn:hover:not(.active) { background: #2d1b69; }
+    .tab-content { display: none; width: 100%; flex-direction: column; gap: 8px; }
+    .tab-content.active { display: flex; }
+      background: rgba(0,0,0,0.55);
+      border: 2px solid #7c3aed;
+      border-radius: 8px;
+      padding: 28px 36px;
+      min-width: 320px;
+      max-width: 820px;
+      width: 92vw;
+      max-height: 92vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    h2 { color: #fbbf24; font-family: monospace; font-size: 26px; text-align: center; margin-bottom: 6px; }
+    .subtitle { color: #a78bfa; font-family: monospace; font-size: 14px; margin-bottom: 8px; text-align: center; }
+    .coins { color: #22c55e; font-family: monospace; font-size: 16px; font-weight: bold; margin-bottom: 6px; }
+    button.mbtn {
+      width: 260px; padding: 12px 0;
+      background: #2d1b69; border: 2px solid #a78bfa; border-radius: 4px;
+      color: #f9fafb; font-family: monospace; font-size: 16px; font-weight: bold;
+      cursor: pointer;
+    }
+    button.mbtn:hover { background: #7c3aed; border-color: #fbbf24; }
+    button.mbtn.back { background: #1e1b4b; border-color: #6b7280; margin-top: 14px; }
+    button.mbtn.back:hover { background: #374151; }
+    .upg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+    .upg-col-hdr { color: #a78bfa; font-family: monospace; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 2px; }
+    .upg-card {
+      background: linear-gradient(135deg, #13093a 0%, #1e1050 100%);
+      border: 2px solid #2d1b69; border-radius: 12px;
+      padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;
+      transition: all 0.15s; position: relative; overflow: hidden;
+    }
+    .upg-card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(124,58,237,0.08),transparent); pointer-events:none; }
+    .upg-card.can { border-color: #7c3aed; box-shadow: 0 0 12px rgba(124,58,237,0.3), inset 0 0 20px rgba(124,58,237,0.05); }
+    .upg-card.can:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(124,58,237,0.45); }
+    .upg-card.maxed { border-color: #22c55e; box-shadow: 0 0 10px rgba(34,197,94,0.25); }
+    .upg-card.equipped { border-color: #a855f7; box-shadow: 0 0 14px rgba(168,85,247,0.4); }
+    .upg-name { color: #f9fafb; font-family: monospace; font-size: 13px; font-weight: bold; letter-spacing: 0.3px; }
+    .upg-desc { color: #8b8fa8; font-family: monospace; font-size: 11px; line-height: 1.5; }
+    .upg-dots { display: flex; gap: 4px; margin-top: 4px; }
+    .upg-dot { flex:1; height: 6px; background: #1e1b4b; border-radius: 3px; transition: background 0.2s; }
+    .upg-dot.on { background: linear-gradient(90deg, #7c3aed, #a855f7); box-shadow: 0 0 6px rgba(168,85,247,0.6); }
+    button.buy-btn {
+      margin-top: 10px; padding: 13px 20px; width: 100%;
+      background: linear-gradient(180deg, #5b21b6 0%, #3b0764 60%, #2e0550 100%);
+      border: 2px solid #7c3aed;
+      border-bottom: 4px solid #3b0764;
+      border-radius: 8px; color: #ddd6fe;
+      font-family: monospace; font-size: 14px; font-weight: bold;
+      cursor: pointer; letter-spacing: 1px; transition: all 0.1s;
+      box-shadow: 0 6px 0 #1e0336, 0 8px 20px rgba(0,0,0,0.6),
+                  inset 0 1px 0 rgba(255,255,255,0.15),
+                  inset 0 -2px 0 rgba(0,0,0,0.3);
+      text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+      text-transform: uppercase;
+      position: relative; overflow: hidden;
+    }
+    button.buy-btn::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.1), transparent);
+      border-radius: 6px 6px 0 0; pointer-events: none;
+    }
+    button.buy-btn:hover:not(:disabled) {
+      background: linear-gradient(180deg, #7c3aed 0%, #5b21b6 60%, #4c1d95 100%);
+      border-color: #a855f7; color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 0 #1e0336, 0 12px 28px rgba(124,58,237,0.55),
+                  inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    button.buy-btn:active:not(:disabled) {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #1e0336, 0 3px 8px rgba(0,0,0,0.4),
+                  inset 0 2px 4px rgba(0,0,0,0.4);
+      border-bottom-width: 2px;
+    }
+    button.buy-btn:disabled {
+      background: linear-gradient(180deg, #1f2937, #111827);
+      border-color: #374151; border-bottom-color: #1f2937;
+      color: #4b5563; box-shadow: 0 3px 0 #0f172a; cursor: not-allowed;
+    }
+    .upg-max { color: #22c55e; font-family: monospace; font-size: 12px; font-weight: bold; text-align: center; margin-top: 5px; background: rgba(34,197,94,0.1); border-radius: 6px; padding: 4px; border: 1px solid rgba(34,197,94,0.3); }
+    .txt { color: #e2e8f0; font-family: monospace; font-size: 13px; line-height: 1.8; width: 100%; white-space: pre-wrap; }
+    .tabs { display: flex; width: 100%; margin-bottom: 12px; border-radius: 6px; overflow: hidden; border: 1.5px solid #4b2d8a; }
+    .tab-btn { flex: 1; padding: 12px 0; background: #1a0a2e; border: none; color: #a78bfa; font-family: monospace; font-size: 13px; font-weight: bold; cursor: pointer; border-right: 1px solid #4b2d8a; transition: all 0.15s; }
+    .tab-btn:last-child { border-right: none; }
+    .tab-btn.active { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; box-shadow: inset 0 -2px 0 rgba(0,0,0,0.3); }
+    .tab-btn:hover:not(.active) { background: #2d1b69; }
+    .tab-pane { display: none; width: 100%; flex-direction: column; gap: 8px; }
+    .tab-pane.active { display: flex; }
+    .diff-btn { padding:6px 10px; background:#1a0a2e; border:2px solid #374151; border-radius:8px; color:#9ca3af; font-family:monospace; font-size:11px; font-weight:bold; cursor:pointer; transition:all 0.1s; }
+    .diff-btn:hover { border-color:#7c3aed; color:#c4b5fd; }
+    .diff-btn.active { background:linear-gradient(135deg,#7c3aed,#a855f7); border-color:#a855f7; color:#fff; box-shadow:0 0 10px rgba(124,58,237,0.4); }
+    @keyframes buyFlash {
+      0%   { background: linear-gradient(180deg,#16a34a,#14532d); border-color:#4ade80; color:#fff; transform:scale(1.03); box-shadow:0 0 20px rgba(34,197,94,0.7); }
+      60%  { background: linear-gradient(180deg,#16a34a,#14532d); border-color:#4ade80; color:#fff; transform:scale(1.03); box-shadow:0 0 20px rgba(34,197,94,0.7); }
+      100% { transform:scale(1); }
+    }
+    button.buy-btn.flash-buy { animation: buyFlash 0.5s ease-out; }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<div id="ui-overlay">
+  <div id="scr-main" class="panel" style="display:flex">
+    <h2>CHORD CHAMPION</h2>
+    <div id="mp-display" style="color:#fbbf24;font-family:monospace;font-size:14px;margin:-8px 0 4px">🎵 0 MP</div>    <div style="margin:6px 0 10px;display:flex;flex-direction:column;align-items:center;gap:5px">
+      <div style="font-family:monospace;font-size:11px;color:#6b7280">DIFFICULTY</div>
+      <div style="display:flex;gap:6px">
+        <button class="diff-btn" id="diff-mom" onclick="setDifficulty('mom')">👩 Mom</button>
+        <button class="diff-btn" id="diff-easy" onclick="setDifficulty('easy')">😌 Easy</button>
+        <button class="diff-btn active" id="diff-medium" onclick="setDifficulty('medium')">⚔️ Med</button>
+        <button class="diff-btn" id="diff-hard" onclick="setDifficulty('hard')">💀 Hard</button>
+      </div>
+    </div>
+    <div class="subtitle">Collect notes. Forge chords. Fight music.</div>
+    <div id="version-display" style="font-family:monospace;font-size:10px;color:#4b5563;margin-top:-4px">v10.2</div>
+    <button class="mbtn" onclick="uiPlay()">PLAY</button>
+    <button class="mbtn" onclick="uiShow('scr-charselect')">SELECT CHARACTER</button>
+    <button class="mbtn" onclick="uiUpgrades()">UPGRADES</button>
+    <button class="mbtn" onclick="uiShow('scr-levelplan')">LEVEL PLAN</button>
+    <button class="mbtn" onclick="uiShow('scr-howtoplay')">HOW TO PLAY</button>
+  </div>
+  <div id="scr-upgrades" class="panel" style="display:none; max-width:580px; max-height:85vh; flex-direction:column;">
+    <h2>UPGRADES</h2>
+    <div id="coins-display" style="flex-shrink:0;background:linear-gradient(135deg,#1a0a2e,#2d1b4e);border:2px solid #7c3aed;border-radius:10px;padding:10px 20px;font-family:monospace;font-size:16px;font-weight:bold;color:#fbbf24;text-align:center;box-shadow:0 0 14px rgba(251,191,36,0.2)">🎵 0 MP</div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="uiTab('gun',this)">🔫 Gun</button>
+      <button class="tab-btn" onclick="uiTab('ability',this)">✨ Ability</button>
+      <button class="tab-btn" onclick="uiTab('stats',this)">❤️ Base Stats</button>
+      <button class="tab-btn" onclick="uiTab('gun-select',this)">🔫 Select Gun</button>
+    </div>
+    <div id="tab-scroll" style="overflow-y:auto;flex:1;min-height:0;padding-right:4px">
+      <div id="tab-gun" class="tab-pane active"></div>
+      <div id="tab-ability" class="tab-pane"></div>
+      <div id="tab-stats" class="tab-pane"></div>
+      <div id="tab-gun-select" class="tab-pane"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0;margin-top:10px">
+      <button class="mbtn back" style="flex:1" onclick="uiShow('scr-main')">BACK</button>
+      <button class="mbtn" style="flex:1;background:linear-gradient(135deg,#7f1d1d,#991b1b);border-color:#ef4444;font-size:12px" onclick="uiRefundAll()">↩ REFUND ALL</button>
+    </div>
+  </div>
+  <div id="scr-charselect" class="panel" style="display:none; max-width:480px">
+    <h2>SELECT CHARACTER</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;margin-bottom:14px">
+      <div id="cs-jimmy" class="upg-card can" style="cursor:pointer;align-items:center;text-align:center" onclick="selectChar('jimmy')">
+        <canvas id="preview-jimmy" width="60" height="80" style="image-rendering:pixelated;margin:0 auto"></canvas>
+        <div class="upg-name" style="margin-top:6px">Jimmy</div>
+        <div class="upg-desc">Classic pajama chaos.</div>
+        <button id="btn-jimmy" class="buy-btn purchased" style="margin-top:8px">✓ SELECTED</button>
+      </div>
+      <div id="cs-hanna" class="upg-card can" style="cursor:pointer;align-items:center;text-align:center" onclick="selectChar('hanna')">
+        <canvas id="preview-hanna" width="60" height="80" style="image-rendering:pixelated;margin:0 auto"></canvas>
+        <div class="upg-name" style="margin-top:6px">Hanna</div>
+        <div class="upg-desc">Blond hair, big energy.</div>
+        <button id="btn-hanna" class="buy-btn" style="margin-top:8px">SELECT</button>
+      </div>
+      <div id="cs-bob" class="upg-card can" style="cursor:pointer;align-items:center;text-align:center" onclick="selectChar('bob')">
+        <canvas id="preview-bob" width="60" height="80" style="image-rendering:pixelated;margin:0 auto"></canvas>
+        <div class="upg-name" style="margin-top:6px">Bob</div>
+        <div class="upg-desc">Red shirt, blue shorts.</div>
+        <button id="btn-bob" class="buy-btn" style="margin-top:8px">SELECT</button>
+      </div>
+      <div id="cs-max" class="upg-card can" style="cursor:pointer;align-items:center;text-align:center" onclick="selectChar('max')">
+        <canvas id="preview-max" width="60" height="80" style="image-rendering:pixelated;margin:0 auto"></canvas>
+        <div class="upg-name" style="margin-top:6px">Max</div>
+        <div class="upg-desc">Good boy. Very good boy.</div>
+        <button id="btn-max" class="buy-btn" style="margin-top:8px">SELECT</button>
+      </div>
+    </div>
+    <button class="mbtn" onclick="startFromCharSelect()">▶ PLAY</button>
+    <button class="mbtn back" onclick="uiShow('scr-main')">BACK</button>
+  </div>
+  <div id="scr-levelplan" class="panel" style="display:none">
+    <h2>LEVEL PLAN</h2>
+    <div class="txt">Stage 1:  Grass Plains       - Bass Brute
+Stage 2:  Desert Dunes       - Trumpet Tyrant
+Stage 3:  Frozen Tundra      - Drum Destroyer
+Stage 4:  Beach              - Violin Viper
+Stage 5:  Night Forest       - Sax Specter
+Stage 6:  Volcano            - Keyboard Killer
+Stage 7:  City Ruins         - Guitar Golem
+Stage 8:  Underworld         - Flute Phantom
+Stage 9:  Sky Kingdom        - Harp Hunter
+Stage 10: Music Meisters Lair - Music Meiser</div>
+    <button class="mbtn back" onclick="uiShow('scr-main')">BACK</button>
+  </div>
+  <div id="scr-howtoplay" class="panel" style="display:none">
+    <h2>HOW TO PLAY</h2>
+    <div class="txt" style="text-align:left;line-height:1.7;font-size:12px">
+<b style="color:#fbbf24">🎮 Controls</b>
+WASD / Arrow Keys — Move
+Left Click (hold) — Shoot
+Right Click — Forge chord from collected notes
+ESC — Pause / Upgrades
+
+<b style="color:#fbbf24">🎵 Music Points (MP)</b>
+Collect glowing notes floating around the map.
+Right-click to forge them into chords — the more complex the chord, the more MP!
+Dom 7th = 80 MP · Major/Minor = 20 MP · Diminished = 30 MP · Intervals = 5–8 MP
+
+<b style="color:#fbbf24">⚔️ Combat</b>
+Shoot enemies to deal damage. Kill them to earn EP and level up.
+Every level: choose 1 upgrade from Gun / Ability / Stat categories.
+At level 10/20/30 enemies evolve — faster, tougher, darker (★ ★★ ★★★).
+
+<b style="color:#fbbf24">✨ Abilities (max 3)</b>
+Equip up to 3 abilities at once — all fire on every shot.
+Once you have 3, level-ups only upgrade existing ones.
+🔥 Fire · 🩸 Bleed · 🧊 Freeze · 💥 Explosive · 🧠 Psychic · ⚡ Lightning
+☠️ Poison · 💀 Weaken · 💚 Lifesteal · 💨 Knockback · 🧲 Magnetic · 🎯 Piercing
+
+<b style="color:#fbbf24">🗺️ Biomes</b>
+9 biomes surround the starting Forest — explore to find harder enemies and bosses.
+Stay in a biome 30s to trigger a boss fight. Survive!</div>
+    <button class="mbtn back" onclick="uiShow('scr-main')">BACK</button>
+  </div>
+</div>
+
+<div id="levelup-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:200;align-items:center;justify-content:center;flex-direction:column">
+  <div class="panel" style="min-width:320px;max-width:440px;gap:8px">
+    <h2 id="levelup-title" style="color:#fbbf24;margin-bottom:8px">⭐ Level Up!</h2>
+    <p style="color:#aaa;font-size:13px;margin:0 0 10px">Choose one free upgrade:</p>
+    <div id="levelup-options"></div>
+  </div>
+</div>
+
+<div id="pause-overlay" style="display:none">
+  <div class="panel" style="min-width:260px; gap:12px">
+    <h2>PAUSED</h2>
+    <button class="mbtn" onclick="uiResume()">▶ RESUME</button>
+    <button class="mbtn" onclick="uiUpgradesFromPause()">🛒 UPGRADES</button>
+    <button class="mbtn back" onclick="uiQuit()">✕ QUIT TO MENU</button>
+  </div>
+</div>
+
+<script is:inline src="/game.js?v="></script>
+</body>
+</html>
