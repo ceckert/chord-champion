@@ -628,6 +628,7 @@ function uiPlay() {
   initLandmarks();
   initWorldChests();
   setTimeout(() => preSpawnEnemies(3), 300);
+  initExploration();
   canvas.setAttribute('tabindex', '0');
   canvas.focus();
 }
@@ -1691,6 +1692,7 @@ function update() {
   if (mapNotes.length < 1000 && frame % 15 === 0) spawnMapNote();
   if (player.shootCooldown > 0) player.shootCooldown--;
   if (mouseDown && gameState === 'playing') { shoot(mouseX, mouseY); }
+  updateExploration();
   // World chest collection
   if (mouseDown) {
     WORLD_CHESTS.forEach(ch => {
@@ -2564,6 +2566,72 @@ function drawEnemyByType(e, x, y) {
 }
 
 
+
+// =====================================================================
+// EXPLORATION SYSTEMS — particles, secrets, signs, shrines, hazards, wildlife
+// =====================================================================
+let BIOME_PARTICLES = [];
+let HIDDEN_SECRETS  = [];
+let LORE_SIGNS      = [];
+let BIOME_SHRINES   = [];
+let HAZARD_ZONES    = [];
+let WILDLIFE        = [];
+let shrineBuffType  = null;  // 'speed'|'damage'|'regen'
+let shrineBuffTimer = 0;
+const SHRINE_DURATION = 3600; // 60s
+
+const LORE_TEXT = {
+  forest:   ["Ancient bark carving:\n'Here the beetles guard their queen.'",
+             "Mossy signpost:\n'Beware the goblin runs at dusk.'"],
+  swamp:    ["Skull-topped totem:\n'The bog queen takes the unwary.'",
+             "Rotting plank sign:\n'Turn back. The mud never lets go.'"],
+  desert:   ["Bleached bone marker:\n'Day 47. Still searching for water.'",
+             "Sand-worn obelisk:\n'The Dune King was once a wanderer too.'"],
+  tundra:   ["Frozen parchment:\n'If you find this, I didn't make it.'",
+             "Ice-carved rune:\n'The Glacier breathes. Stay still.'"],
+  volcano:  ["Scorched warning sign:\n'The Magma Drake feeds at sundown.'",
+             "Lava-etched stone:\n'Fire is just light moving too fast.'"],
+  crystal:  ["Humming gemstone:\n'Crystal sings at 432hz. Match it.'",
+             "Carved facet:\n'The palace was built by sound alone.'"],
+  storm:    ["Crackling antenna:\n'Storm hawk last seen heading west.'",
+             "Lightning-struck post:\n'Count the seconds. You have fewer than you think.'"],
+  mushroom: ["Spore-dusted tablet:\n'Don't breathe the purple ones.'",
+             "Twisted fungal sign:\n'The mycelium remembers every step.'"],
+  shadow:   ["Void-etched plaque:\n'Nothing here has a name. Not even you.'",
+             "Dark crystal shard:\n'The Void Lord was never born. It arrived.'"]
+};
+
+const SHRINE_BUFFS = {
+  forest:'speed', swamp:'regen', desert:'damage', tundra:'regen',
+  volcano:'damage', crystal:'speed', storm:'damage', mushroom:'regen', shadow:'speed'
+};
+const SHRINE_COLORS = {
+  forest:'#22aa44', swamp:'#44aa22', desert:'#d4a030', tundra:'#88ccff',
+  volcano:'#ff4400', crystal:'#4488ff', storm:'#aaaaff', mushroom:'#aa44cc', shadow:'#8800cc'
+};
+const HAZARD_CFG = {
+  forest:  {color:'#1a4a10',dmg:0,slow:0.6,label:'Thicket'},
+  swamp:   {color:'#2a5a10',dmg:1,slow:0.4,label:'Quicksand'},
+  desert:  {color:'#c8900a',dmg:1,slow:0.5,label:'Scorched sand'},
+  tundra:  {color:'#88ccff',dmg:1,slow:0.45,label:'Freezing patch'},
+  volcano: {color:'#ff3300',dmg:3,slow:0.6,label:'Lava pool'},
+  crystal: {color:'#4466cc',dmg:0,slow:0.5,label:'Razor shards'},
+  storm:   {color:'#8888cc',dmg:2,slow:0.7,label:'Static field'},
+  mushroom:{color:'#882288',dmg:1,slow:0.6,label:'Spore cloud'},
+  shadow:  {color:'#220033',dmg:2,slow:0.5,label:'Void tear'}
+};
+const WILDLIFE_CFG = {
+  forest:  [{c:'#44aa22',sz:6,sp:2.5,label:'🦋'},{c:'#aa6622',sz:5,sp:3,label:'🐿️'}],
+  swamp:   [{c:'#22aa44',sz:7,sp:1.5,label:'🐸'},{c:'#44cc22',sz:4,sp:2,label:'🐍'}],
+  desert:  [{c:'#d4a030',sz:5,sp:3,label:'🦎'},{c:'#c8c080',sz:4,sp:4,label:'🪲'}],
+  tundra:  [{c:'#ffffff',sz:6,sp:2,label:'🐇'},{c:'#aaccff',sz:5,sp:3.5,label:'❄'}],
+  volcano: [{c:'#cc4400',sz:5,sp:3,label:'🦎'},{c:'#ff6600',sz:4,sp:4,label:'🪲'}],
+  crystal: [{c:'#88aaff',sz:5,sp:2.5,label:'✨'},{c:'#ccaaff',sz:4,sp:3,label:'💎'}],
+  storm:   [{c:'#aaaacc',sz:5,sp:4,label:'🐦'},{c:'#8888bb',sz:4,sp:5,label:'⚡'}],
+  mushroom:[{c:'#cc44aa',sz:6,sp:1.5,label:'🍄'},{c:'#882266',sz:5,sp:2,label:'🐛'}],
+  shadow:  [{c:'#8800cc',sz:5,sp:2,label:'👁'},{c:'#440066',sz:4,sp:3,label:'🌑'}]
+};
+
 // =====================================================================
 // BOSS DRAW FUNCTIONS — one block per biome
 // =====================================================================
@@ -2952,6 +3020,7 @@ function render() {
   }
   const ps = worldToScreen(player.x, player.y);
   drawPlayer(ps.x, ps.y);
+  drawExploration();
   drawHUD();
 
 
@@ -3768,6 +3837,382 @@ function tileHash(tx, ty) {
   h = (Math.imul(h, 1274126177)) >>> 0;
   h = (h ^ (h >>> 16)) >>> 0;
   return h;
+}
+
+// =====================================================================
+// EXPLORATION — init / update / draw
+// =====================================================================
+function getBiomeCellBounds(biomeName) {
+  for (let row=0;row<3;row++) for (let col=0;col<3;col++) {
+    if (BIOME_GRID[row][col]===biomeName) {
+      const cx = (VOID_BORDER + col*CELL + CELL/2)*TILE;
+      const cy = (VOID_BORDER + row*CELL + CELL/2)*TILE;
+      const half = CELL*TILE*0.38;
+      return {cx,cy,half};
+    }
+  }
+  return null;
+}
+
+function randFloorInBiome(biomeName) {
+  const b = getBiomeCellBounds(biomeName);
+  if (!b) return {x: MAP_W/2*TILE, y: MAP_H/2*TILE};
+  for (let attempt=0;attempt<40;attempt++) {
+    const wx = b.cx + (Math.random()-0.5)*b.half*2;
+    const wy = b.cy + (Math.random()-0.5)*b.half*2;
+    const tx = Math.floor(wx/TILE), ty = Math.floor(wy/TILE);
+    if (tx>=0&&tx<MAP_W&&ty>=0&&ty<MAP_H&&tileMap[ty]&&tileMap[ty][tx]===0) return {x:wx,y:wy};
+  }
+  return {x:b.cx, y:b.cy};
+}
+
+function initExploration() {
+  BIOME_PARTICLES = [];
+  HIDDEN_SECRETS  = [];
+  LORE_SIGNS      = [];
+  BIOME_SHRINES   = [];
+  HAZARD_ZONES    = [];
+  WILDLIFE        = [];
+  shrineBuffType  = null;
+  shrineBuffTimer = 0;
+  const biomes = ['forest','swamp','desert','tundra','volcano','crystal','storm','mushroom','shadow'];
+
+  biomes.forEach(bm => {
+    // Hidden secrets (1 per biome)
+    const sp = randFloorInBiome(bm);
+    HIDDEN_SECRETS.push({x:sp.x, y:sp.y, biome:bm, collected:false, pulse:0});
+
+    // Lore signs (2 per biome)
+    (LORE_TEXT[bm]||[]).forEach((txt,i) => {
+      const lp = randFloorInBiome(bm);
+      LORE_SIGNS.push({x:lp.x, y:lp.y, biome:bm, text:txt, showTimer:0});
+    });
+
+    // Biome shrines (1 per biome) — placed away from center
+    const b = getBiomeCellBounds(bm);
+    if (b) {
+      const angle = Math.random()*Math.PI*2;
+      const dist  = b.half * 0.5;
+      BIOME_SHRINES.push({
+        x: b.cx + Math.cos(angle)*dist,
+        y: b.cy + Math.sin(angle)*dist,
+        biome: bm, activated: false, cooldown: 0,
+        glowPulse: Math.random()*Math.PI*2
+      });
+    }
+
+    // Hazard zones (2 per biome, skip forest hazards for damage)
+    for (let h=0;h<2;h++) {
+      const hp2 = randFloorInBiome(bm);
+      HAZARD_ZONES.push({x:hp2.x, y:hp2.y, r:50+Math.random()*30, biome:bm, tickTimer:0});
+    }
+
+    // Wildlife (2 types × 2 individuals per biome = 4 critters)
+    const cfgs = WILDLIFE_CFG[bm]||[];
+    cfgs.forEach(cfg => {
+      for (let w=0;w<2;w++) {
+        const wp = randFloorInBiome(bm);
+        WILDLIFE.push({x:wp.x, y:wp.y, vx:0, vy:0, biome:bm,
+          color:cfg.c, sz:cfg.sz, speed:cfg.sp,
+          idleTimer:Math.floor(Math.random()*120),
+          fleeing:false});
+      }
+    });
+  });
+}
+
+function updateExploration() {
+  // ── Shrine buff tick ──────────────────────────────────────────────
+  if (shrineBuffTimer > 0) {
+    shrineBuffTimer--;
+    if (shrineBuffType === 'regen' && shrineBuffTimer % 60 === 0) {
+      player.hp = Math.min(player.maxHp, player.hp + 5);
+    }
+    if (shrineBuffTimer === 0) {
+      shrineBuffType = null;
+      showNotif('Shrine buff faded.','#888',90);
+    }
+  }
+
+  // ── Hidden secrets ────────────────────────────────────────────────
+  HIDDEN_SECRETS.forEach(s => {
+    if (s.collected) return;
+    s.pulse = (s.pulse + 0.08) % (Math.PI*2);
+    const dx = player.x - s.x, dy = player.y - s.y;
+    if (Math.sqrt(dx*dx+dy*dy) < 36) {
+      s.collected = true;
+      const roll = Math.random();
+      if (roll < 0.6) {
+        player.coins += 25;
+        showNotif('🔍 Secret! +25 MP','#fbbf24',150);
+      } else {
+        // Free bonus upgrade pick
+        player.bonusUpgrades = player.bonusUpgrades || {};
+        const flatUpgs = ALL_UPGRADES.filter(u => u.level < (u.maxLevel||5));
+        if (flatUpgs.length) {
+          const pick = flatUpgs[Math.floor(Math.random()*flatUpgs.length)];
+          player.bonusUpgrades[pick.id] = (player.bonusUpgrades[pick.id]||0)+1;
+          showNotif('🔍 Secret! +1 ' + pick.label,'#22c55e',180);
+        } else {
+          player.coins += 25;
+          showNotif('🔍 Secret! +25 MP','#fbbf24',150);
+        }
+      }
+    }
+  });
+
+  // ── Lore signs ────────────────────────────────────────────────────
+  LORE_SIGNS.forEach(s => {
+    const dx = player.x - s.x, dy = player.y - s.y;
+    if (Math.sqrt(dx*dx+dy*dy) < 52) {
+      s.showTimer = 180;
+    } else if (s.showTimer > 0) s.showTimer--;
+  });
+
+  // ── Biome shrines ─────────────────────────────────────────────────
+  BIOME_SHRINES.forEach(sh => {
+    sh.glowPulse += 0.05;
+    if (sh.cooldown > 0) { sh.cooldown--; return; }
+    const dx = player.x - sh.x, dy = player.y - sh.y;
+    if (Math.sqrt(dx*dx+dy*dy) < 40) {
+      if (player.coins >= 50) {
+        player.coins -= 50;
+        const buffType = SHRINE_BUFFS[sh.biome] || 'speed';
+        shrineBuffType = buffType;
+        shrineBuffTimer = SHRINE_DURATION;
+        sh.cooldown = SHRINE_DURATION;
+        const label = buffType==='speed' ? '⚡ Speed' : buffType==='damage' ? '⚔️ Damage' : '💚 Regen';
+        showNotif('Shrine: ' + label + ' buff! (60s)','#ffd700',200);
+      } else if (frame % 120 === 0) {
+        showNotif('Shrine needs 50 MP','#888',90);
+      }
+    }
+  });
+
+  // ── Hazard zones ──────────────────────────────────────────────────
+  HAZARD_ZONES.forEach(hz => {
+    const dx = player.x+12 - hz.x, dy = player.y+14 - hz.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if (dist < hz.r) {
+      // Slow
+      const cfg = HAZARD_CFG[hz.biome]||{slow:0.6,dmg:0};
+      if (cfg.slow < 1) { player.x -= player.vx_last*(1-cfg.slow)||0; player.y -= player.vy_last*(1-cfg.slow)||0; }
+      // Damage tick
+      if (cfg.dmg > 0) {
+        hz.tickTimer++;
+        if (hz.tickTimer >= 60) {
+          hz.tickTimer = 0;
+          player.hp -= cfg.dmg;
+          if (player.hp <= 0) player.hp = 1;
+        }
+      }
+    } else hz.tickTimer = 0;
+  });
+
+  // ── Wildlife ──────────────────────────────────────────────────────
+  WILDLIFE.forEach(w => {
+    const dx = player.x - w.x, dy = player.y - w.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if (dist < 90) {
+      // Flee
+      w.fleeing = true;
+      const len = Math.sqrt(dx*dx+dy*dy)||1;
+      w.vx = -(dx/len) * w.speed;
+      w.vy = -(dy/len) * w.speed;
+    } else {
+      w.fleeing = false;
+      w.idleTimer--;
+      if (w.idleTimer <= 0) {
+        // Idle wander
+        const ang = Math.random()*Math.PI*2;
+        w.vx = Math.cos(ang) * w.speed * 0.3;
+        w.vy = Math.sin(ang) * w.speed * 0.3;
+        w.idleTimer = 60 + Math.floor(Math.random()*120);
+      }
+    }
+    // Move and clamp
+    w.x += w.vx; w.y += w.vy;
+    const tx2 = Math.floor(w.x/TILE), ty2 = Math.floor(w.y/TILE);
+    if (tx2>=0&&tx2<MAP_W&&ty2>=0&&ty2<MAP_H&&tileMap[ty2]&&tileMap[ty2][tx2]!==0) {
+      w.x -= w.vx; w.y -= w.vy; w.vx=0; w.vy=0;
+    }
+  });
+}
+
+function drawExploration() {
+  const cx0 = worldToScreen(0,0);
+
+  // ── Biome ambient particles (spawned per frame) ───────────────────
+  const cb = getBiomeAtPixel(player.x, player.y);
+  if (cb !== 'void' && frame % 3 === 0) {
+    const spawnX = player.x + (Math.random()-0.5)*CW;
+    const spawnY = player.y + (Math.random()-0.5)*CH;
+    let pcfg = null;
+    if      (cb==='forest')   pcfg={color:'#44aa22',size:4,vx:(Math.random()-0.5)*0.4,vy:0.6+Math.random()*0.4,life:120,shape:'leaf'};
+    else if (cb==='volcano')  pcfg={color:'#ff6600',size:3,vx:(Math.random()-0.5)*0.8,vy:-1.2-Math.random()*0.6,life:80,shape:'dot'};
+    else if (cb==='tundra')   pcfg={color:'#ddeeff',size:3,vx:(Math.random()-0.5)*0.6,vy:0.5+Math.random()*0.4,life:150,shape:'dot'};
+    else if (cb==='mushroom') pcfg={color:'#cc66ff',size:3,vx:(Math.random()-0.5)*0.3,vy:-0.6-Math.random()*0.4,life:130,shape:'dot'};
+    else if (cb==='swamp')    pcfg={color:'#44cc44',size:4,vx:0,vy:-0.4-Math.random()*0.3,life:100,shape:'bubble'};
+    else if (cb==='crystal')  pcfg={color:'#88ccff',size:2,vx:(Math.random()-0.5)*1,vy:(Math.random()-0.5)*1,life:60,shape:'dot'};
+    else if (cb==='storm')    pcfg={color:'#aaaaff',size:2,vx:(Math.random()-0.3)*2,vy:(Math.random()-0.5)*1.5,life:40,shape:'dot'};
+    else if (cb==='desert')   pcfg={color:'#d4b060',size:2,vx:0.8+Math.random()*0.6,vy:(Math.random()-0.5)*0.3,life:90,shape:'dot'};
+    else if (cb==='shadow')   pcfg={color:'#8800cc',size:3,vx:(Math.random()-0.5)*0.5,vy:-0.3-Math.random()*0.5,life:110,shape:'wisp'};
+    if (pcfg) BIOME_PARTICLES.push({x:spawnX,y:spawnY,...pcfg,maxLife:pcfg.life});
+  }
+  // Update & draw particles
+  for (let i=BIOME_PARTICLES.length-1;i>=0;i--) {
+    const p = BIOME_PARTICLES[i];
+    p.x += p.vx; p.y += p.vy; p.life--;
+    if (p.life<=0) { BIOME_PARTICLES.splice(i,1); continue; }
+    const ps2 = worldToScreen(p.x, p.y);
+    if (ps2.x<-20||ps2.x>CW+20||ps2.y<-20||ps2.y>CH+20) { BIOME_PARTICLES.splice(i,1); continue; }
+    const alpha = Math.min(1, p.life/20) * Math.min(1,(p.maxLife-p.life)/10);
+    ctx.save(); ctx.globalAlpha = alpha * 0.75;
+    ctx.fillStyle = p.color;
+    if (p.shape==='leaf') {
+      ctx.save(); ctx.translate(ps2.x,ps2.y); ctx.rotate(p.life*0.12);
+      ctx.fillRect(-p.size/2,-p.size,p.size,p.size*2);
+      ctx.restore();
+    } else if (p.shape==='bubble') {
+      ctx.strokeStyle=p.color; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(ps2.x,ps2.y,p.size,0,Math.PI*2); ctx.stroke();
+    } else if (p.shape==='wisp') {
+      ctx.globalAlpha=alpha*0.5;
+      ctx.beginPath(); ctx.arc(ps2.x,ps2.y,p.size*2,0,Math.PI*2); ctx.fill();
+    } else {
+      ctx.fillRect(Math.round(ps2.x-p.size/2),Math.round(ps2.y-p.size/2),p.size,p.size);
+    }
+    ctx.restore();
+  }
+
+  // ── Hidden secrets ────────────────────────────────────────────────
+  HIDDEN_SECRETS.forEach(s => {
+    if (s.collected) return;
+    const ss = worldToScreen(s.x, s.y);
+    if (ss.x<-30||ss.x>CW+30||ss.y<-30||ss.y>CH+30) return;
+    const glow = 0.4 + 0.4*Math.sin(s.pulse);
+    ctx.save();
+    ctx.globalAlpha = glow * 0.9;
+    ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+    ctx.shadowColor='#ffd700'; ctx.shadowBlur=10;
+    ctx.strokeRect(Math.round(ss.x-8),Math.round(ss.y-8),16,16);
+    ctx.globalAlpha = glow * 0.5;
+    ctx.fillStyle='#ffd700';
+    ctx.fillRect(Math.round(ss.x-4),Math.round(ss.y-4),8,8);
+    ctx.restore();
+  });
+
+  // ── Lore signs ────────────────────────────────────────────────────
+  LORE_SIGNS.forEach(s => {
+    const ss = worldToScreen(s.x, s.y);
+    if (ss.x<-30||ss.x>CW+30||ss.y<-30||ss.y>CH+30) return;
+    // Post + sign
+    ctx.fillStyle='#6a4820'; ctx.fillRect(Math.round(ss.x-2),Math.round(ss.y-18),4,20);
+    ctx.fillStyle='#c8a050'; ctx.fillRect(Math.round(ss.x-10),Math.round(ss.y-22),20,10);
+    ctx.fillStyle='#6a4820'; ctx.fillRect(Math.round(ss.x-10),Math.round(ss.y-22),20,2);
+    // Exclamation dot when in range
+    if (s.showTimer > 0) {
+      ctx.fillStyle='#fff'; ctx.font='bold 10px monospace';
+      ctx.textAlign='center'; ctx.fillText('!',Math.round(ss.x),Math.round(ss.y-24));
+    }
+    // Tooltip
+    if (s.showTimer > 0) {
+      const alpha = Math.min(1, s.showTimer/20);
+      const lines = s.text.split('\\n');
+      const maxW = Math.max(...lines.map(l=>l.length))*6.5;
+      const bh = lines.length*14+12;
+      const bx = ss.x - maxW/2, by = ss.y - bh - 30;
+      ctx.save(); ctx.globalAlpha = alpha;
+      ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(Math.round(bx-4),Math.round(by-4),Math.round(maxW+8),bh);
+      ctx.strokeStyle='#c8a050'; ctx.lineWidth=1;
+      ctx.strokeRect(Math.round(bx-4),Math.round(by-4),Math.round(maxW+8),bh);
+      ctx.fillStyle='#ffd700'; ctx.font='bold 10px monospace'; ctx.textAlign='left';
+      lines.forEach((ln,i)=>ctx.fillText(ln,Math.round(bx),Math.round(by+10+i*14)));
+      ctx.restore();
+    }
+  });
+
+  // ── Biome shrines ─────────────────────────────────────────────────
+  BIOME_SHRINES.forEach(sh => {
+    const ss = worldToScreen(sh.x, sh.y);
+    if (ss.x<-40||ss.x>CW+40||ss.y<-40||ss.y>CH+40) return;
+    const col = SHRINE_COLORS[sh.biome]||'#ffffff';
+    const active = sh.cooldown === 0;
+    const glow = active ? (0.5+0.5*Math.sin(sh.glowPulse)) : 0.1;
+    ctx.save();
+    // Base stone
+    ctx.fillStyle='#444448'; ctx.fillRect(Math.round(ss.x-12),Math.round(ss.y-4),24,12);
+    ctx.fillStyle='#666668'; ctx.fillRect(Math.round(ss.x-10),Math.round(ss.y-14),20,14);
+    ctx.fillStyle='#888'; ctx.fillRect(Math.round(ss.x-8),Math.round(ss.y-18),16,6);
+    // Glowing gem on top
+    ctx.globalAlpha = active ? 0.8+glow*0.2 : 0.3;
+    ctx.fillStyle = col;
+    ctx.shadowColor=col; ctx.shadowBlur = active ? 12+glow*8 : 4;
+    ctx.fillRect(Math.round(ss.x-4),Math.round(ss.y-26),8,8);
+    // Icon
+    ctx.shadowBlur=0; ctx.globalAlpha=1;
+    ctx.fillStyle='#fff'; ctx.font='8px monospace'; ctx.textAlign='center';
+    const icon = sh.cooldown>0 ? '✓' : (SHRINE_BUFFS[sh.biome]==='speed' ? '⚡' : SHRINE_BUFFS[sh.biome]==='damage' ? '⚔' : '♥');
+    ctx.fillText(icon, Math.round(ss.x), Math.round(ss.y-20));
+    // Nearby prompt
+    const pdx = player.x-sh.x, pdy = player.y-sh.y;
+    if (active && Math.sqrt(pdx*pdx+pdy*pdy)<80) {
+      ctx.globalAlpha=0.9; ctx.fillStyle='rgba(0,0,0,0.7)';
+      ctx.fillRect(Math.round(ss.x-36),Math.round(ss.y-48),72,14);
+      ctx.fillStyle='#ffd700'; ctx.font='9px monospace'; ctx.textAlign='center';
+      ctx.fillText('Shrine — 50 MP',Math.round(ss.x),Math.round(ss.y-38));
+    }
+    ctx.restore();
+  });
+
+  // ── Hazard zones ──────────────────────────────────────────────────
+  HAZARD_ZONES.forEach(hz => {
+    const ss = worldToScreen(hz.x, hz.y);
+    if (ss.x<-hz.r-20||ss.x>CW+hz.r+20||ss.y<-hz.r-20||ss.y>CH+hz.r+20) return;
+    const cfg = HAZARD_CFG[hz.biome]||{color:'#333'};
+    const pulse = 0.25 + 0.12*Math.sin(frame*0.05+hz.x);
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = cfg.color;
+    ctx.beginPath(); ctx.arc(Math.round(ss.x),Math.round(ss.y),hz.r,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha = pulse*0.5;
+    ctx.strokeStyle=cfg.color; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(Math.round(ss.x),Math.round(ss.y),hz.r+4+Math.sin(frame*0.1)*3,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  });
+
+  // ── Wildlife ──────────────────────────────────────────────────────
+  WILDLIFE.forEach(w => {
+    const ss = worldToScreen(w.x, w.y);
+    if (ss.x<-20||ss.x>CW+20||ss.y<-20||ss.y>CH+20) return;
+    const bob2 = Math.sin(frame*0.2+w.x)*1.5;
+    ctx.save();
+    ctx.fillStyle = w.color;
+    // Tiny critter body (oval)
+    ctx.beginPath();
+    ctx.ellipse(Math.round(ss.x),Math.round(ss.y+bob2),w.sz,w.sz*0.7,0,0,Math.PI*2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle='#000';
+    ctx.fillRect(Math.round(ss.x-w.sz*0.5),Math.round(ss.y+bob2-2),2,2);
+    ctx.fillRect(Math.round(ss.x+w.sz*0.2),Math.round(ss.y+bob2-2),2,2);
+    if (w.fleeing) {
+      ctx.fillStyle='rgba(255,0,0,0.6)'; ctx.font='8px monospace'; ctx.textAlign='center';
+      ctx.fillText('!',Math.round(ss.x),Math.round(ss.y+bob2-w.sz-2));
+    }
+    ctx.restore();
+  });
+
+  // ── Shrine buff HUD indicator ─────────────────────────────────────
+  if (shrineBuffTimer > 0) {
+    const icon = shrineBuffType==='speed' ? '⚡' : shrineBuffType==='damage' ? '⚔️' : '💚';
+    const secs = Math.ceil(shrineBuffTimer/60);
+    ctx.save();
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(CW/2-40,4,80,16);
+    ctx.fillStyle='#ffd700'; ctx.font='bold 10px monospace'; ctx.textAlign='center';
+    ctx.fillText(icon+' '+shrineBuffType.toUpperCase()+' '+secs+'s', CW/2, 15);
+    ctx.restore();
+  }
 }
 function loop() { update(); render(); requestAnimationFrame(loop); }
 window.addEventListener('resize', () => { CW = window.innerWidth; CH = window.innerHeight; });
