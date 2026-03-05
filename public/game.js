@@ -147,8 +147,13 @@ function drawCharPreview(canvasId, charName) {
   cx.restore();
 }
 
-function drawCharBody(cx, charName, frame) {
+function drawCharBody(cx, charName, frame, walkCycle, damageExprTimer) {
   const bob = Math.sin((frame||0)*0.14)*0.7;
+  // Leg animation — alternating forward/backward with walk cycle
+  const legSwing = Math.sin((walkCycle||0)*0.15) * 3; // -3 to +3 pixel swing
+  // Facial expression — determine if walking and if damaged
+  const isWalking = (walkCycle||0) > 0;
+  const isDamaged = (damageExprTimer||0) > 0;
   // Shadow (ground)
   cx.fillStyle='rgba(0,0,0,0.18)';
   cx.beginPath(); cx.ellipse(2,13,11,4,0,0,Math.PI*2); cx.fill();
@@ -157,10 +162,10 @@ function drawCharBody(cx, charName, frame) {
     // ── Jimmy — top-down, blue pajamas ──────────────────────────────────────
     // Feet/shoe soles (bottom, top-down)
     cx.fillStyle='#1e1b4b';
-    cx.fillRect(-9,8+bob,7,5); cx.fillRect(3,8-bob,7,5);
+    cx.fillRect(-9,8+bob+legSwing,7,5); cx.fillRect(3,8-bob-legSwing,7,5);
     // Legs (short, stubby)
     cx.fillStyle='#3730a3';
-    cx.fillRect(-9,3+bob,7,7); cx.fillRect(3,3-bob,7,7);
+    cx.fillRect(-9,3+bob+legSwing,7,7); cx.fillRect(3,3-bob-legSwing,7,7);
     // Body / shirt (top-down rectangle, slightly wider than tall)
     cx.fillStyle='#1d4ed8'; cx.fillRect(-11,-4,22,10);
     // Shirt highlight (top edge = nearest to viewer)
@@ -175,19 +180,36 @@ function drawCharBody(cx, charName, frame) {
     cx.fillRect(-3,-20,3,6); cx.fillRect(1,-21,3,7); cx.fillRect(-8,-18,3,5);
     // Small face strip (bottom of head = front, visible strip)
     cx.fillStyle='#f9c74f'; cx.fillRect(-7,-6,14,3);
-    // Eyes (tiny dots visible from above)
-    cx.fillStyle='#1a0a2e'; cx.fillRect(-5,-6,2,2); cx.fillRect(3,-6,2,2);
-    // Blush
-    cx.fillStyle='rgba(255,150,100,0.4)';
-    cx.beginPath(); cx.arc(-5,-5,2,0,Math.PI*2); cx.fill();
-    cx.beginPath(); cx.arc(5,-5,2,0,Math.PI*2); cx.fill();
+    // Eyes (tiny dots visible from above) — expression changes with walking/damage
+    if (isDamaged) {
+      // Pained expression: squinted eyes, X-shaped or closed
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-5,-6,2,2); cx.fillRect(3,-6,2,2);
+      cx.strokeStyle='#ff0000'; cx.lineWidth=0.5;
+      cx.beginPath(); cx.moveTo(-5,-6); cx.lineTo(-4,-5); cx.stroke();
+      cx.beginPath(); cx.moveTo(-4,-6); cx.lineTo(-5,-5); cx.stroke();
+    } else if (isWalking) {
+      // Focused/determined look: eyes slightly narrowed
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-5,-6,2,1); cx.fillRect(3,-6,2,1); // narrower eyes
+    } else {
+      // Relaxed neutral expression
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-5,-6,2,2); cx.fillRect(3,-6,2,2);
+    }
+    // Blush (less visible when damaged)
+    if (!isDamaged) {
+      cx.fillStyle='rgba(255,150,100,0.4)';
+      cx.beginPath(); cx.arc(-5,-5,2,0,Math.PI*2); cx.fill();
+      cx.beginPath(); cx.arc(5,-5,2,0,Math.PI*2); cx.fill();
+    }
 
   } else if (charName==='hanna') {
     // ── Hanna — top-down, lavender hoodie ───────────────────────────────────
     // Feet
-    cx.fillStyle='#be185d'; cx.fillRect(-9,8+bob,7,5); cx.fillRect(3,8-bob,7,5);
+    cx.fillStyle='#be185d'; cx.fillRect(-9,8+bob+legSwing,7,5); cx.fillRect(3,8-bob-legSwing,7,5);
     // Legs
-    cx.fillStyle='#db2777'; cx.fillRect(-9,3+bob,7,7); cx.fillRect(3,3-bob,7,7);
+    cx.fillStyle='#db2777'; cx.fillRect(-9,3+bob+legSwing,7,7); cx.fillRect(3,3-bob-legSwing,7,7);
     // Body
     cx.fillStyle='#9333ea'; cx.fillRect(-11,-4,22,10);
     cx.fillStyle='#c084fc'; cx.fillRect(-11,-4,22,2); // hood edge highlight
@@ -202,19 +224,39 @@ function drawCharBody(cx, charName, frame) {
     cx.fillStyle='#fff'; cx.fillRect(6,-17,3,3);
     // Face strip
     cx.fillStyle='#fde68a'; cx.fillRect(-7,-6,14,3);
-    // Eyes with lashes
-    cx.fillStyle='#1a0a2e'; cx.fillRect(-5,-6,2,2); cx.fillRect(3,-6,2,2);
-    cx.fillStyle='#6d28d9'; cx.fillRect(-5,-6,1,1); cx.fillRect(3,-6,1,1);
-    cx.fillStyle='rgba(236,72,153,0.35)';
-    cx.beginPath(); cx.arc(-4,-5,2,0,Math.PI*2); cx.fill();
-    cx.beginPath(); cx.arc(4,-5,2,0,Math.PI*2); cx.fill();
+    // Eyes with lashes — expression changes with walking/damage
+    if (isDamaged) {
+      // Pained expression: eyebrows down, eyes squinted
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-5,-6,2,1); cx.fillRect(3,-6,2,1);
+      // Angry/pained eyebrows
+      cx.strokeStyle='#d72a8a'; cx.lineWidth=0.7;
+      cx.beginPath(); cx.moveTo(-6,-7); cx.lineTo(-3,-6); cx.stroke();
+      cx.beginPath(); cx.moveTo(3,-6); cx.lineTo(6,-7); cx.stroke();
+    } else if (isWalking) {
+      // Focused look: normal eyes with slight narrowing
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-5,-6,2,2); cx.fillRect(3,-6,2,2);
+      cx.fillStyle='#6d28d9'; cx.fillRect(-5,-6,1,1); cx.fillRect(3,-6,1,1);
+    } else {
+      // Relaxed expression
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-5,-6,2,2); cx.fillRect(3,-6,2,2);
+      cx.fillStyle='#6d28d9'; cx.fillRect(-5,-6,1,1); cx.fillRect(3,-6,1,1);
+    }
+    // Blush (less visible when damaged)
+    if (!isDamaged) {
+      cx.fillStyle='rgba(236,72,153,0.35)';
+      cx.beginPath(); cx.arc(-4,-5,2,0,Math.PI*2); cx.fill();
+      cx.beginPath(); cx.arc(4,-5,2,0,Math.PI*2); cx.fill();
+    }
 
   } else if (charName==='bob') {
     // ── Bob — top-down, wide chubby red shirt ────────────────────────────────
     // Feet (bigger/wider)
-    cx.fillStyle='#1e3a8a'; cx.fillRect(-11,8+bob,9,6); cx.fillRect(4,8-bob,9,6);
+    cx.fillStyle='#1e3a8a'; cx.fillRect(-11,8+bob+legSwing,9,6); cx.fillRect(4,8-bob-legSwing,9,6);
     // Legs
-    cx.fillStyle='#1d4ed8'; cx.fillRect(-11,3+bob,9,7); cx.fillRect(4,3-bob,9,7);
+    cx.fillStyle='#1d4ed8'; cx.fillRect(-11,3+bob+legSwing,9,7); cx.fillRect(4,3-bob-legSwing,9,7);
     // Body (wider to show chubby)
     cx.fillStyle='#dc2626'; cx.fillRect(-13,-4,26,10);
     cx.fillStyle='#ef4444'; cx.fillRect(-13,-4,26,2);
@@ -224,13 +266,37 @@ function drawCharBody(cx, charName, frame) {
     cx.fillStyle='#44403c'; cx.beginPath(); cx.arc(0,-12,8,0,Math.PI*2); cx.fill();
     // Face strip (wider)
     cx.fillStyle='#fbbf24'; cx.fillRect(-8,-6,16,4);
-    // Eyes (rounder)
-    cx.fillStyle='#1a0a2e'; cx.fillRect(-5,-6,3,3); cx.fillRect(3,-6,3,3);
-    cx.fillStyle='#fff'; cx.fillRect(-4,-5,1,1); cx.fillRect(4,-5,1,1);
-    // Rosy cheeks visible from above
-    cx.fillStyle='rgba(255,100,80,0.45)';
-    cx.beginPath(); cx.arc(-6,-4,2.5,0,Math.PI*2); cx.fill();
-    cx.beginPath(); cx.arc(6,-4,2.5,0,Math.PI*2); cx.fill();
+    // Eyes (rounder) — expression changes with walking/damage
+    if (isDamaged) {
+      // Pained expression: X eyes or closed
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-5,-6,3,3); cx.fillRect(3,-6,3,3);
+      cx.strokeStyle='#ff0000'; cx.lineWidth=0.7;
+      // X pattern on left eye
+      cx.beginPath(); cx.moveTo(-5,-6); cx.lineTo(-2,-3); cx.stroke();
+      cx.beginPath(); cx.moveTo(-2,-6); cx.lineTo(-5,-3); cx.stroke();
+      // X pattern on right eye
+      cx.beginPath(); cx.moveTo(3,-6); cx.lineTo(6,-3); cx.stroke();
+      cx.beginPath(); cx.moveTo(6,-6); cx.lineTo(3,-3); cx.stroke();
+    } else if (isWalking) {
+      // Focused look with narrowed eyes
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-5,-6,3,2); cx.fillRect(3,-6,3,2);
+      cx.fillStyle='#fff';
+      cx.fillRect(-4,-5,1,1); cx.fillRect(4,-5,1,1);
+    } else {
+      // Relaxed normal eyes
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-5,-6,3,3); cx.fillRect(3,-6,3,3);
+      cx.fillStyle='#fff';
+      cx.fillRect(-4,-5,1,1); cx.fillRect(4,-5,1,1);
+    }
+    // Rosy cheeks (less visible when damaged)
+    if (!isDamaged) {
+      cx.fillStyle='rgba(255,100,80,0.45)';
+      cx.beginPath(); cx.arc(-6,-4,2.5,0,Math.PI*2); cx.fill();
+      cx.beginPath(); cx.arc(6,-4,2.5,0,Math.PI*2); cx.fill();
+    }
 
   } else {
     // ── Max — top-down goldendoodle ──────────────────────────────────────────
@@ -242,10 +308,11 @@ function drawCharBody(cx, charName, frame) {
     // Front paws
     cx.beginPath(); cx.ellipse(9,-12,5,3,0,0,Math.PI*2); cx.fill();
     cx.beginPath(); cx.ellipse(-9,-12,5,3,0,0,Math.PI*2); cx.fill();
-    // Leg stubs
+    // Leg stubs — with walking animation
     cx.fillStyle='#fde68a';
-    cx.fillRect(5,9,7,6); cx.fillRect(-12,9,7,6);   // hind
-    cx.fillRect(5,-11,7,6); cx.fillRect(-12,-11,7,6); // front
+    const legSwingScaled = legSwing * 0.72; // account for Max's scale
+    cx.fillRect(5,9+legSwingScaled,7,6); cx.fillRect(-12,9-legSwingScaled,7,6);   // hind
+    cx.fillRect(5,-11-legSwingScaled,7,6); cx.fillRect(-12,-11+legSwingScaled,7,6); // front
     // Body (oval top-down)
     cx.fillStyle='#fde68a'; cx.beginPath(); cx.ellipse(0,2,14,10,0,0,Math.PI*2); cx.fill();
     // Fluffy back patches
@@ -268,9 +335,28 @@ function drawCharBody(cx, charName, frame) {
     cx.fillStyle='#fff8e1'; cx.beginPath(); cx.ellipse(0,-10,5,4,0,0,Math.PI*2); cx.fill();
     cx.fillStyle='#1c1917'; cx.beginPath(); cx.ellipse(0,-10,3,2,0,0,Math.PI*2); cx.fill(); // nose
     cx.fillStyle='#fff'; cx.beginPath(); cx.arc(1,-11,1,0,Math.PI*2); cx.fill();
-    // Eyes
-    cx.fillStyle='#1a0a2e'; cx.fillRect(-6,-17,3,3); cx.fillRect(4,-17,3,3);
-    cx.fillStyle='#78350f'; cx.fillRect(-5,-16,1,1); cx.fillRect(5,-16,1,1);
+    // Eyes — expression changes with walking/damage
+    if (isDamaged) {
+      // Pained expression: closed or squeezed eyes
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-6,-17,3,2); cx.fillRect(4,-17,3,2);
+      // Pain lines
+      cx.strokeStyle='#ff4400'; cx.lineWidth=0.5;
+      cx.beginPath(); cx.moveTo(-6,-19); cx.lineTo(-4,-17); cx.stroke();
+      cx.beginPath(); cx.moveTo(4,-19); cx.lineTo(6,-17); cx.stroke();
+    } else if (isWalking) {
+      // Focused/alert look
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-6,-17,3,3); cx.fillRect(4,-17,3,3);
+      cx.fillStyle='#ffaa00'; // brighter pupil
+      cx.fillRect(-5,-16,1,1); cx.fillRect(5,-16,1,1);
+    } else {
+      // Relaxed normal eyes
+      cx.fillStyle='#1a0a2e';
+      cx.fillRect(-6,-17,3,3); cx.fillRect(4,-17,3,3);
+      cx.fillStyle='#78350f';
+      cx.fillRect(-5,-16,1,1); cx.fillRect(5,-16,1,1);
+    }
     // Tail (top-down, curl at back right)
     const tailWag = Math.sin((frame||0)*0.22)*0.4;
     cx.save(); cx.translate(12,8); cx.rotate(tailWag);
@@ -330,7 +416,7 @@ function loadGame() {
           // Re-apply stat effects from shop upgrades
           if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, u.level)));
           if (u.id === 'maxhp') { player.maxHp = 150 + u.level * 20; player.hp = player.maxHp; }
-          if (u.id === 'speed') player.speed = 3 + u.level * 0.3;
+          if (u.id === 'speed') player.speed = 4 + u.level * 0.3;
         }
       });
     }
@@ -386,6 +472,8 @@ const player = {
   hp: 150, maxHp: 150, coins: 0,
   notes: [], invincible: 0, facing: 1,
   shootCooldown: 0, shootRate: 40,
+  walkCycle: 0, damageExpressionTimer: 0,
+  activeItem: null, // 'grenade', 'health_potion', 'shield_potion', 'ammo_pack', or null
 };
 
 // Checkpoint
@@ -575,7 +663,7 @@ function spawnEnemy(nearPlayer) {
     }
     ex = Math.min((MAP_W-2)*TILE, Math.max(TILE, ex));
     ey = Math.min((MAP_H-2)*TILE, Math.max(TILE, ey));
-    if (getTile(Math.floor(ex/TILE), Math.floor(ey/TILE))===1||getTile(Math.floor(ex/TILE), Math.floor(ey/TILE))===TILE_WATER) {
+    if (getTile(Math.floor(ex/TILE), Math.floor(ey/TILE))===1) {
       ex = Math.min((MAP_W-2)*TILE, ex + TILE*2);
       ey = Math.min((MAP_H-2)*TILE, ey + TILE*2);
     }
@@ -653,9 +741,31 @@ window.addEventListener('keydown', e => {
   if (['Escape','Backspace'].includes(e.key) && gameState !== 'playing') e.preventDefault();
   keys[e.key.toLowerCase()] = true;
   if (e.key === 'Escape') {
-    if (gameState === 'playing') { gameState = 'paused'; document.getElementById('pause-overlay').style.display = 'flex'; }
+    if (gameState === 'playing') { 
+      if (activeTradeMenu) { activeTradeMenu = null; }
+      else { gameState = 'paused'; document.getElementById('pause-overlay').style.display = 'flex'; }
+    }
     else if (gameState === 'paused') { uiResume(); }
     else { uiShow('scr-main'); }
+  }
+  // E key: interact with nearby villager
+  if (e.key === 'e' || e.key === 'E') {
+    if (gameState === 'playing' && !interiorState) {
+      tryInteractVillager();
+    }
+  }
+  // Q key: use active item
+  if (e.key === 'q' || e.key === 'Q') {
+    if (gameState === 'playing' && !interiorState && player.activeItem) {
+      useActiveItem();
+    }
+  }
+  // Number keys 1-3: buy from trade menu
+  if (activeTradeMenu && ['1','2','3'].includes(e.key)) {
+    const idx = parseInt(e.key) - 1;
+    if (idx < activeTradeMenu.inventory.length) {
+      buyFromVillager(activeTradeMenu, idx);
+    }
   }
 });
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
@@ -699,6 +809,7 @@ function uiPlay() {
   initRivers();
   initLandmarks();
   initWorldChests();
+  initVillagers();
   setTimeout(() => preSpawnEnemies(3), 300);
   initMinimap();
   initExploration();
@@ -760,7 +871,7 @@ function openLevelUp() {
       // Apply stat effects immediately
       if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, total)));
       if (u.id === 'maxhp') { player.maxHp = 150 + total * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
-      if (u.id === 'speed') player.speed = 3 + total * 0.3;
+      if (u.id === 'speed') player.speed = 4 + total * 0.3;
       // Auto-equip ability if picked
       if (u.id.startsWith('ab_')) {
         if (!equippedAbilities.includes(u.id) && equippedAbilities.length < 3) equippedAbilities.push(u.id);
@@ -804,7 +915,7 @@ function uiRefundAll() {
     return u && (u.level + (player.bonusUpgrades[id]||0)) > 0;
   });
   // Reset stat effects
-  player.shootRate = 40; player.speed = 3; player.maxHp = 150;
+  player.shootRate = 40; player.speed = 4; player.maxHp = 150;
   player.hp = Math.min(player.hp, player.maxHp);
   savedCoins += refund;
   saveGame();
@@ -1094,7 +1205,7 @@ function updateInterior() {
     b.x = Math.max(40,Math.min(CW-40,b.x)); b.y = Math.max(110,Math.min(CH-80,b.y));
     // Contact damage
     if (Math.abs(s.px-b.x)<b.w*0.6&&Math.abs(s.py-b.y)<b.h*0.6&&frame%28===0) {
-      { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*1.3*getDiff().enemyDmg*acR); player.invincible=30; }
+      { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*1.3*getDiff().enemyDmg*acR); player.invincible=30; player.damageExpressionTimer=45; }
     }
     // ── Special attacks ────────────────────────────────────────────────────────
     b.specialCooldown--;
@@ -1153,20 +1264,20 @@ function updateInterior() {
         a.x+=a.vx; a.y+=a.vy;
         if (a.x<0||a.x>CW||a.y<80||a.y>CH) return false;
         if (Math.abs(s.px-a.x)<16&&Math.abs(s.py-a.y)<16) {
-          { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*1.4*getDiff().enemyDmg*acR); player.invincible=25; return false; }
+          { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*1.4*getDiff().enemyDmg*acR); player.invincible=25; player.damageExpressionTimer=45; return false; }
         }
       } else if (a.kind==='aoe') {
         a.r = a.maxR * (1 - a.life/a.initLife); // linear expansion
         const aoeD = Math.sqrt((s.px-a.x)**2+(s.py-a.y)**2);
         if (Math.abs(aoeD - a.r) < 28 && !a.hit) { // ring contact band
           a.hit = true; // damage once per ring pass
-          { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*1.4*getDiff().enemyDmg*acR); }
+          { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*1.4*getDiff().enemyDmg*acR); player.damageExpressionTimer=45; }
           player.invincible = 45;
           showNotif('-'+Math.round(b.dmg*1.4*getDiff().enemyDmg)+' HP!','#ff4444',50);
         } else if (Math.abs(aoeD - a.r) > 40) { a.hit = false; } // allow next ring
       } else if (a.kind==='hazard') {
         if (Math.sqrt((s.px-a.x)**2+(s.py-a.y)**2) < a.r && frame%25===0) {
-          { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*0.9*getDiff().enemyDmg*acR); }
+          { const acR=1-totalLevel('ac')*0.08; player.hp -= Math.round(b.dmg*0.9*getDiff().enemyDmg*acR); player.damageExpressionTimer=45; }
         }
       }
       return a.life > 0;
@@ -1360,7 +1471,7 @@ function drawInterior() {
   ctx.save(); ctx.translate(sx, sy2);
   const ang = Math.atan2(mouseY-sy2, mouseX-sx);
   ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(2,18,11,5,0,0,Math.PI*2); ctx.fill();
-  drawCharBody(ctx, selectedCharacter, frame);
+  drawCharBody(ctx, selectedCharacter, frame, player.walkCycle, player.damageExpressionTimer);
   ctx.save(); ctx.translate(9,-1); ctx.rotate(ang);
   ctx.fillStyle='#f9c74f'; ctx.fillRect(0,-3,8,5);
   const gid=selectedGunId||'pistol';
@@ -1411,10 +1522,12 @@ function bfsPath(startX, startY, goalX, goalY) {
     for (const [dx2, dy2] of dirs) {
       const nx = cx + dx2, ny = cy + dy2;
       if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue;
-      if (getTile(nx, ny) === 1) continue;
+      const nTile = getTile(nx, ny);
+      if (nTile === 1 || nTile === TILE_WATER) continue;
       // For diagonals, also check both adjacent tiles to avoid corner cutting
       if (dx2 !== 0 && dy2 !== 0) {
-        if (getTile(cx + dx2, cy) === 1 || getTile(cx, cy + dy2) === 1) continue;
+        const adjH = getTile(cx + dx2, cy), adjV = getTile(cx, cy + dy2);
+        if (adjH === 1 || adjH === TILE_WATER || adjV === 1 || adjV === TILE_WATER) continue;
       }
       const k = key(nx, ny);
       if (!visited.has(k)) {
@@ -1476,6 +1589,16 @@ function update() {
   if (player.frozen > 0) { player.frozen--; dx *= 0.3; dy *= 0.3; }
   if (dx > 0) player.facing = 1;
   if (dx < 0) player.facing = -1;
+  // ── Walk cycle animation ──────────────────────────────────────
+  if (dx !== 0 || dy !== 0) {
+    player.walkCycle++;
+  } else {
+    player.walkCycle = 0; // reset when idle
+  }
+  // Decrement damage expression timer each frame
+  if (player.damageExpressionTimer > 0) {
+    player.damageExpressionTimer--;
+  }
 
   const px = player.x, py = player.y;
   player.x += dx;
@@ -1509,7 +1632,7 @@ function update() {
     if (b.life <= 0) { bullets.splice(i, 1); continue; }
     let hit = false;
     // Wall hit — check explosive
-    if (getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE))===1||getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE))===TILE_WATER) {
+    if (getTile(Math.floor(b.x/TILE), Math.floor(b.y/TILE))===1) {
       if (equippedAbilities.includes('ab_explode')) { const lv=totalLevel('ab_explode'); triggerExplosion(b.x, b.y, 40+lv*10, 5); }
       bullets.splice(i, 1); continue;
     }
@@ -1623,7 +1746,12 @@ function update() {
     } else {
       const edx = targetX - e.x, edy = targetY - e.y;
       const elen = Math.sqrt(edx*edx + edy*edy) || 1;
-      e.x += edx/elen * effectiveSpeed; e.y += edy/elen * effectiveSpeed;
+      const nex = e.x + edx/elen * effectiveSpeed;
+      const ney = e.y + edy/elen * effectiveSpeed;
+      // Block enemies from walking into water
+      if (getTile(Math.floor(nex/TILE), Math.floor(ney/TILE)) !== TILE_WATER) {
+        e.x = nex; e.y = ney;
+      }
     }
 
     // Burn DOT tick
@@ -1680,7 +1808,7 @@ function update() {
     // Player collision (psychic enemies don't attack player)
     if (e.psychic > 0) continue;
     if (player.invincible === 0 && rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)) {
-      const acReduct = 1 - totalLevel('ac') * 0.08; player.hp -= Math.round((e.dmg || 10) * acReduct); player.invincible = 40;
+      const acReduct = 1 - totalLevel('ac') * 0.08; player.hp -= Math.round((e.dmg || 10) * acReduct); player.invincible = 40; player.damageExpressionTimer = 45;
       if (e.type === 'boss_glacier') { player.frozen = 90; } // freeze player briefly
       if (player.hp <= 0) {
         onPlayerDeath();
@@ -1783,7 +1911,7 @@ function applyUpgrade(u) {
   u.level++;
   if (u.id === 'fire')  player.shootRate = Math.max(5, Math.floor(40 * Math.pow(0.9, totalLevel('fire'))));
   if (u.id === 'maxhp') { player.maxHp = 150 + totalLevel('maxhp') * 20; player.hp = Math.min(player.hp + 20, player.maxHp); }
-  if (u.id === 'speed') player.speed = 3 + totalLevel('speed') * 0.3;
+  if (u.id === 'speed') player.speed = 4 + totalLevel('speed') * 0.3;
   if (u.id === 'range') { /* applied in bullet life calc */ }
   if (u.id.startsWith('ab_')) {
     if (!equippedAbilities.includes(u.id)) {
@@ -1848,68 +1976,30 @@ function drawMap() {
     for (let tx = stx; tx < etx; tx++) {
       const sx = tx*TILE - camera.x, sy = ty*TILE - camera.y;
       if (map[ty][tx] === TILE_WATER) {
-        // ── Water tile ───────────────────────────────────────────────────
-        const biomeW2 = getBiome(tx, ty);
-        const wc = RIVER_WATER_COLORS[biomeW2] || '#1565c0';
-        // Draw water
-        const shimmer = Math.sin(frame*0.06 + tx*0.4 + ty*0.3)*0.12;
-        ctx.fillStyle = wc;
+        // ── Water tile ──────────────────────────────────────────────
+        const biomeW = getBiome(tx, ty);
+        const wcfg = RIVER_BIOME_CFG[biomeW] || RIVER_BIOME_CFG.forest;
+        const shimmer = Math.sin(frame * 0.06 + tx * 0.4 + ty * 0.3) * 0.12;
+        ctx.fillStyle = wcfg.water;
         ctx.fillRect(Math.round(sx), Math.round(sy), TILE, TILE);
         ctx.save(); ctx.globalAlpha = 0.18 + shimmer;
         ctx.fillStyle = '#ffffff';
-        if ((tx+ty+Math.floor(frame/12))%3===0) ctx.fillRect(Math.round(sx+3),Math.round(sy+TILE*0.3),TILE-6,2);
-        if ((tx+ty+Math.floor(frame/8))%5===0)  ctx.fillRect(Math.round(sx+5),Math.round(sy+TILE*0.6),TILE-10,2);
+        if ((tx + ty + Math.floor(frame / 12)) % 3 === 0) ctx.fillRect(Math.round(sx + 3), Math.round(sy + TILE * 0.3), TILE - 6, 2);
+        if ((tx + ty + Math.floor(frame / 8))  % 5 === 0) ctx.fillRect(Math.round(sx + 5), Math.round(sy + TILE * 0.6), TILE - 10, 2);
         ctx.restore();
       } else if (map[ty][tx] === TILE_BRIDGE) {
-        // ── Bridge tile ─────────────────────────────────────────────────
+        // ── Bridge tile ─────────────────────────────────────────────
         const biomeB = getBiome(tx, ty);
-        const bc2 = RIVER_BRIDGE_COLORS[biomeB] || '#8d6e63';
-        // Detect bridge axis from nearby water tiles
-        const hasWaterNS = getTile(tx,ty-1)===TILE_WATER||getTile(tx,ty+1)===TILE_WATER;
-        const isHBridge = hasWaterNS; // bridge planks run left-right if water above/below
-
-        // Draw water beneath (peek through gaps)
-        const wc2 = RIVER_WATER_COLORS[biomeB] || '#1565c0';
-        ctx.fillStyle = wc2; ctx.fillRect(Math.round(sx), Math.round(sy), TILE, TILE);
-
-        // Wood plank base
-        ctx.fillStyle = bc2; ctx.fillRect(Math.round(sx+1), Math.round(sy+1), TILE-2, TILE-2);
-
-        // Plank grain lines (run perpendicular to water flow)
-        ctx.fillStyle = 'rgba(0,0,0,0.22)';
-        if (isHBridge) {
-          // planks run horizontally, grain lines vertical
-          ctx.fillRect(Math.round(sx+TILE*0.28), Math.round(sy+2), 2, TILE-4);
-          ctx.fillRect(Math.round(sx+TILE*0.55), Math.round(sy+2), 2, TILE-4);
-          ctx.fillRect(Math.round(sx+TILE*0.78), Math.round(sy+2), 2, TILE-4);
-        } else {
-          // planks run vertically, grain lines horizontal
-          ctx.fillRect(Math.round(sx+2), Math.round(sy+TILE*0.28), TILE-4, 2);
-          ctx.fillRect(Math.round(sx+2), Math.round(sy+TILE*0.55), TILE-4, 2);
-          ctx.fillRect(Math.round(sx+2), Math.round(sy+TILE*0.78), TILE-4, 2);
-        }
-        // Wood highlight (top-left)
+        const bcfg = RIVER_BIOME_CFG[biomeB] || RIVER_BIOME_CFG.forest;
+        ctx.fillStyle = bcfg.water;
+        ctx.fillRect(Math.round(sx), Math.round(sy), TILE, TILE);
+        ctx.fillStyle = bcfg.bridge;
+        ctx.fillRect(Math.round(sx + 1), Math.round(sy + 1), TILE - 2, TILE - 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(Math.round(sx + 2), Math.round(sy + TILE * 0.33), TILE - 4, 2);
+        ctx.fillRect(Math.round(sx + 2), Math.round(sy + TILE * 0.66), TILE - 4, 2);
         ctx.fillStyle = 'rgba(255,255,255,0.12)';
-        ctx.fillRect(Math.round(sx+1), Math.round(sy+1), TILE-2, 3);
-        ctx.fillRect(Math.round(sx+1), Math.round(sy+1), 3, TILE-2);
-
-        // Railings — short posts at corners, connecting bar
-        const isEdge = isHBridge
-          ? (getTile(tx,ty-1)===TILE_WATER||getTile(tx,ty+1)===TILE_WATER)
-          : (getTile(tx-1,ty)===TILE_WATER||getTile(tx+1,ty)===TILE_WATER);
-        const rc = 'rgba(200,200,200,0.85)'; // railing color
-        if (isHBridge) {
-          // Top rail
-          const topWater = getTile(tx, ty-1)===TILE_WATER;
-          const botWater = getTile(tx, ty+1)===TILE_WATER;
-          if (topWater) { ctx.fillStyle=rc; ctx.fillRect(Math.round(sx),Math.round(sy),TILE,3); ctx.fillRect(Math.round(sx+1),Math.round(sy),2,8); ctx.fillRect(Math.round(sx+TILE-3),Math.round(sy),2,8); }
-          if (botWater) { ctx.fillStyle=rc; ctx.fillRect(Math.round(sx),Math.round(sy+TILE-3),TILE,3); ctx.fillRect(Math.round(sx+1),Math.round(sy+TILE-8),2,8); ctx.fillRect(Math.round(sx+TILE-3),Math.round(sy+TILE-8),2,8); }
-        } else {
-          const leftWater  = getTile(tx-1, ty)===TILE_WATER;
-          const rightWater = getTile(tx+1, ty)===TILE_WATER;
-          if (leftWater)  { ctx.fillStyle=rc; ctx.fillRect(Math.round(sx),Math.round(sy),3,TILE); ctx.fillRect(Math.round(sx),Math.round(sy+1),8,2); ctx.fillRect(Math.round(sx),Math.round(sy+TILE-3),8,2); }
-          if (rightWater) { ctx.fillStyle=rc; ctx.fillRect(Math.round(sx+TILE-3),Math.round(sy),3,TILE); ctx.fillRect(Math.round(sx+TILE-8),Math.round(sy+1),8,2); ctx.fillRect(Math.round(sx+TILE-8),Math.round(sy+TILE-3),8,2); }
-        }
+        ctx.fillRect(Math.round(sx + 1), Math.round(sy + 1), TILE - 2, 3);
       } else if (map[ty][tx] === 1) {
         const biomeW = getBiome(tx, ty);
         const seed2 = tx*31+ty*17;
@@ -1935,223 +2025,244 @@ function drawMap() {
         ctx.translate(cx3, cy3); ctx.scale(1.5, 1.5); ctx.translate(-cx3, -cy3);
 
         if (!biomeW || biomeW === 'forest') {
-          // ── Forest: round-canopy tree OR pine OR stump ─────────
-          if (v===2) {
-            // STUMP
-            ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+11,9,4,0,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#4e342e'; ctx.beginPath(); ctx.ellipse(cx3,cy3+8,9,4,0,0,Math.PI*2); ctx.fill(); // side
-            ctx.fillStyle='#795548'; ctx.beginPath(); ctx.ellipse(cx3,cy3+4,9,4,0,0,Math.PI*2); ctx.fill(); // top face
-            ctx.fillStyle='#8d6e63'; ctx.beginPath(); ctx.ellipse(cx3-1,cy3+3,5,2,0,0,Math.PI*2); ctx.fill(); // ring highlight
-            ctx.strokeStyle='#6d4c41'; ctx.lineWidth=0.5; ctx.beginPath(); ctx.ellipse(cx3,cy3+4,9,4,0,0,Math.PI*2); ctx.stroke();
-          } else if (v===1) {
-            // PINE TREE
-            ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+12,8,3,0,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#5d4037'; ctx.fillRect(cx3-2,cy3+4,4,9); // trunk side
-            ctx.fillStyle='#795548'; ctx.fillRect(cx3-2,cy3+4,2,9); // trunk lit
-            // Pine tiers (3 layers, darker bottom to lighter top)
-            [[12,cy3+6,'#1b5e20','#2e7d32'],[9,cy3+1,'#2e7d32','#388e3c'],[6,cy3-5,'#388e3c','#66bb6a']].forEach(([r,ty2,dark,light])=>{
-              ctx.fillStyle=dark; ctx.beginPath(); ctx.moveTo(cx3,ty2-r*1.2); ctx.lineTo(cx3-r,ty2); ctx.lineTo(cx3+r,ty2); ctx.closePath(); ctx.fill();
-              ctx.fillStyle=light; ctx.beginPath(); ctx.moveTo(cx3,ty2-r*1.2); ctx.lineTo(cx3-r*0.4,ty2); ctx.lineTo(cx3+r,ty2); ctx.closePath(); ctx.fill();
-            });
-          } else {
-            // ROUND DECIDUOUS TREE
-            ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(cx3+5,cy3+12,11,4,0,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#4e342e'; ctx.fillRect(cx3-3,cy3+2,6,10); // trunk side dark
-            ctx.fillStyle='#795548'; ctx.fillRect(cx3-3,cy3+2,3,10); // trunk lit
-            ctx.fillStyle='#1b5e20'; ctx.beginPath(); ctx.arc(cx3,cy3-3,13,0,Math.PI*2); ctx.fill(); // canopy rim
-            ctx.fillStyle='#2e7d32'; ctx.beginPath(); ctx.arc(cx3-1,cy3-5,11,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.arc(cx3-4,cy3-7,7,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.arc(cx3+3,cy3-6,6,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#66bb6a'; ctx.beginPath(); ctx.arc(cx3-5,cy3-9,5,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#a5d6a7'; ctx.beginPath(); ctx.arc(cx3-6,cy3-10,2,0,Math.PI*2); ctx.fill();
-          }
+// Ground shadow
+ctx.fillStyle='rgba(0,0,0,0.32)'; ctx.beginPath(); ctx.ellipse(cx3+5,cy3+13,13,5,0,0,Math.PI*2); ctx.fill();
+// Root flare (widened base)
+ctx.fillStyle='#3e2723'; ctx.beginPath(); ctx.moveTo(cx3-7,cy3+13); ctx.quadraticCurveTo(cx3-5,cy3+8,cx3-3,cy3+3); ctx.lineTo(cx3+3,cy3+3); ctx.quadraticCurveTo(cx3+5,cy3+8,cx3+7,cy3+13); ctx.fill();
+// Trunk (cylinder 2.5D)
+ctx.fillStyle='#4e342e'; ctx.fillRect(cx3-3,cy3+1,6,11); // dark side
+ctx.fillStyle='#795548'; ctx.fillRect(cx3-3,cy3+1,3,11); // lit side
+ctx.fillStyle='#6d4c41'; ctx.beginPath(); ctx.ellipse(cx3,cy3+1,3,1.5,0,0,Math.PI*2); ctx.fill(); // top rim
+// Branch hints peeking through canopy
+ctx.strokeStyle='#4e342e'; ctx.lineWidth=2; ctx.lineCap='round';
+ctx.beginPath(); ctx.moveTo(cx3-1,cy3+1); ctx.quadraticCurveTo(cx3-8,cy3-4,cx3-12,cy3-2); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(cx3+1,cy3+1); ctx.quadraticCurveTo(cx3+9,cy3-3,cx3+11,cy3-6); ctx.stroke();
+// Canopy layers (deep back, mid, highlight clusters)
+ctx.fillStyle='#1b5e20'; ctx.beginPath(); ctx.ellipse(cx3,cy3-4,14,12,0,0,Math.PI*2); ctx.fill(); // back mass
+ctx.fillStyle='#2e7d32'; ctx.beginPath(); ctx.ellipse(cx3-2,cy3-6,12,10,0,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.ellipse(cx3-6,cy3-9,8,7,-0.2,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.ellipse(cx3+5,cy3-8,7,6,0.3,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#43a047'; ctx.beginPath(); ctx.ellipse(cx3-4,cy3-13,6,5,-0.1,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#66bb6a'; ctx.beginPath(); ctx.ellipse(cx3-7,cy3-11,4,4,0,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#81c784'; ctx.beginPath(); ctx.ellipse(cx3-8,cy3-13,3,3,0,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='rgba(200,240,200,0.18)'; ctx.beginPath(); ctx.ellipse(cx3-8,cy3-14,2,2,0,0,Math.PI*2); ctx.fill();
 
         } else if (biomeW === 'swamp') {
-          // ── Swamp: dead gnarled tree OR mossy log OR mangrove ───
-          ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+12,10,4,0,0,Math.PI*2); ctx.fill();
-          if (v===0) {
-            // DEAD GNARLED TREE
-            ctx.strokeStyle='#3e2723'; ctx.lineWidth=5; ctx.lineCap='round';
-            ctx.beginPath(); ctx.moveTo(cx3,cy3+10); ctx.lineTo(cx3-1,cy3-2); ctx.stroke();
-            ctx.lineWidth=3;
-            ctx.beginPath(); ctx.moveTo(cx3-1,cy3-2); ctx.lineTo(cx3-7,cy3-8); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx3-1,cy3-2); ctx.lineTo(cx3+6,cy3-7); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx3-1,cy3+4); ctx.lineTo(cx3+5,cy3+1); ctx.stroke();
-            ctx.strokeStyle='#4e342e'; ctx.lineWidth=2;
-            ctx.beginPath(); ctx.moveTo(cx3,cy3+10); ctx.lineTo(cx3-1,cy3-2); ctx.stroke();
-            ctx.fillStyle='#1a3a10'; ctx.beginPath(); ctx.arc(cx3-7,cy3-9,4,0,Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(cx3+6,cy3-8,3,0,Math.PI*2); ctx.fill();
-          } else if (v===1) {
-            // MOSSY LOG (lying on ground)
-            ctx.fillStyle='#3e2723'; ctx.beginPath(); ctx.ellipse(cx3+7,cy3+4,4,8,Math.PI*0.45,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#5d4037'; ctx.beginPath(); ctx.ellipse(cx3,cy3+1,11,6,Math.PI*0.45,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#6d4c41'; ctx.beginPath(); ctx.ellipse(cx3-1,cy3,9,4,Math.PI*0.45,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#33691e'; ctx.beginPath(); ctx.ellipse(cx3-5,cy3-1,5,3,Math.PI*0.45,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#558b2f'; ctx.beginPath(); ctx.ellipse(cx3-4,cy3-2,3,2,Math.PI*0.45,0,Math.PI*2); ctx.fill();
-          } else {
-            // MANGROVE (2.5D trunk with canopy)
-            ctx.strokeStyle='#3e2723'; ctx.lineWidth=3; ctx.lineCap='round';
-            [[-6,9],[-8,5],[6,10],[8,4]].forEach(([rx,ry])=>{ ctx.beginPath(); ctx.moveTo(cx3,cy3+2); ctx.quadraticCurveTo(cx3+rx*0.5,cy3+ry*0.5,cx3+rx,cy3+ry); ctx.stroke(); });
-            ctx.fillStyle='#4e342e'; ctx.fillRect(cx3-3,cy3+1,6,6);
-            ctx.fillStyle='#795548'; ctx.fillRect(cx3-3,cy3+1,3,6);
-            ctx.fillStyle='#1a3a10'; ctx.beginPath(); ctx.arc(cx3,cy3-4,11,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#2e5a20'; ctx.beginPath(); ctx.arc(cx3-2,cy3-6,8,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#33691e'; ctx.beginPath(); ctx.arc(cx3-4,cy3-7,5,0,Math.PI*2); ctx.fill();
-          }
+ctx.fillStyle='rgba(0,30,0,0.35)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+12,11,4,0,0,Math.PI*2); ctx.fill();
+// Twisted trunk
+ctx.strokeStyle='#263238'; ctx.lineWidth=7; ctx.lineCap='round';
+ctx.beginPath(); ctx.moveTo(cx3,cy3+11); ctx.quadraticCurveTo(cx3+2,cy3+4,cx3-1,cy3-2); ctx.stroke();
+ctx.strokeStyle='#37474f'; ctx.lineWidth=5;
+ctx.beginPath(); ctx.moveTo(cx3,cy3+11); ctx.quadraticCurveTo(cx3+2,cy3+4,cx3-1,cy3-2); ctx.stroke();
+// Branches
+ctx.strokeStyle='#263238'; ctx.lineWidth=3;
+ctx.beginPath(); ctx.moveTo(cx3-1,cy3-2); ctx.quadraticCurveTo(cx3-5,cy3-5,cx3-9,cy3-8); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(cx3-1,cy3-2); ctx.quadraticCurveTo(cx3+5,cy3-4,cx3+8,cy3-9); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(cx3,cy3+5); ctx.quadraticCurveTo(cx3+5,cy3+3,cx3+8,cy3+4); ctx.stroke();
+ctx.lineWidth=2;
+ctx.beginPath(); ctx.moveTo(cx3-9,cy3-8); ctx.lineTo(cx3-13,cy3-7); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(cx3-9,cy3-8); ctx.lineTo(cx3-10,cy3-12); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(cx3+8,cy3-9); ctx.lineTo(cx3+11,cy3-7); ctx.stroke();
+// Spanish moss wisps hanging
+ctx.strokeStyle='#4a6741'; ctx.lineWidth=1.5;
+[[-8,-8],[-10,-8],[-11,-6],[8,-8],[10,-7]].forEach(([bx,by])=>{
+  ctx.beginPath(); ctx.moveTo(cx3+bx,cy3+by); ctx.quadraticCurveTo(cx3+bx-1,cy3+by+5,cx3+bx+1,cy3+by+9); ctx.stroke();
+});
+// Small dead leaf cluster
+ctx.fillStyle='#1a3318'; ctx.beginPath(); ctx.arc(cx3-9,cy3-9,4,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#2a4a28'; ctx.beginPath(); ctx.arc(cx3+8,cy3-9,3,0,Math.PI*2); ctx.fill();
+// Murky glow at base
+ctx.save(); ctx.globalAlpha=0.15+0.08*Math.sin(frame*0.05+tx); ctx.fillStyle='#00ff00';
+ctx.beginPath(); ctx.ellipse(cx3,cy3+12,10,4,0,0,Math.PI*2); ctx.fill(); ctx.restore();
 
         } else if (biomeW === 'desert') {
-          // ── Desert: saguaro OR dead log OR rock pile ─────────────
-          ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+12,8,3,0,0,Math.PI*2); ctx.fill();
-          if (v!==2) {
-            // SAGUARO CACTUS (2.5D cylinder trunk + arms)
-            ctx.fillStyle='#1b5e20'; ctx.fillRect(cx3-5,cy3-2,10,14); // trunk side dark
-            ctx.fillStyle='#2e7d32'; ctx.fillRect(cx3-5,cy3-2,5,14); // lit side
-            ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.ellipse(cx3,cy3-2,5,3,0,0,Math.PI*2); ctx.fill(); // top oval
-            if (v===0) {
-              ctx.fillStyle='#1b5e20'; ctx.fillRect(cx3-10,cy3+1,6,6); ctx.fillRect(cx3-10,cy3-3,6,5);
-              ctx.fillStyle='#2e7d32'; ctx.fillRect(cx3-10,cy3+1,3,6);
-              ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.ellipse(cx3-10,cy3+1,3,2,0,0,Math.PI*2); ctx.fill();
-            } else {
-              ctx.fillStyle='#1b5e20'; ctx.fillRect(cx3+4,cy3+2,6,5); ctx.fillRect(cx3+4,cy3-2,6,5);
-              ctx.fillStyle='#2e7d32'; ctx.fillRect(cx3+4,cy3+2,3,5);
-              ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.ellipse(cx3+10,cy3+2,3,2,0,0,Math.PI*2); ctx.fill();
-            }
-            ctx.fillStyle='#f9a825';
-            for(let si2=0;si2<5;si2++){ctx.fillRect(cx3+5,cy3-1+si2*3,2,1);ctx.fillRect(cx3-6,cy3+si2*3,2,1);}
-          } else {
-            // SANDSTONE ROCK PILE
-            ctx.fillStyle='#8d6e63';
-            ctx.beginPath(); ctx.moveTo(cx3-10,cy3+8); ctx.lineTo(cx3-12,cy3+2); ctx.lineTo(cx3-4,cy3-4); ctx.lineTo(cx3+4,cy3-4); ctx.lineTo(cx3+12,cy3+2); ctx.lineTo(cx3+10,cy3+8); ctx.closePath(); ctx.fill();
-            ctx.fillStyle='#a1887f';
-            ctx.beginPath(); ctx.moveTo(cx3-9,cy3+6); ctx.lineTo(cx3-10,cy3+1); ctx.lineTo(cx3-3,cy3-3); ctx.lineTo(cx3+4,cy3-3); ctx.lineTo(cx3+9,cy3+2); ctx.lineTo(cx3+8,cy3+7); ctx.closePath(); ctx.fill();
-            ctx.fillStyle='#bcaaa4'; ctx.beginPath(); ctx.ellipse(cx3,cy3,8,3,0,0,Math.PI*2); ctx.fill();
-          }
+ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+13,9,3.5,0,0,Math.PI*2); ctx.fill();
+// Main trunk (cylinder 2.5D)
+ctx.fillStyle='#1b5e20'; ctx.fillRect(cx3-5,cy3-8,10,20); // dark side
+ctx.fillStyle='#2e7d32'; ctx.fillRect(cx3-5,cy3-8,5,20); // lit side
+ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.ellipse(cx3,cy3-8,5,2.5,0,0,Math.PI*2); ctx.fill(); // top oval
+ctx.fillStyle='#1b5e20'; ctx.beginPath(); ctx.ellipse(cx3+5,cy3-8,1.5,12,0,0,Math.PI*2); ctx.fill(); // right edge shade
+// Left arm
+ctx.fillStyle='#1b5e20'; ctx.fillRect(cx3-11,cy3-3,7,10); ctx.fillRect(cx3-11,cy3-9,7,7);
+ctx.fillStyle='#2e7d32'; ctx.fillRect(cx3-11,cy3-3,4,10);
+ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.ellipse(cx3-8,cy3-9,3.5,2,0,0,Math.PI*2); ctx.fill();
+// Right arm
+ctx.fillStyle='#1b5e20'; ctx.fillRect(cx3+4,cy3+1,7,8); ctx.fillRect(cx3+4,cy3-5,7,7);
+ctx.fillStyle='#2e7d32'; ctx.fillRect(cx3+4,cy3+1,4,8);
+ctx.fillStyle='#388e3c'; ctx.beginPath(); ctx.ellipse(cx3+8,cy3-5,3.5,2,0,0,Math.PI*2); ctx.fill();
+// Spine rows
+ctx.fillStyle='#f9a825';
+for(let si=0;si<7;si++){
+  ctx.fillRect(cx3+5,cy3-7+si*4,2.5,1.5);
+  ctx.fillRect(cx3-7,cy3-6+si*4,2.5,1.5);
+  if(si<5){ ctx.fillRect(cx3-11,cy3-2+si*3,1.5,1); ctx.fillRect(cx3+11,cy3+2+si*3,1.5,1); }
+}
 
         } else if (biomeW === 'tundra') {
-          // ── Tundra: snow boulder OR frozen pine OR ice spike ────
-          ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+12,11,4,0,0,Math.PI*2); ctx.fill();
-          if (v===0) {
-            // SNOW BOULDER (2.5D rock)
-            ctx.fillStyle='#546e7a'; ctx.beginPath(); ctx.moveTo(cx3-10,cy3+8); ctx.lineTo(cx3-11,cy3+1); ctx.lineTo(cx3-5,cy3-6); ctx.lineTo(cx3+5,cy3-6); ctx.lineTo(cx3+11,cy3+1); ctx.lineTo(cx3+9,cy3+8); ctx.closePath(); ctx.fill();
-            ctx.fillStyle='#607d8b'; ctx.beginPath(); ctx.moveTo(cx3-8,cy3+6); ctx.lineTo(cx3-9,cy3); ctx.lineTo(cx3-4,cy3-5); ctx.lineTo(cx3+5,cy3-5); ctx.lineTo(cx3+8,cy3); ctx.lineTo(cx3+6,cy3+7); ctx.closePath(); ctx.fill();
-            ctx.fillStyle='#eceff1'; ctx.beginPath(); ctx.ellipse(cx3-1,cy3-3,8,4,Math.PI*0.1,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.ellipse(cx3-3,cy3-5,5,3,0,0,Math.PI*2); ctx.fill();
-          } else if (v===1) {
-            // FROZEN PINE
-            ctx.fillStyle='#4a3020'; ctx.fillRect(cx3-2,cy3+5,4,8);
-            ctx.fillStyle='#37474f'; ctx.fillRect(cx3-2,cy3+5,2,8);
-            [[11,cy3+7,'#b0bec5'],[8,cy3+2,'#cfd8dc'],[5,cy3-4,'#eceff1']].forEach(([r,ty2,col])=>{
-              ctx.fillStyle='#37474f'; ctx.beginPath(); ctx.moveTo(cx3,ty2-r*1.1); ctx.lineTo(cx3-r,ty2); ctx.lineTo(cx3+r,ty2); ctx.closePath(); ctx.fill();
-              ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(cx3,ty2-r*1.1); ctx.lineTo(cx3-r*0.3,ty2); ctx.lineTo(cx3+r,ty2); ctx.closePath(); ctx.fill();
-            });
-          } else {
-            // ICE CRYSTAL SPIKE
-            ctx.fillStyle='#4fc3f7'; ctx.beginPath(); ctx.moveTo(cx3,cy3-12); ctx.lineTo(cx3-6,cy3+4); ctx.lineTo(cx3,cy3+2); ctx.lineTo(cx3+6,cy3+4); ctx.closePath(); ctx.fill();
-            ctx.fillStyle='#b3e5fc'; ctx.beginPath(); ctx.moveTo(cx3,cy3-12); ctx.lineTo(cx3,cy3+2); ctx.lineTo(cx3+6,cy3+4); ctx.closePath(); ctx.fill();
-            ctx.fillStyle='#e1f5fe'; ctx.fillRect(cx3,cy3-11,1,4);
-            ctx.save(); ctx.globalAlpha=0.4+0.2*Math.sin(frame*0.1+tx); ctx.fillStyle='#fff';
-            ctx.beginPath(); ctx.arc(cx3,cy3-10,2,0,Math.PI*2); ctx.fill(); ctx.restore();
-          }
+ctx.fillStyle='rgba(0,0,0,0.22)'; ctx.beginPath(); ctx.ellipse(cx3+5,cy3+13,13,5,0,0,Math.PI*2); ctx.fill();
+// Rock base (multi-polygon for irregular shape)
+ctx.fillStyle='#37474f';
+ctx.beginPath(); ctx.moveTo(cx3-11,cy3+10); ctx.lineTo(cx3-13,cy3+3); ctx.lineTo(cx3-8,cy3-5); ctx.lineTo(cx3-2,cy3-8); ctx.lineTo(cx3+6,cy3-6); ctx.lineTo(cx3+12,cy3+2); ctx.lineTo(cx3+10,cy3+10); ctx.closePath(); ctx.fill();
+ctx.fillStyle='#455a64';
+ctx.beginPath(); ctx.moveTo(cx3-9,cy3+8); ctx.lineTo(cx3-10,cy3+2); ctx.lineTo(cx3-6,cy3-4); ctx.lineTo(cx3-1,cy3-6); ctx.lineTo(cx3+5,cy3-5); ctx.lineTo(cx3+9,cy3+1); ctx.lineTo(cx3+7,cy3+8); ctx.closePath(); ctx.fill();
+// Right face (darker)
+ctx.fillStyle='#263238';
+ctx.beginPath(); ctx.moveTo(cx3+9,cy3+1); ctx.lineTo(cx3+12,cy3+2); ctx.lineTo(cx3+10,cy3+10); ctx.lineTo(cx3+7,cy3+8); ctx.closePath(); ctx.fill();
+// Top highlight
+ctx.fillStyle='#546e7a'; ctx.beginPath(); ctx.ellipse(cx3-1,cy3-4,8,4,0.1,0,Math.PI*2); ctx.fill();
+// Snow accumulation
+ctx.fillStyle='#e0f2f1'; ctx.beginPath(); ctx.moveTo(cx3-9,cy3-4); ctx.quadraticCurveTo(cx3-2,cy3-11,cx3+6,cy3-6); ctx.lineTo(cx3+5,cy3-5); ctx.lineTo(cx3-1,cy3-6); ctx.lineTo(cx3-6,cy3-4); ctx.closePath(); ctx.fill();
+ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.ellipse(cx3-2,cy3-8,6,3,-0.2,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#eceff1'; ctx.beginPath(); ctx.ellipse(cx3+3,cy3-7,4,2,0.3,0,Math.PI*2); ctx.fill();
 
         } else if (biomeW === 'crystal') {
-          // ── Crystal: gem cluster (2.5D faceted spires) ──────────
-          ctx.fillStyle='rgba(0,0,30,0.3)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+11,11,4,0,0,Math.PI*2); ctx.fill();
-          const spires = v===0?[[-5,3,9],[ 1,-1,12],[ 6,2,8]] : v===1?[[-4,0,11],[ 4,-2,14],[-1,3,7]] : [[-6,2,8],[0,-2,13],[5,1,10]];
-          spires.forEach(([ox,oy,sh])=>{
-            ctx.fillStyle='#0d47a1';
-            ctx.beginPath(); ctx.moveTo(cx3+ox,cy3+oy+sh); ctx.lineTo(cx3+ox-4,cy3+oy); ctx.lineTo(cx3+ox+4,cy3+oy); ctx.closePath(); ctx.fill();
-            ctx.fillStyle='#1565c0';
-            ctx.beginPath(); ctx.moveTo(cx3+ox,cy3+oy+sh); ctx.lineTo(cx3+ox-4,cy3+oy); ctx.lineTo(cx3+ox,cy3+oy+sh*0.5); ctx.closePath(); ctx.fill();
-            ctx.fillStyle='#42a5f5';
-            ctx.beginPath(); ctx.moveTo(cx3+ox,cy3+oy+sh); ctx.lineTo(cx3+ox,cy3+oy+sh*0.5); ctx.lineTo(cx3+ox+4,cy3+oy); ctx.closePath(); ctx.fill();
-            ctx.fillStyle='#e3f2fd'; ctx.fillRect(cx3+ox-1,cy3+oy-1,2,3);
-            ctx.save(); ctx.globalAlpha=0.3+0.25*Math.sin(frame*0.09+ox); ctx.fillStyle='#fff'; ctx.fillRect(cx3+ox+1,cy3+oy+2,1,4); ctx.restore();
-          });
+ctx.fillStyle='rgba(0,0,30,0.35)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+11,12,5,0,0,Math.PI*2); ctx.fill();
+// Crystal matrix base
+ctx.fillStyle='#0d1a2e'; ctx.beginPath(); ctx.ellipse(cx3,cy3+10,10,4,0,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#0a2a4a'; ctx.beginPath(); ctx.ellipse(cx3,cy3+10,8,3,0,0,Math.PI*2); ctx.fill();
+// Spire layout per variant
+const layouts=[
+  [{x:-5,y:3,h:9,w:4},{x:1,y:-1,h:13,w:5},{x:6,y:2,h:8,w:4}],
+  [{x:-4,y:0,h:12,w:5},{x:4,y:-2,h:15,w:6},{x:-1,y:3,h:7,w:3}],
+  [{x:-6,y:2,h:8,w:3},{x:0,y:-2,h:14,w:5},{x:5,y:1,h:10,w:4}]
+][v];
+layouts.forEach(({x,y,h,w})=>{
+  // Base crystal
+  ctx.fillStyle='#0d47a1';
+  ctx.beginPath(); ctx.moveTo(cx3+x,cy3+y+h); ctx.lineTo(cx3+x-w,cy3+y); ctx.lineTo(cx3+x,cy3+y-h*0.15); ctx.lineTo(cx3+x+w,cy3+y); ctx.closePath(); ctx.fill();
+  // Left dark face
+  ctx.fillStyle='#1565c0';
+  ctx.beginPath(); ctx.moveTo(cx3+x,cy3+y+h); ctx.lineTo(cx3+x-w,cy3+y); ctx.lineTo(cx3+x,cy3+y-h*0.15); ctx.closePath(); ctx.fill();
+  // Right lit face
+  ctx.fillStyle='#42a5f5';
+  ctx.beginPath(); ctx.moveTo(cx3+x,cy3+y+h); ctx.lineTo(cx3+x+w,cy3+y); ctx.lineTo(cx3+x,cy3+y-h*0.15); ctx.closePath(); ctx.fill();
+  // Specular streak
+  ctx.fillStyle='#e3f2fd'; ctx.fillRect(cx3+x-1,cy3+y-1,2,4);
+  // Inner glow
+  ctx.save(); ctx.globalAlpha=0.2+0.15*Math.sin(frame*0.07+x*0.4); ctx.fillStyle='#80d8ff';
+  ctx.beginPath(); ctx.arc(cx3+x,cy3+y,w*0.6,0,Math.PI*2); ctx.fill(); ctx.restore();
+});
+// Ambient glow halo
+ctx.save(); ctx.globalAlpha=0.1+0.08*Math.sin(frame*0.05+cy3*0.01);
+ctx.fillStyle='#00b0ff'; ctx.beginPath(); ctx.arc(cx3,cy3,14,0,Math.PI*2); ctx.fill(); ctx.restore();
 
         } else if (biomeW === 'storm') {
-          // ── Storm: jagged rock stack (2.5D) ─────────────────────
-          ctx.fillStyle='rgba(0,0,0,0.32)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+12,12,4,0,0,Math.PI*2); ctx.fill();
-          // Base block
-          ctx.fillStyle='#1c2833';
-          ctx.beginPath(); ctx.moveTo(cx3-10,cy3+10); ctx.lineTo(cx3-11,cy3+3); ctx.lineTo(cx3-4,cy3-2); ctx.lineTo(cx3+5,cy3-2); ctx.lineTo(cx3+11,cy3+3); ctx.lineTo(cx3+10,cy3+10); ctx.closePath(); ctx.fill();
-          // Mid block (lighter)
-          ctx.fillStyle='#263238';
-          ctx.beginPath(); ctx.moveTo(cx3-7,cy3+4); ctx.lineTo(cx3-8,cy3-2); ctx.lineTo(cx3-2,cy3-6); ctx.lineTo(cx3+4,cy3-6); ctx.lineTo(cx3+8,cy3-2); ctx.lineTo(cx3+6,cy3+5); ctx.closePath(); ctx.fill();
-          // Top face
-          ctx.fillStyle='#37474f'; ctx.beginPath(); ctx.ellipse(cx3,cy3-4,7,3,0,0,Math.PI*2); ctx.fill();
-          ctx.fillStyle='#546e7a'; ctx.beginPath(); ctx.ellipse(cx3-1,cy3-5,4,2,0,0,Math.PI*2); ctx.fill();
-          // Lightning rod
-          ctx.strokeStyle='#90a4ae'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx3,cy3-6); ctx.lineTo(cx3,cy3-14); ctx.stroke();
-          ctx.fillStyle='#ffee58'; ctx.beginPath(); ctx.moveTo(cx3-3,cy3-12); ctx.lineTo(cx3,cy3-15); ctx.lineTo(cx3+3,cy3-12); ctx.lineTo(cx3+1,cy3-10); ctx.closePath(); ctx.fill();
-          if(frame%60<5){ctx.save();ctx.globalAlpha=0.6;ctx.fillStyle='#ffff88';ctx.beginPath();ctx.arc(cx3,cy3-13,5,0,Math.PI*2);ctx.fill();ctx.restore();}
+ctx.fillStyle='rgba(0,0,0,0.38)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+13,13,5,0,0,Math.PI*2); ctx.fill();
+// Base block
+const baseShapes=[[[-11,10],[-13,2],[-5,-4],[5,-4],[12,2],[10,10]],[[-10,10],[-12,3],[-6,-5],[4,-5],[11,3],[9,10]],[[-12,10],[-11,2],[-4,-4],[6,-5],[12,2],[11,10]]];
+ctx.fillStyle='#1a1f2e';
+ctx.beginPath(); baseShapes[v].forEach(([bx,by],i)=>{i===0?ctx.moveTo(cx3+bx,cy3+by):ctx.lineTo(cx3+bx,cy3+by);}); ctx.closePath(); ctx.fill();
+// Mid block (slightly offset)
+ctx.fillStyle='#232d3f';
+ctx.beginPath(); ctx.moveTo(cx3-8,cy3+4); ctx.lineTo(cx3-9,cy3-3); ctx.lineTo(cx3-3,cy3-8); ctx.lineTo(cx3+3,cy3-8); ctx.lineTo(cx3+9,cy3-3); ctx.lineTo(cx3+7,cy3+5); ctx.closePath(); ctx.fill();
+// Right face (darker = depth)
+ctx.fillStyle='#111822';
+ctx.beginPath(); ctx.moveTo(cx3+9,cy3-3); ctx.lineTo(cx3+12,cy3+2); ctx.lineTo(cx3+10,cy3+10); ctx.lineTo(cx3+7,cy3+5); ctx.closePath(); ctx.fill();
+// Top face (lighter)
+ctx.fillStyle='#37474f'; ctx.beginPath(); ctx.ellipse(cx3,cy3-5,8,3.5,0,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#546e7a'; ctx.beginPath(); ctx.ellipse(cx3-2,cy3-6,5,2,0,0,Math.PI*2); ctx.fill();
+// Crack lines
+ctx.strokeStyle='#0d1420'; ctx.lineWidth=1;
+ctx.beginPath(); ctx.moveTo(cx3-3,cy3+4); ctx.lineTo(cx3,cy3-2); ctx.lineTo(cx3+4,cy3+2); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(cx3+2,cy3-6); ctx.lineTo(cx3+5,cy3-1); ctx.stroke();
+// Lightning rod
+ctx.strokeStyle='#78909c'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx3-1,cy3-6); ctx.lineTo(cx3-1,cy3-16); ctx.stroke();
+ctx.strokeStyle='#b0bec5'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(cx3-1,cy3-6); ctx.lineTo(cx3-1,cy3-16); ctx.stroke();
+ctx.fillStyle='#ffee58'; ctx.beginPath(); ctx.moveTo(cx3-4,cy3-14); ctx.lineTo(cx3-1,cy3-18); ctx.lineTo(cx3+2,cy3-14); ctx.lineTo(cx3,cy3-11); ctx.closePath(); ctx.fill();
+// Storm flash
+if(frame%80<4){ctx.save();ctx.globalAlpha=0.55;ctx.fillStyle='#fff9c4';ctx.beginPath();ctx.arc(cx3-1,cy3-15,7,0,Math.PI*2);ctx.fill();ctx.restore();}
 
         } else if (biomeW === 'volcano') {
-          // ── Volcano: obsidian rock stack with lava cracks ────────
-          ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+12,12,4,0,0,Math.PI*2); ctx.fill();
-          ctx.fillStyle='#0d0000';
-          ctx.beginPath(); ctx.moveTo(cx3-11,cy3+10); ctx.lineTo(cx3-12,cy3+2); ctx.lineTo(cx3-5,cy3-4); ctx.lineTo(cx3+5,cy3-4); ctx.lineTo(cx3+12,cy3+2); ctx.lineTo(cx3+10,cy3+10); ctx.closePath(); ctx.fill();
-          ctx.fillStyle='#1a0000';
-          ctx.beginPath(); ctx.moveTo(cx3-8,cy3+7); ctx.lineTo(cx3-9,cy3+1); ctx.lineTo(cx3-3,cy3-3); ctx.lineTo(cx3+4,cy3-3); ctx.lineTo(cx3+8,cy3+1); ctx.lineTo(cx3+6,cy3+8); ctx.closePath(); ctx.fill();
-          ctx.fillStyle='#3e0000'; ctx.beginPath(); ctx.ellipse(cx3,cy3-1,6,3,0,0,Math.PI*2); ctx.fill();
-          // Lava cracks glowing
-          ctx.strokeStyle='#ff6d00'; ctx.lineWidth=1.5; ctx.lineCap='round';
-          ctx.beginPath(); ctx.moveTo(cx3-5,cy3+6); ctx.lineTo(cx3-2,cy3+2); ctx.lineTo(cx3+3,cy3+5); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(cx3+2,cy3-1); ctx.lineTo(cx3,cy3+3); ctx.stroke();
-          const gv=0.25+0.2*Math.sin(frame*0.1+tx); ctx.save(); ctx.globalAlpha=gv; ctx.fillStyle='#ff6d00';
-          ctx.beginPath(); ctx.arc(cx3-1,cy3+3,4,0,Math.PI*2); ctx.fill(); ctx.restore();
+ctx.fillStyle='rgba(60,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+13,13,5,0,0,Math.PI*2); ctx.fill();
+// Main obsidian mass (multi-polygon)
+ctx.fillStyle='#050000';
+ctx.beginPath(); ctx.moveTo(cx3-12,cy3+11); ctx.lineTo(cx3-13,cy3+2); ctx.lineTo(cx3-6,cy3-5); ctx.lineTo(cx3+4,cy3-6); ctx.lineTo(cx3+13,cy3+1); ctx.lineTo(cx3+11,cy3+11); ctx.closePath(); ctx.fill();
+ctx.fillStyle='#120000';
+ctx.beginPath(); ctx.moveTo(cx3-9,cy3+8); ctx.lineTo(cx3-10,cy3+1); ctx.lineTo(cx3-4,cy3-4); ctx.lineTo(cx3+4,cy3-4); ctx.lineTo(cx3+9,cy3+1); ctx.lineTo(cx3+7,cy3+9); ctx.closePath(); ctx.fill();
+// Right sheer face (very dark)
+ctx.fillStyle='#0a0000';
+ctx.beginPath(); ctx.moveTo(cx3+9,cy3+1); ctx.lineTo(cx3+13,cy3+1); ctx.lineTo(cx3+11,cy3+11); ctx.lineTo(cx3+7,cy3+9); ctx.closePath(); ctx.fill();
+// Top reflective surface (obsidian sheen)
+ctx.fillStyle='#1a0000'; ctx.beginPath(); ctx.ellipse(cx3-1,cy3-2,7,3,0,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='rgba(60,0,0,0.5)'; ctx.beginPath(); ctx.ellipse(cx3-3,cy3-3,4,2,0,0,Math.PI*2); ctx.fill();
+// Lava crack network
+const glow=0.4+0.3*Math.sin(frame*0.08+tx*0.3);
+ctx.strokeStyle='#ff6d00'; ctx.lineWidth=2; ctx.lineCap='round';
+ctx.beginPath(); ctx.moveTo(cx3-6,cy3+8); ctx.lineTo(cx3-3,cy3+3); ctx.lineTo(cx3+1,cy3+6); ctx.lineTo(cx3+4,cy3+2); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(cx3+4,cy3+2); ctx.lineTo(cx3+2,cy3-2); ctx.stroke();
+ctx.strokeStyle='#ff3d00'; ctx.lineWidth=1;
+ctx.beginPath(); ctx.moveTo(cx3-3,cy3+3); ctx.lineTo(cx3-7,cy3+5); ctx.stroke();
+// Lava glow pools at cracks
+ctx.save(); ctx.globalAlpha=glow;
+ctx.fillStyle='#ff6d00'; ctx.beginPath(); ctx.arc(cx3-2,cy3+5,5,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#ff3d00'; ctx.beginPath(); ctx.arc(cx3+3,cy3+3,3,0,Math.PI*2); ctx.fill(); ctx.restore();
+// Embers particle (3 static + animated)
+ctx.save(); ctx.globalAlpha=0.6+0.3*Math.sin(frame*0.12);
+ctx.fillStyle='#ffab40'; ctx.beginPath(); ctx.arc(cx3-1,cy3-5,1.5,0,Math.PI*2); ctx.fill(); ctx.restore();
 
         } else if (biomeW === 'mushroom') {
-          // ── Mushroom: 2.5D giant shroom (stem + cap with rim) ────
-          ctx.fillStyle='rgba(80,0,80,0.3)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+12,10,4,0,0,Math.PI*2); ctx.fill();
-          // Stem (cylinder 2.5D)
-          ctx.fillStyle='#d7ccc8'; ctx.fillRect(cx3-4,cy3+2,8,10); // stem front face
-          ctx.fillStyle='#bcaaa4'; ctx.fillRect(cx3+4,cy3+2,2,10); // stem right shadow
-          ctx.fillStyle='#efebe9'; ctx.fillRect(cx3-4,cy3+2,3,10); // stem lit
-          ctx.fillStyle='#d7ccc8'; ctx.beginPath(); ctx.ellipse(cx3,cy3+2,4,2,0,0,Math.PI*2); ctx.fill();
-          // Cap underside rim (visible below cap)
-          ctx.fillStyle='#6a1b9a'; ctx.beginPath(); ctx.ellipse(cx3,cy3+1,12,5,0,0,Math.PI*2); ctx.fill();
-          ctx.fillStyle='#e1bee7'; // gills ring
-          ctx.beginPath(); ctx.ellipse(cx3,cy3+1,10,4,0,0,Math.PI*2); ctx.fill();
-          ctx.strokeStyle='#ba68c8'; ctx.lineWidth=0.5;
-          for(let gi=0;gi<8;gi++){const ga=gi*Math.PI/4;ctx.beginPath();ctx.moveTo(cx3+Math.cos(ga)*4,cy3+1+Math.sin(ga)*2);ctx.lineTo(cx3+Math.cos(ga)*9,cy3+1+Math.sin(ga)*3.5);ctx.stroke();}
-          // Cap top
-          ctx.fillStyle='#6a1b9a'; ctx.beginPath(); ctx.ellipse(cx3,cy3-5,12,6,0,0,Math.PI*2); ctx.fill();
-          ctx.fillStyle='#8e24aa'; ctx.beginPath(); ctx.ellipse(cx3-1,cy3-6,10,5,0,0,Math.PI*2); ctx.fill();
-          ctx.fillStyle='#ab47bc'; ctx.beginPath(); ctx.ellipse(cx3-3,cy3-7,6,3,0,0,Math.PI*2); ctx.fill();
-          ctx.fillStyle='#ffffff'; [[0,-7],[4,-4],[-4,-5],[1,-2]].forEach(([ox,oy])=>{ctx.beginPath();ctx.arc(cx3+ox,cy3+oy,1.5,0,Math.PI*2);ctx.fill();});
-          ctx.save(); ctx.globalAlpha=0.1+0.08*Math.sin(frame*0.06+tx+ty); ctx.fillStyle='#ea80fc';
-          ctx.beginPath(); ctx.arc(cx3,cy3-4,14,0,Math.PI*2); ctx.fill(); ctx.restore();
+ctx.fillStyle='rgba(80,0,80,0.35)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+13,12,5,0,0,Math.PI*2); ctx.fill();
+// Stem (cylinder 2.5D)
+ctx.fillStyle='#c9bdb8'; ctx.fillRect(cx3-4,cy3+2,8,11); // front
+ctx.fillStyle='#9e9188'; ctx.fillRect(cx3+4,cy3+2,2.5,11); // right shadow
+ctx.fillStyle='#f0e8e4'; ctx.fillRect(cx3-4,cy3+2,3,11); // lit
+ctx.fillStyle='#c9bdb8'; ctx.beginPath(); ctx.ellipse(cx3,cy3+2,4,2,0,0,Math.PI*2); ctx.fill(); // top rim
+// Skirt (veil ring)
+ctx.fillStyle='#b0a8a0'; ctx.beginPath(); ctx.ellipse(cx3,cy3+6,7,2.5,0,0,Math.PI*2); ctx.fill();
+// Cap underside (gills visible)
+ctx.fillStyle='#5e1678'; ctx.beginPath(); ctx.ellipse(cx3,cy3+1,13,5.5,0,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#d8a0e8'; // gill color
+ctx.beginPath(); ctx.ellipse(cx3,cy3+1,11,4.5,0,0,Math.PI*2); ctx.fill();
+ctx.strokeStyle='#9c27b0'; ctx.lineWidth=0.5;
+for(let gi=0;gi<10;gi++){const ga=gi*Math.PI*2/10;ctx.beginPath();ctx.moveTo(cx3+Math.cos(ga)*4,cy3+1+Math.sin(ga)*1.5);ctx.lineTo(cx3+Math.cos(ga)*10,cy3+1+Math.sin(ga)*4);ctx.stroke();}
+// Cap top (layered dome)
+ctx.fillStyle='#6a1b9a'; ctx.beginPath(); ctx.ellipse(cx3,cy3-6,13,7,0,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#8e24aa'; ctx.beginPath(); ctx.ellipse(cx3-1,cy3-7,11,6,0,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#ab47bc'; ctx.beginPath(); ctx.ellipse(cx3-3,cy3-9,7,4,-0.1,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#ce93d8'; ctx.beginPath(); ctx.ellipse(cx3-5,cy3-11,4,2.5,0,0,Math.PI*2); ctx.fill();
+// Spots
+ctx.fillStyle='rgba(255,255,255,0.85)'; [[0,-7],[5,-5],[-4,-5],[2,-3],[-2,-10],[4,-10]].forEach(([ox,oy])=>{ctx.beginPath();ctx.arc(cx3+ox,cy3+oy,1.5,0,Math.PI*2);ctx.fill();});
+// Bioluminescent glow
+const glowM=0.15+0.1*Math.sin(frame*0.06+tx);
+ctx.save(); ctx.globalAlpha=glowM; ctx.fillStyle='#ea80fc'; ctx.beginPath(); ctx.arc(cx3,cy3-4,16,0,Math.PI*2); ctx.fill(); ctx.restore();
 
         } else if (biomeW === 'shadow') {
-          // ── Shadow: stone obelisk (2.5D stacked blocks) ──────────
-          ctx.fillStyle='rgba(0,0,20,0.5)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+12,9,4,0,0,Math.PI*2); ctx.fill();
-          // Base block
-          ctx.fillStyle='#0d0020'; ctx.fillRect(cx3-7,cy3+5,14,8);
-          ctx.fillStyle='#1a0040'; ctx.fillRect(cx3-7,cy3+5,6,8);
-          ctx.fillStyle='#37004f'; ctx.beginPath(); ctx.ellipse(cx3,cy3+5,7,3,0,0,Math.PI*2); ctx.fill();
-          // Mid block
-          ctx.fillStyle='#0d0020'; ctx.fillRect(cx3-5,cy3-2,10,8);
-          ctx.fillStyle='#1a0040'; ctx.fillRect(cx3-5,cy3-2,4,8);
-          ctx.fillStyle='#37004f'; ctx.beginPath(); ctx.ellipse(cx3,cy3-2,5,2,0,0,Math.PI*2); ctx.fill();
-          // Top block/tip
-          ctx.fillStyle='#0d0020'; ctx.fillRect(cx3-3,cy3-8,6,7);
-          ctx.fillStyle='#1a0040'; ctx.fillRect(cx3-3,cy3-8,2,7);
-          ctx.fillStyle='#37004f'; ctx.beginPath(); ctx.ellipse(cx3,cy3-8,3,1.5,0,0,Math.PI*2); ctx.fill();
-          // Rune glow
-          const rg=0.3+0.2*Math.sin(frame*0.07+tx);
-          ctx.save(); ctx.globalAlpha=rg; ctx.fillStyle='#b388ff';
-          ctx.fillRect(cx3-2,cy3-6,4,1); ctx.fillRect(cx3-1,cy3-4,2,4); ctx.fillRect(cx3-2,cy3+1,4,1); ctx.restore();
-          ctx.fillStyle='#7c4dff'; ctx.beginPath(); ctx.arc(cx3,cy3-9,2.5,0,Math.PI*2); ctx.fill();
-          ctx.save(); ctx.globalAlpha=0.4+0.3*Math.sin(frame*0.1+ty); ctx.fillStyle='#ea80fc';
-          ctx.beginPath(); ctx.arc(cx3,cy3-9,4,0,Math.PI*2); ctx.fill(); ctx.restore();
+ctx.fillStyle='rgba(0,0,20,0.55)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+13,10,4,0,0,Math.PI*2); ctx.fill();
+// Base slab
+ctx.fillStyle='#04020e'; ctx.fillRect(cx3-8,cy3+6,16,7);
+ctx.fillStyle='#0c0628'; ctx.fillRect(cx3-8,cy3+6,6,7); // lit face
+ctx.fillStyle='#1a0e3a'; ctx.beginPath(); ctx.ellipse(cx3,cy3+6,8,3,0,0,Math.PI*2); ctx.fill();
+// Mid block
+ctx.fillStyle='#04020e'; ctx.fillRect(cx3-6,cy3-2,12,9);
+ctx.fillStyle='#0c0628'; ctx.fillRect(cx3-6,cy3-2,4.5,9);
+ctx.fillStyle='#1a0e3a'; ctx.beginPath(); ctx.ellipse(cx3,cy3-2,6,2.5,0,0,Math.PI*2); ctx.fill();
+// Right faces (depth)
+ctx.fillStyle='#020108'; ctx.fillRect(cx3+8,cy3-2,2.5,18); // right side of blocks
+// Top spire
+ctx.fillStyle='#04020e'; ctx.fillRect(cx3-4,cy3-11,8,10);
+ctx.fillStyle='#0c0628'; ctx.fillRect(cx3-4,cy3-11,3,10);
+ctx.fillStyle='#1a0e3a'; ctx.beginPath(); ctx.ellipse(cx3,cy3-11,4,2,0,0,Math.PI*2); ctx.fill();
+// Sharp tip
+ctx.fillStyle='#0c0628'; ctx.beginPath(); ctx.moveTo(cx3,cy3-18); ctx.lineTo(cx3-4,cy3-11); ctx.lineTo(cx3+4,cy3-11); ctx.closePath(); ctx.fill();
+ctx.fillStyle='#1a0e3a'; ctx.beginPath(); ctx.moveTo(cx3,cy3-18); ctx.lineTo(cx3,cy3-11); ctx.lineTo(cx3+4,cy3-11); ctx.closePath(); ctx.fill();
+// Rune glyphs
+ctx.fillStyle='#6a0dad'; ctx.font='bold 7px monospace'; ctx.textAlign='center';
+ctx.fillText('ᛟ',cx3-1,cy3-5); ctx.fillText('ᚹ',cx3,cy3+1);
+// Void wisps (animated)
+const wt=frame*0.04+tx*0.2;
+ctx.save(); ctx.globalAlpha=0.35+0.2*Math.sin(wt); ctx.fillStyle='#4a148c';
+ctx.beginPath(); ctx.arc(cx3+Math.cos(wt)*5,cy3+Math.sin(wt)*3-4,3,0,Math.PI*2); ctx.fill(); ctx.restore();
+ctx.save(); ctx.globalAlpha=0.25+0.15*Math.sin(wt+2); ctx.fillStyle='#7b1fa2';
+ctx.beginPath(); ctx.arc(cx3+Math.cos(wt+2)*7,cy3+Math.sin(wt+2)*4,2,0,Math.PI*2); ctx.fill(); ctx.restore();
 
         } else {
-          // ── Void pillar ───────────────────────────────────────────
-          ctx.save(); ctx.globalAlpha=0.7+0.2*Math.sin(frame*0.1+tx+ty);
-          ctx.fillStyle='#050008'; ctx.beginPath(); ctx.ellipse(cx3,cy3+2,8,11,0,0,Math.PI*2); ctx.fill();
-          ctx.globalAlpha=0.35+0.2*Math.sin(frame*0.12+tx); ctx.fillStyle='#6600aa';
-          ctx.beginPath(); ctx.arc(cx3,cy3,5+2*Math.sin(frame*0.08+tx+ty),0,Math.PI*2); ctx.fill();
-          ctx.restore();
+// VOID: Anomaly
+ctx.fillStyle='rgba(0,0,20,0.55)'; ctx.beginPath(); ctx.ellipse(cx3+4,cy3+13,10,4,0,0,Math.PI*2); ctx.fill();
+ctx.save(); ctx.globalAlpha=0.7+0.2*Math.sin(frame*0.1+tx+ty);
+ctx.fillStyle='#050008'; ctx.beginPath(); ctx.ellipse(cx3,cy3+2,8,11,0,0,Math.PI*2); ctx.fill();
+ctx.globalAlpha=0.35+0.2*Math.sin(frame*0.12+tx); ctx.fillStyle='#6600aa';
+ctx.beginPath(); ctx.arc(cx3,cy3,5+2*Math.sin(frame*0.08+tx+ty),0,Math.PI*2); ctx.fill();
+ctx.restore();
         }
         ctx.restore();
         // Cast shadow (south-east, elongated)
@@ -2290,11 +2401,19 @@ function drawPlayer(sx, sy) {
   ctx.translate(cx, cy);
 
   // === BODY ===
-  drawCharBody(ctx, selectedCharacter, frame);
+  drawCharBody(ctx, selectedCharacter, frame, player.walkCycle, player.damageExpressionTimer);
 
-  // === RESTING ARM (left side, hangs down normally) ===
+  // === RESTING ARM (left/non-gun side, swings as player walks) ===
+  // Arm swings opposite to legs: when walkCycle makes legs move forward, arm swings back
+  const armSwing = Math.sin(player.walkCycle * 0.15) * -8; // -8 to +8 degrees equivalent
+  ctx.save();
+  ctx.translate(-16, -4); // shoulder position for non-gun arm
+  if (player.walkCycle > 0) { // only swing when walking
+    ctx.rotate(armSwing * 0.03); // convert to radians (small angle)
+  }
   ctx.fillStyle = '#f9c74f';
-  ctx.fillRect(-16, -4, 7, 5); // left arm stub
+  ctx.fillRect(0, 0, 7, 5); // arm segment
+  ctx.restore();
 
   // === GUN ARM (rotates from shoulder, model depends on selectedGunId) ===
   ctx.save();
@@ -2900,9 +3019,19 @@ function drawHUD() {
   ctx.fillStyle='#ddd'; ctx.font='bold 10px monospace'; ctx.textBaseline='middle';
   ctx.fillText('Lv'+player.level+' EP: '+player.ep+'/'+player.epMax, 16, 44);
 
-  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(CW-130, 10, 120, 26);
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(CW-130, 10, 120, 44);
   ctx.fillStyle='#fbbf24'; ctx.font='bold 14px monospace'; ctx.textAlign='right';
   ctx.fillText('MP: '+player.coins, CW-14, 23);
+  // Active item display
+  ctx.fillStyle='#a78bfa'; ctx.font='bold 10px monospace';
+  if (player.activeItem) {
+    const itemEmojis = { health_potion: '💚', grenade: '💣', shield_potion: '🛡️', ammo_pack: '📦' };
+    const itemShortNames = { health_potion: 'Potion', grenade: 'Grenade', shield_potion: 'Shield', ammo_pack: 'Pack' };
+    ctx.fillText(itemEmojis[player.activeItem] + ' ' + itemShortNames[player.activeItem], CW-14, 39);
+  } else {
+    ctx.fillStyle='#666'; 
+    ctx.fillText('(No item)', CW-14, 39);
+  }
 
   // ── Current Upgrades box (bottom-left) ──────────────────────────
   const activeUps = ALL_UPGRADES.filter(u => u.level > 0 || (player.bonusUpgrades[u.id]||0) > 0);
@@ -2998,9 +3127,10 @@ function render() {
   ctx.fillStyle = '#1a2e1a';
   ctx.fillRect(0, 0, CW, CH);
   drawMap();
-  drawRivers();
+  drawRiverEnds();
   drawSpawnPad();
   drawLandmarks();
+  drawVillagers();
   for (const n of mapNotes) drawMapNote(n);
   for (const b of bullets) drawBullet(b);
   // Lightning arcs
@@ -3092,6 +3222,10 @@ function render() {
   drawExploration();
   drawMinimap();
   drawHUD();
+  // Draw trade menu if open
+  if (activeTradeMenu) {
+    drawTradeMenu(activeTradeMenu);
+  }
 
 
 }
@@ -3116,107 +3250,152 @@ const BIOME_GRID_POS = [
 let LANDMARK_INSTANCES = [];
 
 // ── River System ────────────────────────────────────────────────────────────
-const RIVER_WATER_COLORS = {
-  forest:'#1565c0', tundra:'#b3e5fc', mushroom:'#6a0072', desert:'#bf6900',
-  swamp:'#1b4a10',  crystal:'#00838f', storm:'#1c2a34',   volcano:'#bf360c',
-  shadow:'#1a0030', void:'#0a0018'
-};
-const RIVER_BRIDGE_COLORS = {
-  forest:'#8d6e63', tundra:'#b0bec5', mushroom:'#9c27b0', desert:'#ffd54f',
-  swamp:'#4caf50',  crystal:'#26c6da', storm:'#607d8b',   volcano:'#e64a19',
-  shadow:'#7b1fa2', void:'#333333'
-};
-const TILE_WATER = 2;
-const TILE_BRIDGE = 3;
-let RIVER_DATA = [];
 const clearedStructures = new Set();
-let WORLD_CHESTS = []; // one per biome, generated at initLandmarks // 'px,py' keys of defeated-boss interiors // { axis, coord, rangeStart, rangeEnd, bridges[], biome, waterColor, bridgeColor }
+let WORLD_CHESTS = [];
+let VILLAGER_DATA = []; // villagers: one per biome (9 total)
+
+// ── River constants ────────────────────────────────────────────────────────
+const TILE_WATER  = 2;
+const TILE_BRIDGE = 3;
+let RIVER_ENDS = []; // [{wx, wy, side}] world-pixel coords of river endpoints
+
+let activeTradeMenu = null; // { villager, closeTimer }
+
+// ── Per-biome river colours ────────────────────────────────────────────────
+const RIVER_BIOME_CFG = {
+  forest:  { water:'#1a6bb5', bridge:'#8d6e63', rock:'#484e40', rockMid:'#5c6452', rockHi:'#7a8468', moss:'rgba(60,90,40,0.35)'  },
+  tundra:  { water:'#6db8e0', bridge:'#cfd8dc', rock:'#607080', rockMid:'#7a8fa0', rockHi:'#a0bfcf', moss:'rgba(180,220,240,0.2)' },
+  crystal: { water:'#00838f', bridge:'#26c6da', rock:'#2e4a54', rockMid:'#3d6070', rockHi:'#5a8898', moss:'rgba(0,180,200,0.2)'   },
+  storm:   { water:'#1c2a34', bridge:'#546e7a', rock:'#2e3840', rockMid:'#3d4e56', rockHi:'#526070', moss:'rgba(80,100,120,0.2)'  },
+  desert:  { water:'#bf6900', bridge:'#f4b942', rock:'#8d6e3a', rockMid:'#a0845c', rockHi:'#bcaa72', moss:'rgba(200,160,60,0.2)'  },
+  swamp:   { water:'#1b5218', bridge:'#558b2f', rock:'#2a3e1a', rockMid:'#3d5228', rockHi:'#546e35', moss:'rgba(50,100,30,0.4)'   },
+  volcano: { water:'#bf360c', bridge:'#e64a19', rock:'#3e1a14', rockMid:'#562420', rockHi:'#7a3428', moss:'rgba(180,50,10,0.25)'  },
+  mushroom:{ water:'#6a0072', bridge:'#ab47bc', rock:'#3a1a4a', rockMid:'#502860', rockHi:'#6a3878', moss:'rgba(150,50,180,0.25)' },
+  shadow:  { water:'#1a0030', bridge:'#7b1fa2', rock:'#1a1020', rockMid:'#28183a', rockHi:'#3c2655', moss:'rgba(80,0,120,0.3)'   },
+};
 
 function initRivers() {
-  RIVER_DATA = [];
-  const CELL = Math.floor((MAP_W - VOID_BORDER*2) / 3);
-  const BIOME_CELLS = [
-    [{b:'tundra',col:0,row:0},{b:'crystal',col:1,row:0},{b:'storm',col:2,row:0}],
-    [{b:'desert',col:0,row:1},{b:'forest',col:1,row:1},{b:'swamp',col:2,row:1}],
-    [{b:'volcano',col:0,row:2},{b:'mushroom',col:1,row:2},{b:'shadow',col:2,row:2}]
-  ];
-  const rng = (seed) => { let s=seed+1; return ()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; }; };
-  const RIVER_W   = 3; // tiles wide
-  const BRIDGE_W  = 5; // tiles long per bridge
-  const NUM_BRIDGES = 4;
+  RIVER_ENDS = [];
+  const riverLen = 70;  // tiles long
+  const riverH   = 3;   // tiles wide
+  const bridgeW  = 5;   // bridge span
 
-  BIOME_CELLS.forEach(rowArr => rowArr.forEach(({b, col, row}) => {
-    const rand = rng(col*999+row*333+b.charCodeAt(0)*7);
-    const bx0 = VOID_BORDER + col*CELL;
-    const by0 = VOID_BORDER + row*CELL;
-    const numRivers = 1 + Math.floor(rand()*2);
+  BIOME_GRID_POS.forEach(rowArr => rowArr.forEach(({ b, col, row: r }) => {
+    const cfg = RIVER_BIOME_CFG[b];
+    if (!cfg) return;
 
-    for (let ri = 0; ri < numRivers; ri++) {
-      const axis = (col + row + ri) % 2 === 0 ? 'h' : 'v';
-      const margin = 14;
-      let coord, rangeStart, rangeEnd;
-      if (axis === 'h') {
-        coord = by0 + 20 + Math.floor(rand()*(CELL-40));
-        rangeStart = bx0 + margin;
-        rangeEnd   = bx0 + CELL - margin;
-      } else {
-        coord = bx0 + 20 + Math.floor(rand()*(CELL-40));
-        rangeStart = by0 + margin;
-        rangeEnd   = by0 + CELL - margin;
-      }
-      const span = rangeStart + (rangeEnd - rangeStart);
+    // Biome cell bounds in tiles
+    const bx0 = VOID_BORDER + col * CELL; // left tile of biome
+    const by0 = VOID_BORDER + r   * CELL; // top tile of biome
+    const bCX = bx0 + Math.floor(CELL / 2); // biome center X
+    const bCY = by0 + Math.floor(CELL / 2); // biome center Y
 
-      // Evenly space 4 bridges
-      const bridges = [];
-      for (let bi = 0; bi < NUM_BRIDGES; bi++) {
-        const t = Math.floor(rangeStart + 10 + (bi+0.5)*((rangeEnd-rangeStart-20)/NUM_BRIDGES));
-        bridges.push(t);
-      }
+    // Two river rows: above and below biome center
+    const offsets = [-Math.floor(CELL / 4), Math.floor(CELL / 4)];
+
+    offsets.forEach(yOff => {
+      const riverRow = bCY + yOff;
+      const rxStart  = bCX - Math.floor(riverLen / 2);
+      const rxEnd    = bCX + Math.ceil(riverLen / 2);
+      const bridgeCol = bCX;
+
       const bridgeSet = new Set();
-      bridges.forEach(bt => { for(let k=0;k<BRIDGE_W;k++) bridgeSet.add(bt+k); });
+      for (let k = 0; k < bridgeW; k++) {
+        bridgeSet.add(bridgeCol - Math.floor(bridgeW / 2) + k);
+      }
 
-      // Write tiles into map
-      for (let rw = 0; rw < RIVER_W; rw++) {
-        for (let t = rangeStart; t < rangeEnd; t++) {
-          let tx2, ty2;
-          if (axis === 'h') { tx2=t; ty2=coord+rw; } else { tx2=coord+rw; ty2=t; }
-          if (tx2<1||ty2<1||tx2>=MAP_W-1||ty2>=MAP_H-1) continue;
-          if (bridgeSet.has(t)) { map[ty2][tx2]=TILE_BRIDGE; }
-          else if (map[ty2][tx2]!==TILE_BRIDGE) { map[ty2][tx2]=TILE_WATER; }
+      // Write water + bridge tiles
+      for (let ty = riverRow; ty < riverRow + riverH; ty++) {
+        for (let tx = rxStart; tx < rxEnd; tx++) {
+          if (!map[ty]) continue;
+          map[ty][tx] = bridgeSet.has(tx) ? TILE_BRIDGE : TILE_WATER;
         }
       }
 
-      // Build world-pixel path with TINY lateral jitter (amplitude ~1 tile)
-      // for a gentle organic edge on the bezier overlay
-      const STEPS = 60;
-      const amp = 0.8 + rand()*0.8; // max ~1.6 tile lateral wobble
-      const freq = 2 + rand()*2;
-      const phase = rand()*Math.PI*2;
-      const worldPoints = [];
-      for (let si = 0; si <= STEPS; si++) {
-        const t = si / STEPS;
-        let wx, wy;
-        const jitter = amp * TILE * Math.sin(t * Math.PI * freq + phase);
-        if (axis === 'h') {
-          wx = (rangeStart + t*(rangeEnd-rangeStart) + 0.5) * TILE;
-          wy = (coord + RIVER_W/2 + jitter/TILE) * TILE;
-        } else {
-          wy = (rangeStart + t*(rangeEnd-rangeStart) + 0.5) * TILE;
-          wx = (coord + RIVER_W/2 + jitter/TILE) * TILE;
+      // Clear obstacle tiles near each endpoint so rocks don't overlap trees
+      const clearW = 7, clearExtraH = 4;
+      const clearTop = riverRow - 2;
+      const clearHTotal = riverH + clearExtraH;
+      [[rxStart - clearW, rxStart + 2], [rxEnd - 2, rxEnd + clearW]].forEach(([cx0, cx1]) => {
+        for (let ty2 = clearTop; ty2 < clearTop + clearHTotal; ty2++) {
+          for (let tx2 = cx0; tx2 <= cx1; tx2++) {
+            if (map[ty2] && map[ty2][tx2] === 1) map[ty2][tx2] = 0;
+          }
         }
-        worldPoints.push({ x: wx, y: wy });
-      }
-
-      RIVER_DATA.push({
-        axis, coord, rangeStart, rangeEnd, bridgeSet, bridges,
-        biome: b, riverW: RIVER_W, bridgeW: BRIDGE_W,
-        worldPoints,
-        waterColor: RIVER_WATER_COLORS[b] || '#1565c0',
-        bridgeColor: RIVER_BRIDGE_COLORS[b] || '#8d6e63'
       });
-    }
+
+      // Store endpoints for drawing
+      const midY = (riverRow + riverH / 2) * TILE;
+      RIVER_ENDS.push({ wx: rxStart * TILE, wy: midY, riverH: riverH * TILE, side: 'left',  cfg });
+      RIVER_ENDS.push({ wx: rxEnd   * TILE, wy: midY, riverH: riverH * TILE, side: 'right', cfg });
+    });
   }));
 }
+
+function drawRiverEnds() {
+  for (const end of RIVER_ENDS) {
+    const s = worldToScreen(end.wx, end.wy);
+    if (s.x < -200 || s.x > CW + 200 || s.y < -200 || s.y > CH + 200) continue;
+    const cfg = end.cfg;
+    ctx.save();
+    ctx.translate(Math.round(s.x), Math.round(s.y));
+    if (end.side === 'right') ctx.scale(-0.8, 1);
+    else ctx.scale(0.8, 1);
+
+    const rh = end.riverH;
+
+    // Dark void behind rock wall
+    ctx.fillStyle = '#080810';
+    ctx.fillRect(-TILE * 4, -rh * 0.5 - 6, TILE * 4, rh + 12);
+
+    // Back layer rocks (darker)
+    const backRocks = [
+      { ox:-TILE*0.5, oy:-rh*0.55, rx:TILE*0.9,  ry:TILE*0.6  },
+      { ox:-TILE*1.4, oy:-rh*0.48, rx:TILE*1.1,  ry:TILE*0.65 },
+      { ox:-TILE*2.5, oy:-rh*0.42, rx:TILE*0.85, ry:TILE*0.55 },
+      { ox:-TILE*0.6, oy: rh*0.5,  rx:TILE*1.0,  ry:TILE*0.6  },
+      { ox:-TILE*1.6, oy: rh*0.44, rx:TILE*1.2,  ry:TILE*0.65 },
+      { ox:-TILE*2.6, oy: rh*0.38, rx:TILE*0.8,  ry:TILE*0.52 },
+      { ox:-TILE*1.0, oy: 0,       rx:TILE*0.7,  ry:TILE*0.45 },
+    ];
+    for (const b of backRocks) {
+      ctx.fillStyle = cfg.rock;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath(); ctx.ellipse(b.ox, b.oy, b.rx, b.ry, 0, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Front rock wall
+    const frontRocks = [
+      { ox:-2,        oy:-rh*0.52, rx:TILE*1.1,  ry:TILE*0.72, rot: 0.05  },
+      { ox:-TILE*1.2, oy:-rh*0.62, rx:TILE*1.3,  ry:TILE*0.78, rot:-0.1   },
+      { ox:-TILE*2.6, oy:-rh*0.52, rx:TILE*1.05, ry:TILE*0.65, rot: 0.12  },
+      { ox:-TILE*3.8, oy:-rh*0.38, rx:TILE*0.9,  ry:TILE*0.6,  rot:-0.08  },
+      { ox:-2,        oy: rh*0.52, rx:TILE*1.1,  ry:TILE*0.72, rot:-0.05  },
+      { ox:-TILE*1.2, oy: rh*0.62, rx:TILE*1.3,  ry:TILE*0.78, rot: 0.1   },
+      { ox:-TILE*2.6, oy: rh*0.52, rx:TILE*1.05, ry:TILE*0.65, rot:-0.12  },
+      { ox:-TILE*3.8, oy: rh*0.38, rx:TILE*0.9,  ry:TILE*0.6,  rot: 0.08  },
+      { ox:-TILE*0.4, oy: 0,       rx:TILE*0.85, ry:TILE*0.58, rot: 0     },
+      { ox:-TILE*1.8, oy: 0,       rx:TILE*0.75, ry:TILE*0.5,  rot: 0.06  },
+    ];
+    for (const b of frontRocks) {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath(); ctx.ellipse(b.ox+5, b.oy+7, b.rx, b.ry*0.6, b.rot, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = cfg.rock;
+      ctx.beginPath(); ctx.ellipse(b.ox, b.oy, b.rx, b.ry, b.rot, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = cfg.rockMid;
+      ctx.beginPath(); ctx.ellipse(b.ox-b.rx*0.1, b.oy-b.ry*0.1, b.rx*0.82, b.ry*0.82, b.rot, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = cfg.rockHi;
+      ctx.beginPath(); ctx.ellipse(b.ox-b.rx*0.28, b.oy-b.ry*0.32, b.rx*0.42, b.ry*0.38, b.rot, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(220,230,215,0.15)';
+      ctx.beginPath(); ctx.ellipse(b.ox-b.rx*0.35, b.oy-b.ry*0.38, b.rx*0.22, b.ry*0.2, b.rot, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = cfg.moss;
+      ctx.beginPath(); ctx.ellipse(b.ox+b.rx*0.05, b.oy+b.ry*0.25, b.rx*0.55, b.ry*0.38, b.rot, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
 
 function initLandmarks() {
   LANDMARK_INSTANCES = [];
@@ -3240,121 +3419,72 @@ function initLandmarks() {
       LANDMARK_INSTANCES.push({ px, py, fn, scale, colorShift, biome: b });
     }
   }));
-}
-
-
-function drawRiverMouth(sx, sy, angle, lineW, waterColor) {
-  // Rocky cave formation where river goes underground
-  if (!lineW || !isFinite(lineW) || lineW <= 0) return;
-  const r = lineW * 0.72;
-  ctx.save();
-  ctx.translate(Math.round(sx), Math.round(sy));
-  ctx.rotate(angle);
-
-  // Dark underground hole (oval, receding)
-  const holeGrad = ctx.createRadialGradient(0, 0, r*0.05, 0, 0, r*0.75);
-  holeGrad.addColorStop(0, '#000008');
-  holeGrad.addColorStop(0.6, '#0a0a14');
-  holeGrad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = holeGrad;
-  ctx.beginPath(); ctx.ellipse(0, 0, r*0.75, r*0.55, 0, 0, Math.PI*2); ctx.fill();
-
-  // Rocky surround — irregular boulders in a rough arc
-  const rockSeeds = [0,1,2,3,4,5,6,7,8,9,10];
-  rockSeeds.forEach((i, idx) => {
-    const ang = (idx / rockSeeds.length) * Math.PI * 2 + i * 0.3;
-    const dist = r * (0.62 + (i%3)*0.08);
-    const rx2 = Math.cos(ang) * dist;
-    const ry2 = Math.sin(ang) * dist * 0.7;
-    const rs = r * (0.18 + (i%4)*0.06);
-    // Rock shadow
-    ctx.fillStyle = '#111118';
-    ctx.beginPath(); ctx.ellipse(rx2+2, ry2+2, rs, rs*0.8, ang*0.3, 0, Math.PI*2); ctx.fill();
-    // Rock face
-    const rockHue = 210 + (i%3)*15;
-    ctx.fillStyle = `hsl(${rockHue},12%,${22+(i%4)*5}%)`;
-    ctx.beginPath(); ctx.ellipse(rx2, ry2, rs, rs*0.8, ang*0.3, 0, Math.PI*2); ctx.fill();
-    // Rock highlight
-    ctx.fillStyle = `hsl(${rockHue},10%,${32+(i%3)*6}%)`;
-    ctx.beginPath(); ctx.ellipse(rx2-rs*0.2, ry2-rs*0.25, rs*0.5, rs*0.35, ang*0.3, 0, Math.PI*2); ctx.fill();
-  });
-
-  // Water rushing in — narrow stream entering the hole
-  ctx.globalAlpha = 0.55;
-  ctx.fillStyle = waterColor;
-  ctx.beginPath();
-  ctx.moveTo(-lineW*0.5, -r*0.12);
-  ctx.lineTo(0, -r*0.08);
-  ctx.lineTo(0, r*0.08);
-  ctx.lineTo(-lineW*0.5, r*0.12);
-  ctx.closePath();
-  ctx.fill();
-
-  // Mist/foam at entrance
-  ctx.globalAlpha = 0.25 + 0.15*Math.sin(frame*0.08 + sx);
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath(); ctx.ellipse(-r*0.1, 0, r*0.35, r*0.18, 0, 0, Math.PI*2); ctx.fill();
-  ctx.globalAlpha = 0.12 + 0.08*Math.sin(frame*0.12 + sy);
-  ctx.beginPath(); ctx.ellipse(r*0.05, -r*0.1, r*0.2, r*0.1, 0.3, 0, Math.PI*2); ctx.fill();
-
-  ctx.restore();
-}
-
-function drawRivers() {
-  for (const rv of RIVER_DATA) {
-    const pts = rv.worldPoints;
-    if (pts.length < 2) continue;
-    const lineW = (rv.riverW) * TILE;
-
-    // ── Draw smooth water path ────────────────────────────────────────────────
-    ctx.save();
-    ctx.strokeStyle = rv.waterColor;
-    ctx.lineWidth   = lineW;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
-    ctx.beginPath();
-    const s0 = worldToScreen(pts[0].x, pts[0].y);
-    ctx.moveTo(s0.x, s0.y);
-    for (let i = 1; i < pts.length - 1; i++) {
-      const sx1 = worldToScreen(pts[i].x, pts[i].y);
-      const sx2 = worldToScreen(pts[i+1].x, pts[i+1].y);
-      const mx = (sx1.x+sx2.x)/2, my = (sx1.y+sx2.y)/2;
-      ctx.quadraticCurveTo(sx1.x, sx1.y, mx, my);
+  // Clear obstacle tiles around every landmark so nothing peeks through
+  const clearR = 7; // tile radius
+  for (const lm of LANDMARK_INSTANCES) {
+    const ltx = Math.floor(lm.px / TILE);
+    const lty = Math.floor(lm.py / TILE);
+    for (let dy = -clearR; dy <= clearR; dy++) {
+      for (let dx = -clearR; dx <= clearR; dx++) {
+        if (dx*dx + dy*dy > clearR*clearR) continue;
+        const tx = ltx + dx, ty = lty + dy;
+        if (map[ty] && map[ty][tx] === 1) map[ty][tx] = 0;
+      }
     }
-    const sLast = worldToScreen(pts[pts.length-1].x, pts[pts.length-1].y);
-    ctx.lineTo(sLast.x, sLast.y);
-    ctx.stroke();
-
-    // ── Shimmer overlay ───────────────────────────────────────────────────────
-    ctx.globalAlpha = 0.18 + Math.sin(frame*0.06)*0.08;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth   = lineW * 0.35;
-    ctx.setLineDash([TILE*3, TILE*5]);
-    ctx.lineDashOffset = -(frame * 0.5) % (TILE*8);
-    ctx.beginPath();
-    ctx.moveTo(s0.x, s0.y);
-    for (let i = 1; i < pts.length - 1; i++) {
-      const sx1 = worldToScreen(pts[i].x, pts[i].y);
-      const sx2 = worldToScreen(pts[i+1].x, pts[i+1].y);
-      const mx = (sx1.x+sx2.x)/2, my = (sx1.y+sx2.y)/2;
-      ctx.quadraticCurveTo(sx1.x, sx1.y, mx, my);
-    }
-    ctx.lineTo(sLast.x, sLast.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
-
-    // ── Rocky cave mouths at both ends ────────────────────────────────────────
-    const p0 = worldToScreen(pts[0].x, pts[0].y);
-    const p1 = worldToScreen(pts[1].x, pts[1].y);
-    const angle0 = Math.atan2(p0.y - p1.y, p0.x - p1.x); // pointing away from river
-    drawRiverMouth(p0.x, p0.y, angle0, lineW, rv.waterColor);
-
-    const pN  = worldToScreen(pts[pts.length-1].x, pts[pts.length-1].y);
-    const pN1 = worldToScreen(pts[pts.length-2].x, pts[pts.length-2].y);
-    const angleN = Math.atan2(pN.y - pN1.y, pN.x - pN1.x);
-    drawRiverMouth(pN.x, pN.y, angleN, lineW, rv.waterColor);
   }
+}
+
+const BIOME_COURTYARD = {
+  forest:  { outer:'#2d2418', inner:'#3a2e20', accent:'#504030', lines:'#6a5a40' },
+  tundra:  { outer:'#7090a8', inner:'#9ab4c8', accent:'#b8d0e0', lines:'#d0e8f0' },
+  crystal: { outer:'#0d2030', inner:'#163040', accent:'#1e5060', lines:'#40c0d0' },
+  storm:   { outer:'#141820', inner:'#1c2430', accent:'#2a3444', lines:'#445060' },
+  desert:  { outer:'#8a6030', inner:'#b08040', accent:'#c8a060', lines:'#e0c080' },
+  swamp:   { outer:'#182010', inner:'#243018', accent:'#304824', lines:'#486030' },
+  volcano: { outer:'#1c0e08', inner:'#2c1810', accent:'#401a10', lines:'#803020' },
+  mushroom:{ outer:'#1e0e28', inner:'#2c1840', accent:'#40225c', lines:'#9040c0' },
+  shadow:  { outer:'#070510', inner:'#0e0a1a', accent:'#160e28', lines:'#4020a0' },
+};
+
+function drawLandmarkCourtyard(cx, cy, biome, scale) {
+  const c = BIOME_COURTYARD[biome] || BIOME_COURTYARD.forest;
+  const r = Math.round(95 * scale);
+  const ri = Math.round(70 * scale);
+
+  // Outer ring of cobblestones
+  ctx.fillStyle = c.outer;
+  ctx.beginPath(); ctx.ellipse(cx, cy + 12, r, Math.round(r * 0.45), 0, 0, Math.PI*2); ctx.fill();
+
+  // Inner plaza
+  ctx.fillStyle = c.inner;
+  ctx.beginPath(); ctx.ellipse(cx, cy + 12, ri, Math.round(ri * 0.45), 0, 0, Math.PI*2); ctx.fill();
+
+  // Subtle stone grid lines (radial spokes)
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.strokeStyle = c.lines;
+  ctx.lineWidth = 1;
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * 14, cy + 12 + Math.sin(a) * 6);
+    ctx.lineTo(cx + Math.cos(a) * ri, cy + 12 + Math.sin(a) * (ri * 0.45));
+    ctx.stroke();
+  }
+  // Concentric rings
+  for (let rr = 0.35; rr <= 1; rr += 0.32) {
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 12, Math.round(ri * rr), Math.round(ri * rr * 0.45), 0, 0, Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Accent trim on inner edge
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.strokeStyle = c.accent;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(cx, cy + 12, ri + 2, Math.round((ri + 2) * 0.45), 0, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
 }
 
 function drawLandmarks() {
@@ -3362,6 +3492,8 @@ function drawLandmarks() {
   for (const lm of LANDMARK_INSTANCES) {
     const s = worldToScreen(lm.px, lm.py);
     if (s.x < -300 || s.x > CW+300 || s.y < -300 || s.y > CH+300) continue;
+    // Draw courtyard BEFORE the structure (in un-scaled coords so radius stays consistent)
+    drawLandmarkCourtyard(s.x, s.y, lm.biome, lm.scale);
     ctx.save();
     ctx.translate(s.x, s.y);
     ctx.scale(lm.scale, lm.scale);
@@ -3374,13 +3506,27 @@ function drawLandmarks() {
 
 // 🌿 Forest — Treehouse
 function drawTreehouse(cx, cy, cs=0) {
+  // Ground shadow
+  ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx+8, cy+22, 85, 20, 0, 0, Math.PI*2); ctx.fill();
+  
   ctx.fillStyle=shiftColor('#5c3317',cs); ctx.fillRect(cx-10,cy,20,80);
   for(let i=0;i<5;i++){ctx.strokeStyle=shiftColor('#a0522d',cs);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx-8,cy+i*15);ctx.lineTo(cx+8,cy+i*15);ctx.stroke();}
   ctx.fillStyle=shiftColor('#8B4513',cs); ctx.fillRect(cx-50,cy-10,100,12);
   ctx.fillStyle=shiftColor('#cd853f',cs); ctx.fillRect(cx-40,cy-55,80,48);
+  // Front face of cabin
+  ctx.fillStyle='#5c2a0d'; ctx.fillRect(cx-40,cy+41,80,9);
+  
   ctx.fillStyle='#3b1f0a'; ctx.fillRect(cx-10,cy-30,20,23);
   ctx.fillStyle='#87ceeb'; ctx.fillRect(cx+12,cy-50,16,14);
   ctx.fillStyle=shiftColor('#5c3317',cs); ctx.fillRect(cx+20,cy-50,2,14); ctx.fillRect(cx+12,cy-44,16,2);
+  
+  // Trunk right face
+  ctx.fillStyle='#4a281c'; ctx.fillRect(cx+10,cy,5,80);
+  // Platform front face
+  ctx.fillStyle='#7a5c38'; ctx.fillRect(cx-50,cy+2,100,6);
+  // AO ground contact
+  ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fillRect(cx-85, cy+42, 170, 3);
+  
   ctx.fillStyle=shiftColor('#2d5a27',cs); ctx.beginPath();ctx.moveTo(cx-50,cy-55);ctx.lineTo(cx,cy-100);ctx.lineTo(cx+50,cy-55);ctx.closePath();ctx.fill();
   ctx.fillStyle=shiftColor('#3a7a30',cs);
   ctx.beginPath();ctx.arc(cx-55,cy-40,28,0,Math.PI*2);ctx.fill();
@@ -3390,9 +3536,18 @@ function drawTreehouse(cx, cy, cs=0) {
 
 // ❄️ Tundra — Ice Cave
 function drawIceCave(cx, cy, cs=0) {
+  // Ground shadow
+  ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx+8, cy+22, 120, 18, 0, 0, Math.PI*2); ctx.fill();
+  
   ctx.fillStyle=shiftColor('#b0c8d8',cs); ctx.fillRect(cx-90,cy-60,180,80);
+  // Front face of main ice body
+  ctx.fillStyle='rgba(0,0,30,0.4)'; ctx.fillRect(cx-90,cy+20,180,10);
+  
   ctx.fillStyle='#1a1a2e';
   ctx.beginPath();ctx.arc(cx,cy-15,42,Math.PI,0);ctx.lineTo(cx+42,cy+20);ctx.lineTo(cx-42,cy+20);ctx.closePath();ctx.fill();
+  // Inner glow just inside cave mouth
+  ctx.fillStyle='rgba(100,200,255,0.2)'; ctx.beginPath();ctx.arc(cx,cy-15,35,Math.PI,0);ctx.lineTo(cx+35,cy+15);ctx.lineTo(cx-35,cy+15);ctx.closePath();ctx.fill();
+  
   ctx.fillStyle=shiftColor('#a8d8ea',cs);
   for(let i=-3;i<=3;i++){const ix=cx+i*13,ilen=15+Math.abs(i)*5;ctx.beginPath();ctx.moveTo(ix-5,cy-55);ctx.lineTo(ix,cy-55+ilen);ctx.lineTo(ix+5,cy-55);ctx.closePath();ctx.fill();}
   ctx.fillStyle=shiftColor('#eef5f9',cs); ctx.beginPath();ctx.arc(cx,cy-65,50,Math.PI,0);ctx.fill();
@@ -3402,8 +3557,19 @@ function drawIceCave(cx, cy, cs=0) {
 
 // 🍄 Mushroom — Castle
 function drawMushroomCastle(cx, cy, cs=0) {
+  // Ground shadow
+  ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx+8, cy+22, 110, 22, 0, 0, Math.PI*2); ctx.fill();
+  
   ctx.fillStyle=shiftColor('#c084fc',cs); ctx.fillRect(cx-30,cy-80,60,100);
+  // Center tower right face
+  ctx.fillStyle='#7a3f9d'; ctx.fillRect(cx+30,cy-80,7,100);
+  
   ctx.fillStyle=shiftColor('#a855f7',cs); ctx.fillRect(cx-70,cy-55,30,75); ctx.fillRect(cx+40,cy-55,30,75);
+  // Side towers right faces
+  ctx.fillStyle='#7a3f9d'; ctx.fillRect(cx-40,cy-55,5,75); ctx.fillRect(cx+70,cy-55,5,75);
+  // Front face strips at bases of towers
+  ctx.fillStyle='#7a3f9d'; ctx.fillRect(cx-30,cy+20,60,6); ctx.fillRect(cx-70,cy+20,30,6); ctx.fillRect(cx+40,cy+20,30,6);
+  
   ctx.fillStyle=shiftColor('#c084fc',cs);
   for(let i=-2;i<=2;i++){ctx.fillRect(cx+i*12-5,cy-90,8,14);}
   for(let i=0;i<3;i++){ctx.fillStyle=shiftColor('#a855f7',cs);ctx.fillRect(cx-70+i*12,cy-65,8,12);ctx.fillRect(cx+40+i*12,cy-65,8,12);}
@@ -3418,39 +3584,77 @@ function drawMushroomCastle(cx, cy, cs=0) {
 
 // 🏜️ Desert — Pyramid
 function drawPyramid(cx, cy, cs=0) {
+  // Enhanced ground shadow ellipse
+  ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.beginPath();ctx.ellipse(cx+12, cy+22, 95, 20, 0, 0, Math.PI*2);ctx.fill();
+  
   ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath();ctx.moveTo(cx-90,cy+20);ctx.lineTo(cx+110,cy+20);ctx.lineTo(cx+90,cy+10);ctx.closePath();ctx.fill();
   ctx.fillStyle=shiftColor('#d4a853',cs); ctx.beginPath();ctx.moveTo(cx,cy-110);ctx.lineTo(cx+90,cy+20);ctx.lineTo(cx-90,cy+20);ctx.closePath();ctx.fill();
   ctx.fillStyle=shiftColor('#b8893a',cs); ctx.beginPath();ctx.moveTo(cx,cy-110);ctx.lineTo(cx+90,cy+20);ctx.lineTo(cx,cy+20);ctx.closePath();ctx.fill();
   ctx.strokeStyle=shiftColor('#c4973f',cs);ctx.lineWidth=1;
   for(let i=1;i<5;i++){const t=i/5,w=90*t;ctx.beginPath();ctx.moveTo(cx-w,cy-110+130*t);ctx.lineTo(cx+w,cy-110+130*t);ctx.stroke();}
   ctx.fillStyle='#1a0a2e'; ctx.beginPath();ctx.moveTo(cx,cy-10);ctx.lineTo(cx+15,cy+20);ctx.lineTo(cx-15,cy+20);ctx.closePath();ctx.fill();
+  
+  // Sand dust effect at base
+  ctx.fillStyle='rgba(212,168,83,0.15)'; ctx.beginPath(); ctx.ellipse(cx, cy+25, 100, 12, 0, 0, Math.PI*2); ctx.fill();
+  
+  // AO contact strip
+  ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fillRect(cx-90, cy+20, 180, 3);
+  
   ctx.fillStyle='#ffd700';ctx.shadowColor='#ffd700';ctx.shadowBlur=10;
   ctx.beginPath();ctx.arc(cx,cy-110,6,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
 }
 
 // 🌊 Swamp — Sunken Ruins
 function drawSwampRuins(cx, cy, cs=0) {
+  // Ground shadow with greenish tint
+  ctx.fillStyle='rgba(0,40,20,0.35)'; ctx.beginPath(); ctx.ellipse(cx+8, cy+22, 100, 20, 0, 0, Math.PI*2); ctx.fill();
+  
   ctx.fillStyle='rgba(30,100,60,0.5)';ctx.beginPath();ctx.ellipse(cx,cy+18,75,18,0,0,Math.PI*2);ctx.fill();
   const cols=[cx-60,cx-30,cx+10,cx+50];
   cols.forEach((x,i)=>{
     const h=[55,35,65,40][i];
     ctx.fillStyle=shiftColor('#7c7a6a',cs); ctx.fillRect(x-8,cy-h,16,h+20);
+    // Right face on each column
+    ctx.fillStyle='#5a4a3a'; ctx.fillRect(x+8,cy-h,4,h+20);
+    
     ctx.fillStyle=shiftColor('#6b6959',cs); ctx.fillRect(x-10,cy-h-8,20,10);
     ctx.strokeStyle='#555';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-3,cy-h+10);ctx.lineTo(x+2,cy-h+25);ctx.stroke();
   });
   ctx.fillStyle=shiftColor('#7c7a6a',cs); ctx.fillRect(cx-45,cy-70,14,75); ctx.fillRect(cx+31,cy-70,14,75);
+  // Right faces on arch support columns
+  ctx.fillStyle='#5a4a3a'; ctx.fillRect(cx-31,cy-70,4,75); ctx.fillRect(cx+45,cy-70,4,75);
+  
   ctx.beginPath();ctx.arc(cx,cy-70,45,Math.PI,0);ctx.lineWidth=12;ctx.strokeStyle=shiftColor('#7c7a6a',cs);ctx.stroke();
+  // Shadow strip underneath arch
+  ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.arc(cx,cy-70,45,Math.PI,0); ctx.lineWidth=14; ctx.lineWidth=3; ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.stroke();
+  
   ctx.fillStyle='#2d6a4f';ctx.font='16px serif';ctx.textAlign='center';ctx.fillText('~',cx-35,cy-50);ctx.fillText('~',cx+20,cy-60);
 }
 
 // 💎 Crystal — Crystal Palace
 function drawCrystalPalace(cx, cy, cs=0) {
+  // Ground shadow with cyan tint + dark
+  ctx.fillStyle='rgba(0,200,220,0.15)'; ctx.beginPath(); ctx.ellipse(cx+8, cy+22, 110, 18, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(cx+8, cy+22, 110, 18, 0, 0, Math.PI*2); ctx.fill();
+  
   ctx.fillStyle=shiftColor('#67e8f9',cs); ctx.fillRect(cx-80,cy+10,160,15);
+  // Front face strip on base platform
+  ctx.fillStyle='#2a5a6a'; ctx.fillRect(cx-80,cy+25,160,8);
+  
   ctx.fillStyle=shiftColor('rgba(103,232,249,0.7)',cs); ctx.beginPath();ctx.moveTo(cx,cy-120);ctx.lineTo(cx+18,cy+10);ctx.lineTo(cx-18,cy+10);ctx.closePath();ctx.fill();
   ctx.strokeStyle=shiftColor('#a5f3fc',cs);ctx.lineWidth=2;ctx.stroke();
+  // Right face on center spire
+  ctx.fillStyle='#2a5a8a'; ctx.beginPath(); ctx.moveTo(cx+18,cy+10); ctx.lineTo(cx+22,cy+10); ctx.lineTo(cx,cy-120); ctx.closePath(); ctx.fill();
+  // Reflected highlight on left face
+  ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.moveTo(cx-18,cy+10); ctx.lineTo(cx-8,cy-80); ctx.lineTo(cx,cy-120); ctx.closePath(); ctx.fill();
+  
   [[cx-50,70],[cx+50,70],[cx-30,90],[cx+30,90]].forEach(([x,h])=>{
     ctx.fillStyle=shiftColor('rgba(103,232,249,0.6)',cs); ctx.beginPath();ctx.moveTo(x,cy-h);ctx.lineTo(x+12,cy+10);ctx.lineTo(x-12,cy+10);ctx.closePath();ctx.fill();
     ctx.strokeStyle=shiftColor('#a5f3fc',cs);ctx.lineWidth=1;ctx.stroke();
+    // Right faces on spires
+    ctx.fillStyle='#2a5a8a'; ctx.beginPath(); ctx.moveTo(x+12,cy+10); ctx.lineTo(x+16,cy+10); ctx.lineTo(x,cy-h); ctx.closePath(); ctx.fill();
+    // Reflected highlights
+    ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.moveTo(x-12,cy+10); ctx.lineTo(x-5,cy-h*0.5); ctx.lineTo(x,cy-h); ctx.closePath(); ctx.fill();
   });
   ctx.fillStyle='#fff';ctx.shadowColor='#67e8f9';ctx.shadowBlur=10;
   [[cx,cy-100],[cx-50,cy-55],[cx+50,cy-55]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();});
@@ -3459,12 +3663,28 @@ function drawCrystalPalace(cx, cy, cs=0) {
 
 // 🌪️ Storm — Lightning Tower
 function drawLightningTower(cx, cy, cs=0) {
+  // Ground shadow
+  ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx+8, cy+22, 70, 16, 0, 0, Math.PI*2); ctx.fill();
+  
   ctx.fillStyle=shiftColor('#374151',cs); ctx.fillRect(cx-25,cy,50,25);
+  // Base front face strip
+  ctx.fillStyle='#1a1f2e'; ctx.fillRect(cx-25,cy+25,50,5);
+  // Base right face
+  ctx.fillStyle='#111827'; ctx.fillRect(cx+25,cy,5,25);
+  
   ctx.fillStyle=shiftColor('#1f2937',cs); ctx.fillRect(cx-18,cy-90,36,92);
+  // Tower right face
+  ctx.fillStyle='#111827'; ctx.fillRect(cx+18,cy-90,6,92);
+  
   ctx.fillStyle='#fbbf24';ctx.shadowColor='#fbbf24';ctx.shadowBlur=8;
   for(let i=0;i<3;i++){ctx.fillRect(cx-8,cy-25-i*28,16,14);}
   ctx.shadowBlur=0;
   ctx.fillStyle=shiftColor('#111827',cs); ctx.fillRect(cx-22,cy-100,44,14);
+  // Top cap front face
+  ctx.fillStyle='#0a0e18'; ctx.fillRect(cx-22,cy-86,44,6);
+  // Top cap right face
+  ctx.fillStyle='#0a0e18'; ctx.fillRect(cx+22,cy-100,4,14);
+  
   ctx.strokeStyle='#9ca3af';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(cx,cy-100);ctx.lineTo(cx,cy-140);ctx.stroke();
   ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(cx,cy-140,5,0,Math.PI*2);ctx.fill();
   ctx.fillStyle='#fbbf24';ctx.shadowColor='#fbbf24';ctx.shadowBlur=6;
@@ -3473,23 +3693,47 @@ function drawLightningTower(cx, cy, cs=0) {
 
 // 🌋 Volcano — Forge
 function drawVolcanoForge(cx, cy, cs=0) {
+  // Ground shadow with reddish tint
+  ctx.fillStyle='rgba(80,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(cx+8, cy+22, 100, 22, 0, 0, Math.PI*2); ctx.fill();
+  
   ctx.fillStyle=shiftColor('#57534e',cs); ctx.fillRect(cx-55,cy-50,110,70);
+  // Roof/body front face
+  ctx.fillStyle='#1c1917'; ctx.fillRect(cx-55,cy+20,110,10);
+  
   ctx.fillStyle=shiftColor('#44403c',cs); ctx.beginPath();ctx.moveTo(cx-65,cy-50);ctx.lineTo(cx,cy-85);ctx.lineTo(cx+65,cy-50);ctx.closePath();ctx.fill();
   ctx.fillStyle=shiftColor('#3c3430',cs); ctx.fillRect(cx+25,cy-95,20,50);
+  // Chimney right face
+  ctx.fillStyle='#1a0f0c'; ctx.fillRect(cx+45,cy-95,4,50);
+  
   ctx.fillStyle='#ef4444';ctx.shadowColor='#ef4444';ctx.shadowBlur=20;
   ctx.beginPath();ctx.arc(cx+35,cy-97,10,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
   ctx.fillStyle='#1c1917'; ctx.beginPath();ctx.arc(cx,cy+5,18,Math.PI,0);ctx.fillRect(cx-18,cy+5,36,15);ctx.fill();
+  
+  // Lava glow pool
+  ctx.fillStyle='rgba(239,68,68,0.15)'; ctx.beginPath(); ctx.ellipse(cx, cy+20, 40, 10, 0, 0, Math.PI*2); ctx.fill();
+  
   ctx.fillStyle='rgba(239,68,68,0.4)';ctx.beginPath();ctx.arc(cx,cy+20,25,0,Math.PI*2);ctx.fill();
 }
 
 // 🌑 Shadow — Dark Temple
 function drawShadowTemple(cx, cy, cs=0) {
+  // Ground shadow with purple tint
+  ctx.fillStyle='rgba(40,0,60,0.4)'; ctx.beginPath(); ctx.ellipse(cx+8, cy+22, 110, 20, 0, 0, Math.PI*2); ctx.fill();
+  
   ctx.fillStyle=shiftColor('#1e1b2e',cs);ctx.fillRect(cx-70,cy+15,140,8);ctx.fillRect(cx-60,cy+7,120,10);
   ctx.fillStyle=shiftColor('#0f0d1a',cs); ctx.fillRect(cx-50,cy-70,100,85);
+  // Main body right face
+  ctx.fillStyle='#05030a'; ctx.fillRect(cx+50,cy-70,8,85);
+  
   [shiftColor('#2d1b4e',cs),shiftColor('#1e1535',cs),shiftColor('#2d1b4e',cs),shiftColor('#1e1535',cs)].forEach((col,i)=>{
     ctx.fillStyle=col; ctx.fillRect(cx-50+i*32,cy-80,14,90);
+    // Pillar column right faces
+    ctx.fillStyle='#05030a'; ctx.fillRect(cx-50+i*32+14,cy-80,3,90);
   });
   ctx.fillStyle=shiftColor('#1e1b2e',cs); ctx.beginPath();ctx.moveTo(cx-60,cy-80);ctx.lineTo(cx,cy-115);ctx.lineTo(cx+60,cy-80);ctx.closePath();ctx.fill();
+  // Roof right-face triangle
+  ctx.fillStyle='#05030a'; ctx.beginPath();ctx.moveTo(cx+60,cy-80);ctx.lineTo(cx+65,cy-77);ctx.lineTo(cx,cy-115);ctx.closePath();ctx.fill();
+  
   ctx.fillStyle='#a855f7';ctx.shadowColor='#a855f7';ctx.shadowBlur=10;
   ctx.font='14px serif'; ctx.textAlign='center';
   ctx.fillText('ᛟ',cx-20,cy-40);ctx.fillText('ᚹ',cx+15,cy-55);ctx.fillText('ᚷ',cx,cy-25);
@@ -3892,6 +4136,254 @@ function initWorldChests() {
       }
     }
   }
+}
+
+// ── Villagers ──────────────────────────────────────────────────────────────────
+function initVillagers() {
+  VILLAGER_DATA = [];
+  const CELL = Math.floor((MAP_W - VOID_BORDER*2) / 3);
+  const villagerNames = [
+    { biome: 'tundra',  name: 'Frostine', color: '#c8e6f5', hairColor: '#e0f2fe' },
+    { biome: 'crystal', name: 'Sparkle', color: '#ddd6fe', hairColor: '#f3e8ff' },
+    { biome: 'storm',   name: 'Zephyr', color: '#bfdbfe', hairColor: '#dbeafe' },
+    { biome: 'desert',  name: 'Mirage', color: '#fef08a', hairColor: '#fef3c7' },
+    { biome: 'forest',  name: 'Mira', color: '#bbf7d0', hairColor: '#d1fae5' },
+    { biome: 'swamp',   name: 'Bog', color: '#a7f3d0', hairColor: '#6ee7b7' },
+    { biome: 'volcano', name: 'Emberstorm', color: '#fed7aa', hairColor: '#fecaca' },
+    { biome: 'mushroom', name: 'Sprig', color: '#e9d5ff', hairColor: '#f0e7fe' },
+    { biome: 'shadow',  name: 'Umbra', color: '#d1d5db', hairColor: '#9ca3af' },
+  ];
+  const itemTypes = ['health_potion', 'grenade', 'shield_potion', 'ammo_pack'];
+  const villagerShops = [
+    ['health_potion', 'grenade', 'shield_potion'],
+    ['grenade', 'shield_potion', 'ammo_pack'],
+    ['health_potion', 'ammo_pack'],
+    ['shield_potion', 'grenade'],
+    ['ammo_pack', 'health_potion', 'grenade'],
+    ['health_potion', 'shield_potion'],
+    ['grenade', 'ammo_pack'],
+    ['health_potion', 'ammo_pack'],
+    ['shield_potion', 'grenade'],
+  ];
+  villagerNames.forEach((vdata, idx) => {
+    const { biome, name, color, hairColor } = vdata;
+    const row = Math.floor(idx / 3);
+    const col = idx % 3;
+    const bx0 = VOID_BORDER + col*CELL;
+    const by0 = VOID_BORDER + row*CELL;
+    // Forest villager: shift toward the south-east edge to avoid spawn
+    const xFrac = biome === 'forest' ? 0.78 : 0.5;
+    const yFrac = biome === 'forest' ? 0.78 : 0.5;
+    const px = (bx0 + CELL * xFrac) * TILE;
+    const py = (by0 + CELL * yFrac) * TILE;
+    const inventory = villagerShops[idx].map(type => {
+      const costs = { health_potion: 30, grenade: 50, shield_potion: 40, ammo_pack: 20 };
+      return { type, price: costs[type] };
+    });
+    VILLAGER_DATA.push({
+      x: px, y: py, name, color, hairColor, biome,
+      inventory, bobOffset: Math.random() * Math.PI * 2
+    });
+  });
+}
+
+function tryInteractVillager() {
+  const INTERACT_RANGE = 80;
+  let closestVillager = null;
+  let closestDist = INTERACT_RANGE;
+  for (const v of VILLAGER_DATA) {
+    const dist = Math.sqrt((player.x - v.x)**2 + (player.y - v.y)**2);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closestVillager = v;
+    }
+  }
+  if (closestVillager) {
+    activeTradeMenu = { ...closestVillager };
+  }
+}
+
+function buyFromVillager(villager, itemIndex) {
+  if (itemIndex >= villager.inventory.length) return;
+  const item = villager.inventory[itemIndex];
+  if (player.coins < item.price) {
+    showNotif('Not enough MP!', '#ff6b6b', 100);
+    return;
+  }
+  player.coins -= item.price;
+  player.activeItem = item.type;
+  const itemNames = {
+    health_potion: '💚 Health Potion',
+    grenade: '💣 Grenade',
+    shield_potion: '🛡️ Shield Potion',
+    ammo_pack: '📦 Ammo Pack'
+  };
+  const itemLabel = itemNames[item.type] || item.type;
+  showNotif('Got ' + itemLabel + '! (Press Q to use)', '#a855f7', 140);
+}
+
+function useActiveItem() {
+  if (!player.activeItem) return;
+  const itemType = player.activeItem;
+  if (itemType === 'health_potion') {
+    player.hp = Math.min(player.maxHp, player.hp + 25);
+    showNotif('💚 Health restored! +25 HP', '#22c55e', 100);
+  } else if (itemType === 'grenade') {
+    // Find closest enemy or use mouse position
+    let targetX = mouseX + camera.x;
+    let targetY = mouseY + camera.y;
+    let closestEnemy = null;
+    let closestDist = 200;
+    for (const e of enemies) {
+      const dist = Math.sqrt((player.x - e.x)**2 + (player.y - e.y)**2);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestEnemy = e;
+      }
+    }
+    if (closestEnemy) {
+      targetX = closestEnemy.x + closestEnemy.w/2;
+      targetY = closestEnemy.y + closestEnemy.h/2;
+    }
+    triggerExplosion(targetX, targetY, 80, 60);
+    showNotif('💥 Grenade thrown!', '#ff6b00', 80);
+  } else if (itemType === 'shield_potion') {
+    player.invincible = 120;
+    showNotif('🛡️ Shield activated! 2s invincible', '#60a5fa', 100);
+  } else if (itemType === 'ammo_pack') {
+    player.hp = Math.min(player.maxHp, player.hp + 15);
+    showNotif('📦 Energy restored! +15 HP', '#a78bfa', 100);
+  }
+  // Item is consumed after use
+  player.activeItem = null;
+}
+
+function drawVillager(v) {
+  ctx.save();
+  // Apply slight bob animation
+  const bobY = Math.sin(frame * 0.05 + v.bobOffset) * 4;
+  // Head
+  ctx.fillStyle = v.color;
+  ctx.beginPath();
+  ctx.arc(0, bobY - 10, 8, 0, Math.PI*2);
+  ctx.fill();
+  // Hair
+  ctx.fillStyle = v.hairColor;
+  ctx.beginPath();
+  ctx.arc(-3, bobY - 16, 4, 0, Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(3, bobY - 16, 4, 0, Math.PI*2);
+  ctx.fill();
+  // Body
+  ctx.fillStyle = v.color;
+  ctx.fillRect(-6, bobY - 2, 12, 12);
+  // Arms
+  ctx.fillRect(-8, bobY, 3, 8);
+  ctx.fillRect(5, bobY, 3, 8);
+  // Legs
+  ctx.fillStyle = '#444';
+  ctx.fillRect(-4, bobY + 10, 3, 6);
+  ctx.fillRect(1, bobY + 10, 3, 6);
+  ctx.restore();
+}
+
+function drawVillagers() {
+  for (const v of VILLAGER_DATA) {
+    const s = worldToScreen(v.x, v.y);
+    const dx = v.x - player.x;
+    const dy = v.y - player.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    // Draw villager
+    ctx.save();
+    ctx.translate(Math.round(s.x), Math.round(s.y));
+    drawVillager(v);
+    ctx.restore();
+    // Draw name tag
+    ctx.save();
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(v.name, Math.round(s.x), Math.round(s.y - 28));
+    ctx.restore();
+    // Draw interaction prompt if close
+    const PROMPT_RANGE = 80;
+    if (dist < PROMPT_RANGE) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 100, 0.8)';
+      ctx.font = 'bold 11px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('(E) TRADE', Math.round(s.x), Math.round(s.y + 28));
+      ctx.restore();
+    }
+  }
+}
+
+function drawTradeMenu(villager) {
+  const menuWidth = 280;
+  const menuHeight = 280;
+  const menuX = CW/2 - menuWidth/2;
+  const menuY = CH/2 - menuHeight/2;
+  // Semi-transparent dark background
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(0, 0, CW, CH);
+  // Menu panel
+  ctx.fillStyle = '#1a0a2e';
+  ctx.strokeStyle = '#a855f7';
+  ctx.lineWidth = 3;
+  ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
+  ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
+  // Title
+  ctx.fillStyle = '#a855f7';
+  ctx.font = 'bold 16px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillText(villager.name + "'s Shop", menuX + 15, menuY + 25);
+  // MP display
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = '12px Arial';
+  ctx.textAlign = 'right';
+  ctx.fillText('Your MP: ' + player.coins, menuX + menuWidth - 15, menuY + 25);
+  // Active item display
+  ctx.fillStyle = '#888';
+  ctx.font = '10px Arial';
+  ctx.textAlign = 'left';
+  if (player.activeItem) {
+    const itemNames = { health_potion: '💚 Potion', grenade: '💣 Grenade', shield_potion: '🛡️ Shield', ammo_pack: '📦 Pack' };
+    ctx.fillText('Active: ' + (itemNames[player.activeItem] || player.activeItem), menuX + 15, menuY + 245);
+  } else {
+    ctx.fillText('No active item', menuX + 15, menuY + 245);
+  }
+  // Items
+  const itemY = menuY + 50;
+  const itemHeight = 60;
+  const itemNames = {
+    health_potion: '💚 Health Potion',
+    grenade: '💣 Grenade',
+    shield_potion: '🛡️ Shield',
+    ammo_pack: '📦 Ammo Pack'
+  };
+  villager.inventory.forEach((item, idx) => {
+    const y = itemY + idx * itemHeight;
+    const label = itemNames[item.type];
+    const canAfford = player.coins >= item.price;
+    ctx.fillStyle = canAfford ? '#ddd' : '#666';
+    ctx.font = '13px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, menuX + 15, y + 15);
+    ctx.fillStyle = canAfford ? '#fbbf24' : '#666';
+    ctx.font = '12px Arial';
+    ctx.fillText('Cost: ' + item.price + ' MP', menuX + 15, y + 33);
+    ctx.fillStyle = canAfford ? '#22c55e' : '#666';
+    ctx.font = 'bold 11px Arial';
+    ctx.fillText('[' + (idx+1) + '] BUY', menuX + menuWidth - 15, y + 15);
+  });
+  // Close hint
+  ctx.fillStyle = '#888';
+  ctx.font = '10px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('Press ESC or E to close', CW/2, menuY + menuHeight - 10);
+  ctx.restore();
 }
 
 // ── Gun models — shared between world + interior player ──────────────────────
@@ -4848,7 +5340,7 @@ function initMinimap() {
   minimapCanvas.width  = MM_DIAM;
   minimapCanvas.height = MM_DIAM;
   const mc = minimapCanvas.getContext('2d');
-  const step = 4; // sample every 4 tiles
+  const step = 2; // sample every 2 tiles for sharper minimap
   const pxPerSample = MM_DIAM / (MAP_W / step);
 
   for (let ty = 0; ty < MAP_H; ty += step) {
@@ -4865,15 +5357,12 @@ function initMinimap() {
     }
   }
 
-  // Draw landmarks as gold squares
-  mc.fillStyle = '#ffd700';
+  // Draw landmarks as small gold dots (1×1 pixel on the pre-rendered canvas)
   LANDMARK_INSTANCES.forEach(lm => {
     const mx = Math.round((lm.px / (MAP_W * TILE)) * MM_DIAM);
     const my = Math.round((lm.py / (MAP_H * TILE)) * MM_DIAM);
-    mc.fillRect(mx - 2, my - 2, 5, 5);
-    mc.fillStyle = '#aa8800';
-    mc.fillRect(mx - 1, my - 1, 3, 3);
     mc.fillStyle = '#ffd700';
+    mc.fillRect(mx, my, 1, 1);
   });
 
   // Spawn marker (white dot)
@@ -4945,7 +5434,9 @@ function drawMinimap() {
   const pcy  = (player.y + player.h/2) * mmScaleY;
   const srcX = Math.max(0, Math.min(MM_DIAM - srcW, pcx - srcW/2));
   const srcY = Math.max(0, Math.min(MM_DIAM - srcH, pcy - srcH/2));
+  ctx.imageSmoothingEnabled = false;
   ctx.drawImage(minimapCanvas, srcX, srcY, srcW, srcH, mx0 - MM_R, my0 - MM_R, MM_DIAM, MM_DIAM);
+  ctx.imageSmoothingEnabled = true;
 
   // ── Fog of war vignette ───────────────────────────────────────────
   const fog = ctx.createRadialGradient(mx0, my0, MM_R*0.5, mx0, my0, MM_R);
